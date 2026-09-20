@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "compilerOptions": {
+    "outDir": "dist/server/",
+    "rootDir": ".",
+    "target": "esnext",
+    "sourceMap": false,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": false,
+    "removeComments": true,
+    "declaration": false
+  },
+  "include": [
+    "server/**/*.ts",
+    "common/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "node_modules"
+  ]
+}

@@ -1,0 +1,61 @@
+name: Deploy to CapRover
+
+# Deploys the server (root Dockerfile, referenced by the root captain-definition)
+# to CapRover: tar the tracked files (incl. submodule content) and upload via the caprover CLI.
+#
+# Nothing deploys from main. Prerelease tags (v3.9.0-canary.1) deploy to canary.silex.me
+# for testing; stable tags (v3.9.0) deploy to production. So untested main never reaches prod.
+#
+# Required secrets:
+#   CAPROVER_SERVER        e.g. https://captain.your-domain.com
+#   CAPROVER_APP_CANARY    canary app name        + CAPROVER_APP_TOKEN_CANARY
+#   CAPROVER_APP_PROD      production app name     + CAPROVER_APP_TOKEN_PROD
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  canary:
+    name: deploy canary
+    # Prerelease tags (v3.9.0-canary.1, -alpha, -beta …) deploy to canary for testing.
+    # Nothing auto-deploys from main: a canary release is a deliberate prerelease tag.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true  # the SaaS serves silex-dashboard/_site
+      - name: Patch version from tag
+        run: ./scripts/set-version.sh "${GITHUB_REF_NAME#v}"
+      - name: Deploy to CapRover (canary)
+        run: |
+          git ls-files --recurse-submodules -z | tar --null --no-recursion -cf deploy.tar -T -
+          npx -y caprover@2.3.1 deploy \
+            --caproverUrl "${{ secrets.CAPROVER_SERVER }}" \
+            --appName "${{ secrets.CAPROVER_APP_CANARY }}" \
+            --appToken "${{ secrets.CAPROVER_APP_TOKEN_CANARY }}" \
+            --tarFile deploy.tar
+
+  production:
+    name: deploy production
+    # Stable tags only. Prerelease tags (v3.9.0-canary.1, -alpha, -beta …) must never
+    # reach production — they are used to publish desktop builds without a SaaS release.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true  # the SaaS serves silex-dashboard/_site
+      - name: Patch version from tag
+        run: ./scripts/set-version.sh "${GITHUB_REF_NAME#v}"
+      - name: Deploy to CapRover (production)
+        run: |
+          git ls-files --recurse-submodules -z | tar --null --no-recursion -cf deploy.tar -T -
+          npx -y caprover@2.3.1 deploy \
+            --caproverUrl "${{ secrets.CAPROVER_SERVER }}" \
+            --appName "${{ secrets.CAPROVER_APP_PROD }}" \
+            --appToken "${{ secrets.CAPROVER_APP_TOKEN_PROD }}" \
+            --tarFile deploy.tar

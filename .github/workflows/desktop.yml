@@ -1,0 +1,400 @@
+name: Desktop release
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  # Linux-only on PRs (Rust+TS is shared, so linux catches almost all breakage);
+  # full 4-platform matrix only on v* tags, where the costly macOS/Windows
+  # runners are worth it. No per-commit main build — the PR already covered it.
+  set-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo 'matrix={"include":[{"platform":"linux","os":"ubuntu-latest"},{"platform":"macos-arm","os":"macos-latest"},{"platform":"macos-x64","os":"macos-latest","rust-target":"x86_64-apple-darwin"},{"platform":"windows","os":"windows-latest"}]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"include":[{"platform":"linux","os":"ubuntu-latest"}]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: set-matrix
+    name: build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      matrix: ${{ fromJSON(needs.set-matrix.outputs.matrix) }}
+
+    steps:
+      # Prevent CRLF conversion on Windows (eslint requires LF)
+      - name: Force LF line endings
+        run: git config --global core.autocrlf false
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      # pnpm after setup-node so its standalone binary wins over node's corepack shim
+      # (stale signing keys); no cache:pnpm to avoid corepack during setup-node.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target || '' }}
+
+      # The build runs under the toolchain pinned by desktop/src-tauri/rust-toolchain.toml,
+      # which only ships the host target — add the cross target to it too.
+      - name: Add cross target to pinned toolchain
+        if: matrix.rust-target
+        working-directory: desktop/src-tauri
+        run: rustup target add ${{ matrix.rust-target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      # Patch the desktop version from the tag before the Tauri build, so the bundles and
+      # updater metadata carry the release version (Tauri reads it from tauri.conf.json;
+      # a stale value would nag users to "update" to the same version).
+      - name: Patch desktop version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          ./scripts/set-version.sh "$V"
+          ACTUAL="$(jq -r '.version' desktop/src-tauri/tauri.conf.json)"
+          if [ "$ACTUAL" != "$V" ]; then
+            echo "::error::Desktop version not patched (expected '$V', got '$ACTUAL')"; exit 1
+          fi
+          echo "Desktop version set to $V"
+
+      # silex-desktop needs its deps (@tauri-apps/cli) installed for the Tauri build.
+      - name: Install JS dependencies and build frontend
+        shell: bash
+        run: pnpm install --frozen-lockfile --filter @silexlabs/silex --filter @silexlabs/silex-desktop && pnpm run build
+
+      - name: Verify frontend was built
+        shell: bash
+        run: |
+          if [ ! -f dist/client/index.html ]; then
+            echo "::error::Frontend build failed — dist/client/index.html not found"
+            exit 1
+          fi
+
+      # Reproducible Linux build: pin timestamps/paths and normalize the mtimes
+      # rust-embed bakes into the binary, so the bundle is verifiable against source.
+      - name: Set deterministic build environment (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          EPOCH="$(git log -1 --pretty=%ct)"
+          echo "SOURCE_DATE_EPOCH=$EPOCH" >> "$GITHUB_ENV"
+          echo "CARGO_INCREMENTAL=0" >> "$GITHUB_ENV"
+          echo "CARGO_NET_LOCKED=true" >> "$GITHUB_ENV"
+          echo "TZ=UTC" >> "$GITHUB_ENV"
+          echo "LC_ALL=C.UTF-8" >> "$GITHUB_ENV"
+          echo "RUSTFLAGS=--remap-path-prefix=$HOME/.cargo=/cargo --remap-path-prefix=$GITHUB_WORKSPACE=/build" >> "$GITHUB_ENV"
+          for dir in dist/client silex-dashboard-2026/public; do
+            [ -d "$dir" ] && find "$dir" -exec touch -h -d "@$EPOCH" {} +
+          done
+
+      # The reproducibility reference is built in the same pinned container that
+      # verifiers use (verify.Dockerfile), so their rebuild can match this hash.
+      - name: Record reproducibility hash (Linux)
+        if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          docker build --build-arg TAG="$GITHUB_REF_NAME" -o target/release - < verify.Dockerfile
+          sha256sum target/release/silex-desktop | cut -d' ' -f1 > silex-desktop.sha256
+          grep -qE '^[a-f0-9]{64}$' silex-desktop.sha256
+          echo "reproducible binary sha256: $(cat silex-desktop.sha256)"
+
+      # The runtime DSN ships as a bundle resource (not compiled in — the binary stays
+      # reproducible); the committed file is empty, releases carry the real one.
+      - name: Write telemetry DSN resource
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: printf '%s' "${{ secrets.GLITCHTIP_DSN }}" > desktop/src-tauri/resources/glitchtip.dsn
+
+      # Linux ships the reference binary itself: bundle it without recompiling.
+      - name: Bundle desktop from the reference binary (Linux, signed)
+        if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: pnpm --dir desktop exec tauri bundle
+
+      # createUpdaterArtifacts only emits .sig for AppImage / NSIS / app.tar.gz. The updater
+      # asks for `linux-x86_64-<deb|rpm>` first when the running app was installed from a
+      # .deb/.rpm, so those bundles need their own signature or the update silently fails.
+      - name: Sign deb and rpm bundles (Linux)
+        if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mapfile -t BUNDLES < <(find target -type f -path '*/release/bundle/*' \
+            \( -name '*.deb' -o -name '*.rpm' \) ! -name '*.sig')
+          if [ ${#BUNDLES[@]} -eq 0 ]; then
+            echo "::error::No .deb/.rpm bundle found to sign"; exit 1
+          fi
+          for f in "${BUNDLES[@]}"; do
+            # Absolute: `--dir desktop` runs the signer from desktop/, where a path
+            # relative to the repository root does not resolve.
+            pnpm --dir desktop exec tauri signer sign "$PWD/$f" > /dev/null
+            if [ ! -s "$f.sig" ]; then
+              echo "::error::Signing produced no signature for $f"; exit 1
+            fi
+            echo "signed $f"
+          done
+
+      # Sign updater artifacts only on v* tags (secrets unavailable on fork PRs).
+      - name: Build Tauri app (signed)
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.os != 'ubuntu-latest'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: desktop
+          tauriScript: pnpm tauri
+          args: ${{ matrix.rust-target && format('--target {0}', matrix.rust-target) || '' }}
+
+      - name: Disable updater artifacts config
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        shell: bash
+        run: echo '{"bundle":{"createUpdaterArtifacts":false}}' > desktop/tauri.ci.json
+
+      - name: Build Tauri app (unsigned)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          tauriScript: pnpm tauri
+          args: --config tauri.ci.json ${{ matrix.rust-target && format('--target {0}', matrix.rust-target) || '' }}
+
+      # target/release/bundle/ for native builds, target/<triple>/release/bundle/ for cross-builds.
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: silex-desktop-${{ matrix.platform }}
+          path: |
+            silex-desktop.sha256
+            target/release/silex-desktop
+            target/**/release/bundle/**/*.dmg
+            target/**/release/bundle/**/*.AppImage
+            target/**/release/bundle/**/*.deb
+            target/**/release/bundle/**/*.rpm
+            target/**/release/bundle/**/*.exe
+            target/**/release/bundle/**/*.sig
+            target/**/release/bundle/**/*.tar.gz
+            target/**/release/bundle/**/*.zip
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Find previous tag
+        id: prev_tag
+        run: |
+          # Previous desktop tag of the same type (prerelease or stable)
+          CURRENT="${GITHUB_REF_NAME}"
+          if [[ "$CURRENT" == *-* ]]; then
+            PREV=$(git tag --sort=-version:refname | grep -E '^v.*-' | grep -v "^${CURRENT}$" | head -1)
+          else
+            PREV=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${CURRENT}$" | head -1)
+          fi
+          echo "tag=${PREV:-}" >> "$GITHUB_OUTPUT"
+          echo "Previous tag: ${PREV:-none}"
+
+      - name: Generate release notes
+        id: changelog
+        run: |
+          PREV="${{ steps.prev_tag.outputs.tag }}"
+          if [[ -n "$PREV" ]]; then
+            BODY=$(./scripts/generate-changelog.sh "${PREV}..${GITHUB_REF_NAME}")
+          else
+            BODY="## What's Changed"$'\n\n'"First release!"
+          fi
+          echo "$BODY" > release-notes.md
+          cat release-notes.md
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+          pattern: silex-desktop-*
+
+      - name: Prepare release files
+        env:
+          VERSION: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir -p release
+
+          # Desktop installers + updater artifacts (flatten into release/).
+          # Tauri v2 updater artifacts are the bundles themselves + .sig:
+          # Linux = .AppImage / .deb / .rpm, macOS = .app.tar.gz, Windows = -setup.exe.
+          find artifacts/silex-desktop-* -type f \
+            \( -name '*.deb' -o -name '*.deb.sig' -o -name '*.rpm' -o -name '*.rpm.sig' \
+               -o -name '*.dmg' -o -name '*-setup.exe' \
+               -o -name '*.AppImage' -o -name '*.AppImage.sig' -o -name '*-setup.exe.sig' \
+               -o -name '*.AppImage.tar.gz' -o -name '*.AppImage.tar.gz.sig' \) \
+            -exec cp {} release/ \;
+
+          # For repackagers: unstamped by `tauri bundle`, so the updater finds no target for it,
+          # unlike a binary lifted out of our .deb which thinks it is Debian and would run dpkg.
+          BIN="$(find artifacts/silex-desktop-linux -type f -name silex-desktop | head -1)"
+          if [ -n "$BIN" ]; then cp "$BIN" release/silex-desktop; fi
+
+          # macOS updater bundles are named Silex.app.tar.gz on both arches — rename per-arch.
+          # Cross-builds leave an unsigned native bundle next to the signed one: pick only
+          # the bundle that has its .sig sibling.
+          V="${VERSION#v}"
+          for pair in "macos-arm aarch64" "macos-x64 x64"; do
+            set -- $pair
+            SRC=$(find "artifacts/silex-desktop-$1" -name '*.app.tar.gz' ! -name '*.sig' \
+                  | while read -r f; do [ -f "$f.sig" ] && echo "$f" && break; done)
+            if [ -n "$SRC" ]; then
+              cp "$SRC" "release/Silex_${V}_$2.app.tar.gz"
+              cp "$SRC.sig" "release/Silex_${V}_$2.app.tar.gz.sig"
+            fi
+          done
+
+          sig() { cat "$1.sig" 2>/dev/null || echo ""; }
+
+          BASE="https://github.com/${REPO}/releases/download/${VERSION}"
+          LINUX_BUNDLE=$(find release -name '*_amd64.AppImage' ! -name '*.sig' | head -1)
+          [ -z "$LINUX_BUNDLE" ] && LINUX_BUNDLE=$(find release -name '*_amd64.AppImage.tar.gz' ! -name '*.sig' | head -1)
+          # The updater looks up `linux-x86_64-<installer>`, so each package updates with its own
+          # format. No generic `linux-x86_64` key: it also caught binaries Tauri cannot identify,
+          # and installing an AppImage overwrites the running executable.
+          LINUX_DEB=$(find release -name '*_amd64.deb' ! -name '*.sig' | head -1)
+          LINUX_RPM=$(find release -name '*.x86_64.rpm' ! -name '*.sig' | head -1)
+          MACOS_ARM_BUNDLE=$(find release -name '*_aarch64.app.tar.gz' ! -name '*.sig' | head -1)
+          MACOS_X64_BUNDLE=$(find release -name '*_x64.app.tar.gz' ! -name '*.sig' | head -1)
+          WINDOWS_BUNDLE=$(find release -name '*_x64-setup.exe' ! -name '*.sig' | head -1)
+
+          # Fail loudly if an updater bundle is missing — an empty URL silently breaks auto-update.
+          for f in "$LINUX_BUNDLE" "$LINUX_DEB" "$LINUX_RPM" "$MACOS_ARM_BUNDLE" "$MACOS_X64_BUNDLE" "$WINDOWS_BUNDLE"; do
+            if [ -z "$f" ] || [ -z "$(sig "$f")" ]; then
+              echo "::error::Missing updater bundle or signature (linux='$LINUX_BUNDLE' deb='$LINUX_DEB' rpm='$LINUX_RPM' macos-arm='$MACOS_ARM_BUNDLE' macos-x64='$MACOS_X64_BUNDLE' windows='$WINDOWS_BUNDLE')"
+              exit 1
+            fi
+          done
+
+          jq -n \
+            --arg ver   "$V" \
+            --arg date  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg lu    "${BASE}/$(basename "$LINUX_BUNDLE")" \
+            --arg ls    "$(sig "$LINUX_BUNDLE")" \
+            --arg ldu   "${BASE}/$(basename "$LINUX_DEB")" \
+            --arg lds   "$(sig "$LINUX_DEB")" \
+            --arg lru   "${BASE}/$(basename "$LINUX_RPM")" \
+            --arg lrs   "$(sig "$LINUX_RPM")" \
+            --arg mau   "${BASE}/$(basename "$MACOS_ARM_BUNDLE")" \
+            --arg mas   "$(sig "$MACOS_ARM_BUNDLE")" \
+            --arg mxu   "${BASE}/$(basename "$MACOS_X64_BUNDLE")" \
+            --arg mxs   "$(sig "$MACOS_X64_BUNDLE")" \
+            --arg wu    "${BASE}/$(basename "$WINDOWS_BUNDLE")" \
+            --arg ws    "$(sig "$WINDOWS_BUNDLE")" \
+            '{
+              version: $ver, pub_date: $date,
+              platforms: {
+                "linux-x86_64-deb": { url: $ldu, signature: $lds },
+                "linux-x86_64-rpm": { url: $lru, signature: $lrs },
+                "linux-x86_64-appimage": { url: $lu, signature: $ls },
+                "darwin-aarch64":  { url: $mau, signature: $mas },
+                "darwin-x86_64":   { url: $mxu, signature: $mxs },
+                "windows-x86_64":  { url: $wu,  signature: $ws }
+              }
+            }' > release/latest.json
+
+          echo "--- latest.json ---"
+          cat release/latest.json
+          echo "--- release files ---"
+          ls -lh release/
+
+      # Reproducibility checksums for the Linux artifacts. SHA256SUMS is download
+      # integrity for the installers; SHA256SUMS.inner is the compiled binary hash
+      # that verify.Dockerfile rebuilds and matches (the installers
+      # wrap a per-format-stamped copy, so the binary is the reproducible unit).
+      - name: Compute reproducibility checksums (Linux)
+        working-directory: release
+        run: |
+          shopt -s nullglob
+          LINUX=( *_amd64.AppImage *.deb *.rpm )
+          [ ${#LINUX[@]} -eq 0 ] && { echo "no Linux artifacts, skipping"; exit 0; }
+          sha256sum "${LINUX[@]}" > SHA256SUMS
+          INNER="$(find .. -name silex-desktop.sha256 | head -1)"
+          [ -n "$INNER" ] && echo "$(cat "$INNER")  silex-desktop [reproducible binary — see scripts/README.md]" > SHA256SUMS.inner
+          echo "--- SHA256SUMS ---"; cat SHA256SUMS SHA256SUMS.inner 2>/dev/null
+
+      # Version-less copies of each installer, so the download page can use permanent
+      # links like releases/latest/download/Silex_amd64.AppImage (asset names carry the
+      # version, which would otherwise break the link on every release).
+      - name: Add version-less download aliases
+        working-directory: release
+        run: |
+          shopt -s nullglob
+          copy_alias() {  # $1 = glob of the versioned file, $2 = stable name
+            for f in $1; do
+              [ "$f" = "$2" ] && continue
+              cp -f "$f" "$2" && echo "$2 <- $f"
+              return
+            done
+          }
+          copy_alias '*_amd64.AppImage' Silex_amd64.AppImage
+          copy_alias '*_amd64.deb'      Silex_amd64.deb
+          copy_alias '*.x86_64.rpm'     Silex_x86_64.rpm
+          copy_alias '*_aarch64.dmg'    Silex_aarch64.dmg
+          copy_alias '*_x64.dmg'        Silex_x64.dmg
+          copy_alias '*_x64-setup.exe'  Silex_x64-setup.exe
+          ls -1
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: release/*

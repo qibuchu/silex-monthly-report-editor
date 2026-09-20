@@ -1,0 +1,6 @@
+# rust-toolchain.toml (repo root: rustup resolves it from any cwd in the workspace)
+# Pins rustc so CI and any verifier build with the same toolchain.
+[toolchain]
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

@@ -1,0 +1,73 @@
+{
+  "name": "@silexlabs/grapesjs-symbols",
+  "version": "1.5.0",
+  "description": "Symbols for GrapesJS",
+  "main": "dist/es6/index.js",
+  "module": "dist/es6/index.js",
+  "types": "dist/es6/index.d.ts",
+  "browser": "dist/bundle.iife.js",
+  "exports": {
+    "import": "./dist/es6/index.js",
+    "types": "./dist/es6/index.d.ts"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/silexlabs/grapesjs-symbols.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "start": "grapesjs-cli serve",
+    "build": "rimraf dist && tsc && pnpm run bundle",
+    "bundle": "rollup -c",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "pnpm run lint -- --fix",
+    "test": "jest",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "bump": "pnpm version patch -m 'Bump v%s'",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "silex",
+    "grapesjs",
+    "plugin",
+    "grapesjs-plugin"
+  ],
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^10.0.1",
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@types/backbone": "^1.4.23",
+    "@types/jest": "^30.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "eslint": "^10.6.0",
+    "husky": "^9.1.7",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "node_modules-path": "^2.4.0",
+    "rimraf": "^6.1.3",
+    "rollup": "^4.62.2",
+    "rollup-plugin-summary": "^3.0.1",
+    "ts-jest": "^29.4.11"
+  },
+  "author": {
+    "name": "Alex Hoyau",
+    "url": "https://lexoyo.me/"
+  },
+  "license": "AGPL-3.0",
+  "peerDependencies": {
+    "grapesjs": ">=0.19.0 <0.23.0",
+    "lit-html": "*"
+  }
+}
