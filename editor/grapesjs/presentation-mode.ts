@@ -5,12 +5,19 @@ export const cmdToggleFreePosition = 'presentation:toggle-free-position'
 export const cmdToggleGridSnap = 'presentation:toggle-grid-snap'
 export const cmdGroup = 'presentation:group'
 export const cmdUngroup = 'presentation:ungroup'
+export const cmdToggleKeyboardNudge = 'presentation:toggle-keyboard-nudge'
+export const cmdToggleLock = 'presentation:toggle-lock'
 
 type AlignMode = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'
 type DistributeMode = 'horizontal' | 'vertical'
 
 const GRID_SIZE = 8
 const GRID_STYLE_ID = 'silex-presentation-grid'
+const LOCK_ATTRIBUTE = 'data-silex-locked'
+
+function isLocked(component: Component): boolean {
+  return component.getAttributes()[LOCK_ATTRIBUTE] === 'true'
+}
 
 function roundPx(value: unknown): string | undefined {
   if (typeof value !== 'string' || !value.endsWith('px')) return undefined
@@ -60,7 +67,34 @@ function selectedComponents(editor: Editor, minimum = 2): Component[] {
   if (selected.length < minimum) {
     throw new Error(`请至少选择 ${minimum} 个对象。按住 Shift 点击可多选。`)
   }
+  if (selected.some(isLocked)) {
+    throw new Error('所选对象中包含已锁定对象，请先解锁。')
+  }
   return selected
+}
+
+function toggleLock(editor: Editor) {
+  const selected = editor.getSelectedAll()
+  if (!selected.length) throw new Error('请先选择需要锁定或解锁的对象。')
+  const lock = !selected.every(isLocked)
+  selected.forEach(component => {
+    if (lock) {
+      component.addAttributes({ [LOCK_ATTRIBUTE]: 'true' })
+      component.set({ draggable: false, editable: false, removable: false, resizable: false })
+    } else {
+      component.removeAttributes(LOCK_ATTRIBUTE)
+      component.unset('draggable')
+      component.unset('editable')
+      component.unset('removable')
+      component.unset('resizable')
+    }
+  })
+  updateLockButton(editor)
+}
+
+function updateLockButton(editor: Editor) {
+  const selected = editor.getSelectedAll()
+  editor.Panels.getButton('options', 'presentation-lock')?.set('active', selected.length > 0 && selected.every(isLocked))
 }
 
 function runPresentationAction(editor: Editor, action: () => void) {
@@ -222,6 +256,22 @@ function ungroup(editor: Editor) {
 
 export default function presentationMode(editor: Editor) {
   let gridSnap = false
+  const nudgeKeymaps = [
+    ['presentation:nudge-left', 'left', -1, 0],
+    ['presentation:nudge-right', 'right', 1, 0],
+    ['presentation:nudge-up', 'up', 0, -1],
+    ['presentation:nudge-down', 'down', 0, 1],
+    ['presentation:nudge-left-large', 'shift+left', -10, 0],
+    ['presentation:nudge-right-large', 'shift+right', 10, 0],
+    ['presentation:nudge-up-large', 'shift+up', 0, -10],
+    ['presentation:nudge-down-large', 'shift+down', 0, 10],
+  ] as const
+  const nudgeSelected = (deltaX: number, deltaY: number) => {
+    if (editor.getEditing()) return
+    const selected = editor.getSelectedAll()
+    if (!selected.length || selected.some(isLocked)) return
+    selected.forEach(component => moveBy(component, deltaX, deltaY))
+  }
 
   editor.Commands.add(cmdToggleFreePosition, {
     run() {
@@ -245,8 +295,20 @@ export default function presentationMode(editor: Editor) {
     },
   })
 
+  editor.Commands.add(cmdToggleKeyboardNudge, {
+    run() {
+      nudgeKeymaps.forEach(([id, keys, deltaX, deltaY]) => {
+        editor.Keymaps.add(id, keys, () => nudgeSelected(deltaX, deltaY), { prevent: true })
+      })
+    },
+    stop() {
+      nudgeKeymaps.forEach(([id]) => editor.Keymaps.remove(id))
+    },
+  })
+
   editor.Commands.add(cmdGroup, () => runPresentationAction(editor, () => group(editor)))
   editor.Commands.add(cmdUngroup, () => runPresentationAction(editor, () => ungroup(editor)))
+  editor.Commands.add(cmdToggleLock, () => runPresentationAction(editor, () => toggleLock(editor)))
   ;(['left', 'center', 'right', 'top', 'middle', 'bottom'] as AlignMode[]).forEach(mode => {
     editor.Commands.add(`presentation:align-${mode}`, () => runPresentationAction(editor, () => align(editor, mode)))
   })
@@ -270,6 +332,20 @@ export default function presentationMode(editor: Editor) {
       title: `网格吸附（${GRID_SIZE}px）`,
       'aria-label': '切换网格吸附',
     },
+  }, {
+    id: 'presentation-keyboard-nudge',
+    className: 'fa-solid fa-keyboard',
+    command: cmdToggleKeyboardNudge,
+    attributes: {
+      title: '键盘微调：方向键 1px，Shift + 方向键 10px',
+      'aria-label': '切换键盘微调',
+    },
+  }, {
+    id: 'presentation-lock',
+    className: 'fa-solid fa-lock',
+    command: cmdToggleLock,
+    togglable: false,
+    attributes: { title: '锁定或解锁所选对象', 'aria-label': '锁定或解锁所选对象' },
   }, {
     id: 'presentation-group',
     className: 'fa-solid fa-object-group',
@@ -345,5 +421,6 @@ export default function presentationMode(editor: Editor) {
   }
   editor.on('canvas:frame:load', attachMultiSelect)
   editor.on('load', attachMultiSelect)
+  editor.on('component:selected component:deselected', () => updateLockButton(editor))
   attachMultiSelect()
 }
