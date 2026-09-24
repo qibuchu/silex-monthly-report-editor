@@ -7,6 +7,10 @@ export const cmdGroup = 'presentation:group'
 export const cmdUngroup = 'presentation:ungroup'
 export const cmdToggleKeyboardNudge = 'presentation:toggle-keyboard-nudge'
 export const cmdToggleLock = 'presentation:toggle-lock'
+export const cmdOpenGeometry = 'presentation:open-geometry'
+export const cmdZoomOut = 'presentation:zoom-out'
+export const cmdZoomIn = 'presentation:zoom-in'
+export const cmdZoomFit = 'presentation:zoom-fit'
 
 type AlignMode = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'
 type DistributeMode = 'horizontal' | 'vertical'
@@ -95,6 +99,83 @@ function toggleLock(editor: Editor) {
 function updateLockButton(editor: Editor) {
   const selected = editor.getSelectedAll()
   editor.Panels.getButton('options', 'presentation-lock')?.set('active', selected.length > 0 && selected.every(isLocked))
+}
+
+function numericStyle(component: Component, property: 'left' | 'top' | 'width' | 'height'): number {
+  const value = Number.parseFloat(String(component.getStyle()[property]))
+  if (Number.isFinite(value)) return value
+  const element = component.getEl() as HTMLElement | undefined
+  if (!element) return 0
+  if (property === 'left') return element.offsetLeft
+  if (property === 'top') return element.offsetTop
+  if (property === 'width') return element.offsetWidth
+  return element.offsetHeight
+}
+
+function openGeometry(editor: Editor) {
+  const component = editor.getSelected()
+  if (!component) throw new Error('请先选择一个对象。')
+  if (isLocked(component)) throw new Error('对象已锁定，请先解锁。')
+
+  const form = document.createElement('form')
+  form.className = 'silex-presentation-geometry'
+  form.innerHTML = `
+    <style>
+      .silex-presentation-geometry { min-width: 360px; color: #ddd; }
+      .silex-presentation-geometry__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .silex-presentation-geometry label { display: grid; gap: 6px; font-size: 13px; }
+      .silex-presentation-geometry input[type="number"] { width: 100%; padding: 8px; color: #eee; background: #282828; border: 1px solid #555; border-radius: 3px; }
+      .silex-presentation-geometry__ratio { display: flex !important; grid-column: 1 / -1; align-items: center; grid-template-columns: auto 1fr; margin-top: 4px; }
+      .silex-presentation-geometry__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+      .silex-presentation-geometry button { padding: 8px 18px; border: 0; border-radius: 3px; cursor: pointer; }
+      .silex-presentation-geometry__apply { color: white; background: #3b97e3; }
+    </style>
+    <div class="silex-presentation-geometry__grid">
+      <label>X 坐标（px）<input name="left" type="number" step="1"></label>
+      <label>Y 坐标（px）<input name="top" type="number" step="1"></label>
+      <label>宽度（px）<input name="width" type="number" min="1" step="1"></label>
+      <label>高度（px）<input name="height" type="number" min="1" step="1"></label>
+      <label class="silex-presentation-geometry__ratio"><input name="ratio" type="checkbox">保持宽高比</label>
+    </div>
+    <div class="silex-presentation-geometry__actions">
+      <button type="button" data-action="cancel">取消</button>
+      <button class="silex-presentation-geometry__apply" type="submit">应用</button>
+    </div>
+  `
+  const fields = Object.fromEntries(['left', 'top', 'width', 'height', 'ratio'].map(name => [name, form.elements.namedItem(name) as HTMLInputElement]))
+  fields.left.value = String(Math.round(numericStyle(component, 'left')))
+  fields.top.value = String(Math.round(numericStyle(component, 'top')))
+  fields.width.value = String(Math.round(numericStyle(component, 'width')))
+  fields.height.value = String(Math.round(numericStyle(component, 'height')))
+  let ratio = Number(fields.width.value) / Math.max(1, Number(fields.height.value))
+  fields.width.addEventListener('input', () => {
+    if (fields.ratio.checked) fields.height.value = String(Math.max(1, Math.round(Number(fields.width.value) / ratio)))
+  })
+  fields.height.addEventListener('input', () => {
+    if (fields.ratio.checked) fields.width.value = String(Math.max(1, Math.round(Number(fields.height.value) * ratio)))
+  })
+  fields.ratio.addEventListener('change', () => {
+    ratio = Number(fields.width.value) / Math.max(1, Number(fields.height.value))
+  })
+  form.querySelector('[data-action="cancel"]')?.addEventListener('click', () => editor.Modal.close())
+  form.addEventListener('submit', event => {
+    event.preventDefault()
+    component.setStyle({
+      ...component.getStyle(),
+      position: 'absolute',
+      left: `${Number(fields.left.value)}px`,
+      top: `${Number(fields.top.value)}px`,
+      width: `${Math.max(1, Number(fields.width.value))}px`,
+      height: `${Math.max(1, Number(fields.height.value))}px`,
+    })
+    editor.Modal.close()
+    editor.select(component)
+  })
+  const container = document.createElement('div')
+  container.append(form)
+  editor.Modal.setTitle('位置与尺寸')
+  editor.Modal.setContent(container)
+  editor.Modal.open()
 }
 
 function runPresentationAction(editor: Editor, action: () => void) {
@@ -309,6 +390,10 @@ export default function presentationMode(editor: Editor) {
   editor.Commands.add(cmdGroup, () => runPresentationAction(editor, () => group(editor)))
   editor.Commands.add(cmdUngroup, () => runPresentationAction(editor, () => ungroup(editor)))
   editor.Commands.add(cmdToggleLock, () => runPresentationAction(editor, () => toggleLock(editor)))
+  editor.Commands.add(cmdOpenGeometry, () => runPresentationAction(editor, () => openGeometry(editor)))
+  editor.Commands.add(cmdZoomOut, () => editor.Canvas.setZoom(Math.max(25, editor.Canvas.getZoom() - 10)))
+  editor.Commands.add(cmdZoomIn, () => editor.Canvas.setZoom(Math.min(200, editor.Canvas.getZoom() + 10)))
+  editor.Commands.add(cmdZoomFit, () => editor.Canvas.fitViewport({ padding: 32 }))
   ;(['left', 'center', 'right', 'top', 'middle', 'bottom'] as AlignMode[]).forEach(mode => {
     editor.Commands.add(`presentation:align-${mode}`, () => runPresentationAction(editor, () => align(editor, mode)))
   })
@@ -346,6 +431,30 @@ export default function presentationMode(editor: Editor) {
     command: cmdToggleLock,
     togglable: false,
     attributes: { title: '锁定或解锁所选对象', 'aria-label': '锁定或解锁所选对象' },
+  }, {
+    id: 'presentation-geometry',
+    className: 'fa-solid fa-ruler-combined',
+    command: cmdOpenGeometry,
+    togglable: false,
+    attributes: { title: '输入对象坐标与尺寸', 'aria-label': '位置与尺寸' },
+  }, {
+    id: 'presentation-zoom-out',
+    className: 'fa-solid fa-magnifying-glass-minus',
+    command: cmdZoomOut,
+    togglable: false,
+    attributes: { title: '画布缩小 10%', 'aria-label': '缩小画布' },
+  }, {
+    id: 'presentation-zoom-fit',
+    className: 'fa-solid fa-expand',
+    command: cmdZoomFit,
+    togglable: false,
+    attributes: { title: '画布适应并居中', 'aria-label': '适应画布' },
+  }, {
+    id: 'presentation-zoom-in',
+    className: 'fa-solid fa-magnifying-glass-plus',
+    command: cmdZoomIn,
+    togglable: false,
+    attributes: { title: '画布放大 10%', 'aria-label': '放大画布' },
   }, {
     id: 'presentation-group',
     className: 'fa-solid fa-object-group',
