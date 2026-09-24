@@ -55,12 +55,12 @@
 Silex 使用 AGPL-3.0。内部验证和自部署可继续进行；如果修改后的服务通过网络提供给用户使用，需要在正式部署前评估并履行相应的源代码提供义务。
 # 中文本地版启动
 
-仓库根目录提供 `start-local-zh.cmd`。工作区根目录另提供便于双击的 `启动中文Silex.cmd`。两个入口都使用 `fs-storage`，直接读取 Silex Desktop 的本地项目目录：
+仓库根目录提供 `start-local-zh.cmd`。工作区根目录另提供便于双击的 `启动中文Silex.cmd`。两个入口都使用 `fs-storage`，项目保存在仓库忽略的可写运行目录：
 
-`C:\Users\buchutang\AppData\Roaming\org.silex.desktop\websites`
+`work\silex-poc\silex\storage`
 
 打开月报时使用：
 
 `http://localhost:6805/?id=e0dd6f21-9309-4431-a7f1-3a2e02c6a995&connectorId=fs-storage&lang=zh`
 
-因此无需登录 FTP，也无需复制月报项目。
+现有桌面版项目已迁移到该目录。这样可避免受限运行环境只能读取 AppData、自动保存时报 `EPERM`；运行数据不会提交到 Git。
