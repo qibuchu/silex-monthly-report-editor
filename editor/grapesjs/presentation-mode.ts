@@ -11,6 +11,8 @@ export const cmdOpenGeometry = 'presentation:open-geometry'
 export const cmdZoomOut = 'presentation:zoom-out'
 export const cmdZoomIn = 'presentation:zoom-in'
 export const cmdZoomFit = 'presentation:zoom-fit'
+export const cmdToggleSmartGuides = 'presentation:toggle-smart-guides'
+export const cmdOpenTableTools = 'presentation:open-table-tools'
 
 type AlignMode = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'
 type DistributeMode = 'horizontal' | 'vertical'
@@ -18,6 +20,8 @@ type DistributeMode = 'horizontal' | 'vertical'
 const GRID_SIZE = 8
 const GRID_STYLE_ID = 'silex-presentation-grid'
 const LOCK_ATTRIBUTE = 'data-silex-locked'
+const GUIDE_TOLERANCE = 6
+const GUIDE_CLASS = 'silex-presentation-guide'
 
 function isLocked(component: Component): boolean {
   return component.getAttributes()[LOCK_ATTRIBUTE] === 'true'
@@ -176,6 +180,119 @@ function openGeometry(editor: Editor) {
   editor.Modal.setTitle('位置与尺寸')
   editor.Modal.setContent(container)
   editor.Modal.open()
+}
+
+function closestTag(component: Component | undefined, tagName: string): Component | undefined {
+  let current = component
+  while (current) {
+    if (String(current.get('tagName')).toLowerCase() === tagName) return current
+    current = current.parent()
+  }
+  return undefined
+}
+
+function openTableTools(editor: Editor) {
+  const table = closestTag(editor.getSelected(), 'table')
+  if (!table) throw new Error('请选择表格或表格中的单元格。')
+  const selectedRow = closestTag(editor.getSelected(), 'tr')
+  const selectedCell = closestTag(editor.getSelected(), 'td') || closestTag(editor.getSelected(), 'th')
+  const rows = () => table.find('tr')
+  const panel = document.createElement('div')
+  panel.className = 'silex-presentation-table-tools'
+  panel.innerHTML = `
+    <style>
+      .silex-presentation-table-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-width: 360px; }
+      .silex-presentation-table-tools button { padding: 12px; color: #eee; background: #333; border: 1px solid #555; border-radius: 4px; cursor: pointer; }
+      .silex-presentation-table-tools button:hover { background: #3b97e3; }
+    </style>
+    <button data-action="add-row">在下方添加行</button>
+    <button data-action="remove-row">删除当前行</button>
+    <button data-action="add-column">在右侧添加列</button>
+    <button data-action="remove-column">删除当前列</button>
+  `
+  const close = () => {
+    editor.Modal.close()
+    editor.select(table)
+  }
+  panel.addEventListener('click', event => {
+    const action = (event.target as HTMLElement).closest('button')?.dataset.action
+    if (!action) return
+    if (action === 'add-row') {
+      const source = selectedRow || rows().at(-1)
+      const clone = source?.clone()
+      if (clone && source?.parent()) source.parent()!.components().add(clone, { at: source.index() + 1 })
+    } else if (action === 'remove-row') {
+      const row = selectedRow || rows().at(-1)
+      if (rows().length <= 2) {
+        editor.runCommand('notifications:add', { type: 'error', group: '表格工具', message: '表格至少保留标题行和一行数据。' })
+        return
+      }
+      row?.remove()
+    } else {
+      const firstRow = rows().at(0)
+      const columnIndex = selectedCell?.index() ?? Math.max(0, (firstRow?.components().length ?? 1) - 1)
+      rows().forEach((row, rowIndex) => {
+        if (action === 'add-column') {
+          row.components().add({ tagName: rowIndex === 0 ? 'th' : 'td', type: 'cell', components: rowIndex === 0 ? '新字段' : '—' }, { at: columnIndex + 1 })
+        } else if (row.components().length > 1) {
+          row.components().at(Math.min(columnIndex, row.components().length - 1))?.remove()
+        }
+      })
+    }
+    close()
+  })
+  const container = document.createElement('div')
+  container.append(panel)
+  editor.Modal.setTitle('表格工具')
+  editor.Modal.setContent(container)
+  editor.Modal.open()
+}
+
+function showGuide(editor: Editor, axis: 'x' | 'y', position: number) {
+  const doc = editor.Canvas.getDocument()
+  if (!doc) return
+  doc.querySelectorAll(`.${GUIDE_CLASS}`).forEach(element => element.remove())
+  const guide = doc.createElement('div')
+  guide.className = GUIDE_CLASS
+  Object.assign(guide.style, axis === 'x'
+    ? { position: 'fixed', left: `${position}px`, top: '0', bottom: '0', width: '1px' }
+    : { position: 'fixed', top: `${position}px`, left: '0', right: '0', height: '1px' }, {
+    zIndex: '2147483647',
+    background: '#ff3b8d',
+    pointerEvents: 'none',
+  })
+  doc.body.append(guide)
+  window.setTimeout(() => guide.remove(), 700)
+}
+
+function snapToSmartGuides(editor: Editor, component?: Component) {
+  if (!component || isLocked(component)) return
+  const parent = component.parent()
+  if (!parent) return
+  const rect = componentRect(component)
+  const siblings = parent.components().models.filter(item => item !== component && item.getEl())
+  if (!siblings.length) return
+  const zoom = editor.Canvas.getZoom() / 100 || 1
+  const tolerance = GUIDE_TOLERANCE * zoom
+  const sourceX = [rect.left, rect.left + rect.width / 2, rect.right]
+  const sourceY = [rect.top, rect.top + rect.height / 2, rect.bottom]
+  const targetX = siblings.flatMap(item => {
+    const itemRect = componentRect(item)
+    return [itemRect.left, itemRect.left + itemRect.width / 2, itemRect.right]
+  })
+  const targetY = siblings.flatMap(item => {
+    const itemRect = componentRect(item)
+    return [itemRect.top, itemRect.top + itemRect.height / 2, itemRect.bottom]
+  })
+  const nearest = (sources: number[], targets: number[]) => sources
+    .flatMap(source => targets.map(target => ({ delta: target - source, target })))
+    .filter(match => Math.abs(match.delta) <= tolerance)
+    .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta))[0]
+  const matchX = nearest(sourceX, targetX)
+  const matchY = nearest(sourceY, targetY)
+  if (matchX || matchY) moveBy(component, (matchX?.delta ?? 0) / zoom, (matchY?.delta ?? 0) / zoom)
+  if (matchX) showGuide(editor, 'x', matchX.target)
+  if (matchY) showGuide(editor, 'y', matchY.target)
 }
 
 function runPresentationAction(editor: Editor, action: () => void) {
@@ -337,6 +454,7 @@ function ungroup(editor: Editor) {
 
 export default function presentationMode(editor: Editor) {
   let gridSnap = false
+  let smartGuides = false
   const nudgeKeymaps = [
     ['presentation:nudge-left', 'left', -1, 0],
     ['presentation:nudge-right', 'right', 1, 0],
@@ -391,6 +509,11 @@ export default function presentationMode(editor: Editor) {
   editor.Commands.add(cmdUngroup, () => runPresentationAction(editor, () => ungroup(editor)))
   editor.Commands.add(cmdToggleLock, () => runPresentationAction(editor, () => toggleLock(editor)))
   editor.Commands.add(cmdOpenGeometry, () => runPresentationAction(editor, () => openGeometry(editor)))
+  editor.Commands.add(cmdOpenTableTools, () => runPresentationAction(editor, () => openTableTools(editor)))
+  editor.Commands.add(cmdToggleSmartGuides, {
+    run() { smartGuides = true },
+    stop() { smartGuides = false },
+  })
   editor.Commands.add(cmdZoomOut, () => editor.Canvas.setZoom(Math.max(25, editor.Canvas.getZoom() - 10)))
   editor.Commands.add(cmdZoomIn, () => editor.Canvas.setZoom(Math.min(200, editor.Canvas.getZoom() + 10)))
   editor.Commands.add(cmdZoomFit, () => editor.Canvas.fitViewport({ padding: 32 }))
@@ -418,6 +541,11 @@ export default function presentationMode(editor: Editor) {
       'aria-label': '切换网格吸附',
     },
   }, {
+    id: 'presentation-smart-guides',
+    className: 'fa-solid fa-crosshairs',
+    command: cmdToggleSmartGuides,
+    attributes: { title: '对象边缘与中心参考线吸附', 'aria-label': '切换参考线吸附' },
+  }, {
     id: 'presentation-keyboard-nudge',
     className: 'fa-solid fa-keyboard',
     command: cmdToggleKeyboardNudge,
@@ -437,6 +565,12 @@ export default function presentationMode(editor: Editor) {
     command: cmdOpenGeometry,
     togglable: false,
     attributes: { title: '输入对象坐标与尺寸', 'aria-label': '位置与尺寸' },
+  }, {
+    id: 'presentation-table-tools',
+    className: 'fa-solid fa-table-cells',
+    command: cmdOpenTableTools,
+    togglable: false,
+    attributes: { title: '添加或删除表格行列', 'aria-label': '表格工具' },
   }, {
     id: 'presentation-zoom-out',
     className: 'fa-solid fa-magnifying-glass-minus',
@@ -507,10 +641,14 @@ export default function presentationMode(editor: Editor) {
     attributes: { title: '纵向等距分布（至少3个对象）', 'aria-label': '纵向等距分布' },
   }])
 
-  editor.on('component:drag:end component:resize', () => {
+  editor.on('component:drag:end', (data: { target?: Component }) => {
     if (gridSnap && editor.getDragMode() === 'absolute') {
       editor.getSelectedAll().forEach(snapComponent)
     }
+    if (smartGuides && editor.getDragMode() === 'absolute') snapToSmartGuides(editor, data?.target || editor.getSelected())
+  })
+  editor.on('component:resize', () => {
+    if (gridSnap && editor.getDragMode() === 'absolute') editor.getSelectedAll().forEach(snapComponent)
   })
 
   const attachedDocuments = new WeakSet<Document>()

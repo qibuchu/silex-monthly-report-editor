@@ -37,6 +37,10 @@ const MONTHLY_BLOCK_STYLES: Record<string, Record<string, string>> = {
   '.monthly-game-copy': { margin: '0', 'font-size': '15px', 'line-height': '1.55' },
   '.monthly-image-text': { display: 'grid', 'grid-template-columns': '42% 1fr', gap: '22px', padding: '14px', color: '#00366b' },
   '.monthly-image-placeholder': { display: 'grid', 'min-height': '180px', color: '#7b8794', background: '#e8edf2', 'place-items': 'center' },
+  '.monthly-ranking-table': { width: '100%', color: '#00366b', background: '#fff', 'border-collapse': 'collapse', 'font-size': '15px' },
+  '.monthly-ranking-table th': { padding: '10px 12px', color: '#fff', background: '#00366b', border: '1px solid #315b84', 'font-weight': '700' },
+  '.monthly-ranking-table td': { padding: '9px 12px', border: '1px solid #dfe4e9', 'text-align': 'center' },
+  '.monthly-ranking-table tr:nth-child(even) td': { background: '#f7f8fa' },
 }
 
 function defaultClassName(blockType: string): string {
@@ -83,6 +87,10 @@ export const blocksPlugin = (editor, opts) => {
     id: 'monthly-image-text',
     label: '左图右文',
     content: '<div class="monthly-image-text" data-monthly-component="image-text"><div class="monthly-image-placeholder">插入图片</div><div><h3 class="monthly-game-name">小标题</h3><p class="monthly-game-copy">在这里填写正文内容。</p></div></div>',
+  }, {
+    id: 'monthly-ranking-table',
+    label: '榜单表格',
+    content: '<table class="monthly-ranking-table" data-monthly-component="ranking-table"><thead><tr><th>排名</th><th>游戏</th><th>预估收入</th><th>排名环比</th><th>玩家环比</th></tr></thead><tbody><tr><td>1</td><td>游戏名称</td><td>—</td><td>—</td><td>—</td></tr><tr><td>2</td><td>游戏名称</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>',
   }]
   monthlyBlocks.forEach(block => editor.BlockManager.add(block.id, {
     label: block.label,
