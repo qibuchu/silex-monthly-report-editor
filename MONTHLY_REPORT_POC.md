@@ -50,6 +50,26 @@
 4. 模板标题、脚注和背景默认锁定；运营人员编辑内容对象。
 5. 人工文案与布局继续保存在项目 JSON 中，刷新数据只改绑定字段。
 
+## Silex Adapter 第一版
+
+仓库提供 `scripts/monthly-report-adapter.cjs`，可将现有 `steam-grapesjs-v2` 可编辑月报转换为新的 Silex 本地项目。适配器执行以下工作：
+
+- 每张月报幻灯片转换为一个 Silex Page；
+- 保留 `data-object-id`，并写入同值的 `data-binding-id`；
+- 保留对象坐标、尺寸、层叠顺序、HTML 内容与数据属性；
+- 为文字、图片、形状、表格和图表建立可选择的外层组件；
+- 默认拒绝覆盖已经存在的 Silex 项目。
+
+示例：
+
+`pnpm monthly:import -- C:\path\Steam-2026-08-完善稿-可编辑.json silex\storage steam-monthly-2026-08`
+
+生成后打开：
+
+`http://localhost:6805/?id=steam-monthly-2026-08&connectorId=fs-storage&lang=zh`
+
+当前版本先解决结构迁移和稳定 ID。字体资源、复杂图表编辑、跨单元格表格操作和像素级视觉差异仍需后续处理。
+
 ## 许可提示
 
 Silex 使用 AGPL-3.0。内部验证和自部署可继续进行；如果修改后的服务通过网络提供给用户使用，需要在正式部署前评估并履行相应的源代码提供义务。
