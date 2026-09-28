@@ -191,6 +191,47 @@ function closestTag(component: Component | undefined, tagName: string): Componen
   return undefined
 }
 
+export function parseTabularText(value: string): string[][] {
+  const lines = value.replace(/\r\n?/g, '\n').split('\n')
+  while (lines.length && lines.at(-1) === '') lines.pop()
+  if (!lines.length || (lines.length === 1 && lines[0] === '')) return []
+  return lines.map(line => line.split('\t'))
+}
+
+function replaceCellText(cell: Component, value: string) {
+  cell.components([{ type: 'textnode', content: value }])
+}
+
+function applyTabularData(table: Component, startRow: number, startColumn: number, data: string[][]) {
+  if (!data.length) return
+  const requiredRows = startRow + data.length
+  while (table.find('tr').length < requiredRows) {
+    const source = table.find('tr').at(-1)
+    const clone = source?.clone()
+    if (!source || !clone || !source.parent()) break
+    clone.components().forEach(cell => replaceCellText(cell, ''))
+    source.parent()!.components().add(clone, { at: source.index() + 1 })
+  }
+  const allRows = table.find('tr')
+  const requiredColumns = startColumn + Math.max(...data.map(row => row.length))
+  allRows.forEach((row, rowIndex) => {
+    while (row.components().length < requiredColumns) {
+      row.components().add({
+        tagName: rowIndex === 0 ? 'th' : 'td',
+        type: 'cell',
+        components: [{ type: 'textnode', content: '' }],
+      })
+    }
+  })
+  data.forEach((values, rowOffset) => {
+    const row = allRows.at(startRow + rowOffset)
+    values.forEach((value, columnOffset) => {
+      const cell = row?.components().at(startColumn + columnOffset)
+      if (cell) replaceCellText(cell, value)
+    })
+  })
+}
+
 function openTableTools(editor: Editor) {
   const table = closestTag(editor.getSelected(), 'table')
   if (!table) throw new Error('请选择表格或表格中的单元格。')
@@ -204,7 +245,17 @@ function openTableTools(editor: Editor) {
       .silex-presentation-table-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-width: 360px; }
       .silex-presentation-table-tools button { padding: 12px; color: #eee; background: #333; border: 1px solid #555; border-radius: 4px; cursor: pointer; }
       .silex-presentation-table-tools button:hover { background: #3b97e3; }
+      .silex-presentation-table-tools__paste { display: grid; grid-column: 1 / -1; gap: 8px; margin-bottom: 4px; }
+      .silex-presentation-table-tools__paste span { color: #bbb; font-size: 12px; line-height: 1.5; }
+      .silex-presentation-table-tools textarea { min-height: 140px; resize: vertical; padding: 10px; color: #eee; background: #222; border: 1px solid #555; border-radius: 4px; font: 13px/1.5 monospace; }
+      .silex-presentation-table-tools [data-action="paste-data"] { grid-column: 1 / -1; background: #245f91; }
     </style>
+    <label class="silex-presentation-table-tools__paste">
+      <strong>批量粘贴表格数据</strong>
+      <span>从 Excel 或表格复制后粘贴。以当前单元格为起点；未选择单元格时从左上角开始。需要时会自动增加行列。</span>
+      <textarea data-table-data placeholder="排名&#9;游戏名&#9;预估收入&#10;1&#9;示例游戏&#9;100万"></textarea>
+    </label>
+    <button data-action="paste-data">写入粘贴数据</button>
     <button data-action="add-row">在下方添加行</button>
     <button data-action="remove-row">删除当前行</button>
     <button data-action="add-column">在右侧添加列</button>
@@ -217,7 +268,22 @@ function openTableTools(editor: Editor) {
   panel.addEventListener('click', event => {
     const action = (event.target as HTMLElement).closest('button')?.dataset.action
     if (!action) return
-    if (action === 'add-row') {
+    if (action === 'paste-data') {
+      const data = parseTabularText((panel.querySelector('[data-table-data]') as HTMLTextAreaElement).value)
+      if (!data.length) {
+        editor.runCommand('notifications:add', { type: 'error', group: '表格工具', message: '请先粘贴表格数据。' })
+        return
+      }
+      const currentRows = rows()
+      const rowIndex = selectedRow ? Math.max(0, currentRows.indexOf(selectedRow)) : 0
+      const columnIndex = selectedCell ? Math.max(0, selectedCell.index()) : 0
+      applyTabularData(table, rowIndex, columnIndex, data)
+      editor.runCommand('notifications:add', {
+        type: 'success',
+        group: '表格工具',
+        message: `已写入 ${data.length} 行、最多 ${Math.max(...data.map(row => row.length))} 列。`,
+      })
+    } else if (action === 'add-row') {
       const source = selectedRow || rows().at(-1)
       const clone = source?.clone()
       if (clone && source?.parent()) source.parent()!.components().add(clone, { at: source.index() + 1 })
@@ -570,7 +636,7 @@ export default function presentationMode(editor: Editor) {
     className: 'fa-solid fa-table-cells',
     command: cmdOpenTableTools,
     togglable: false,
-    attributes: { title: '添加或删除表格行列', 'aria-label': '表格工具' },
+    attributes: { title: '批量粘贴或调整表格行列', 'aria-label': '表格工具' },
   }, {
     id: 'presentation-zoom-out',
     className: 'fa-solid fa-magnifying-glass-minus',
