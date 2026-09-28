@@ -75,6 +75,7 @@ import aiCapabilitiesPlugin from '@silexlabs/grapesjs-ai-capabilities'
 import coreCommandsPlugin from './core-commands'
 import ViewButtons from './view-buttons'
 import presentationMode from './presentation-mode'
+import pptxImportPlugin from './pptx-import'
 import { storagePlugin } from './storage'
 import { API_PATH, API_WEBSITE_ASSETS_WRITE, API_WEBSITE_PATH, SILEX_VERSION } from '~/common/constants'
 import { ClientConfig } from '../config'
@@ -99,6 +100,7 @@ const plugins = [
   {name: './blocks', value: blocksPlugin},
   {name: './view-buttons', value: ViewButtons},
   {name: './presentation-mode', value: presentationMode},
+  {name: './pptx-import', value: pptxImportPlugin},
   {name: './semantic', value: semanticPlugin},
   {name: './rich-text', value: richTextPlugin},
   {name: 'grapesjs-style-filter', value: styleFilterPlugin},
