@@ -55,13 +55,14 @@ function objectComponent(object, pageIndex, objectIndex) {
     ...(object.attributes || {}),
     id,
     'data-object-id': id,
-    'data-binding-id': id,
+    'data-binding-id': object.attributes?.['data-binding-id'] || id,
     'data-report-object': 'true',
   }
 
   return {
     attributes,
-    classes: ['object', `report-${attributes['data-kind'] || 'object'}`],
+    tagName: object.tagName || 'div',
+    classes: [...new Set(['object', `report-${attributes['data-kind'] || 'object'}`, ...(object.classes || [])])],
     components: object.content || '',
     name: attributes['data-name'] || id,
     type: 'default',
@@ -77,6 +78,8 @@ function pageData(page, pageIndex) {
     name: page.name || `第 ${pageIndex + 1} 页`,
     frames: [
       {
+        width: Number(page.width) || 1920,
+        height: Number(page.height) || 1080,
         component: {
           COMPONENT_NAME_PREFIX: '',
           attributes: { id: rootId },
@@ -139,7 +142,7 @@ function baseStyles(project) {
   project.deck.pages.forEach((page, pageIndex) => {
     styles.push({
       selectors: [`#monthly-slide-${String(pageIndex + 1).padStart(2, '0')}-canvas`],
-      style: { background: page.background || '#ffffff' },
+      style: { background: page.background || '#ffffff', width: `${Number(page.width)||1920}px`, height: `${Number(page.height)||1080}px` },
     })
     page.objects.forEach((object, objectIndex) => {
       const id = safeId(object?.attributes?.['data-object-id'], `slide-${pageIndex + 1}-object-${objectIndex + 1}`)
@@ -192,6 +195,7 @@ function writeSilexProject(result, storageRoot, projectId, force = false) {
     fs.rmSync(outputDir, { force: true, recursive: true })
   }
   fs.mkdirSync(path.join(outputDir, 'pages'), { recursive: true })
+  fs.mkdirSync(path.join(outputDir, 'assets'), { recursive: true })
   writeJson(path.join(outputDir, 'meta.json'), result.meta)
   writeJson(path.join(outputDir, 'website.json'), result.website)
   result.pages.forEach((page, index) => {

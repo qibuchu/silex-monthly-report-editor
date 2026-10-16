@@ -60,13 +60,13 @@ export default function(editor: Editor/*, opts: EleventyPluginOptions*/): void {
     className: `${REFRESH_BUTTON_BASE_CLASS} fa-refresh`,
     command: COMMAND_REFRESH,
     togglable: false,
-    attributes: { title: 'Refresh data sources (reload dynamic content) - Ctrl+Alt+R' }
+    attributes: { title: '刷新数据源（重新加载动态内容）- Ctrl+Alt+R' }
   }, {
     id: 'toggle-data-source-preview',
     className: 'fa fa-fw data-source-preview-toggle fa-table gjs-pn-active gjs-four-color',
     command: COMMAND_PREVIEW_TOGGLE,
     togglable: false,
-    attributes: { title: 'Enable/Disable data source preview (Ctrl+Alt+V)' }
+    attributes: { title: '开启/关闭数据源预览（Ctrl+Alt+V）' }
   }, {
     // Separator for visual grouping of data source buttons in the panel
     id: 'data-source-separator',
@@ -83,8 +83,8 @@ export default function(editor: Editor/*, opts: EleventyPluginOptions*/): void {
     if (button) {
       button.set('attributes', {
         title: isActive
-          ? 'Disable data source preview (Ctrl+Alt+V)'
-          : 'Enable data source preview (Ctrl+Alt+V)'
+          ? '关闭数据源预览（Ctrl+Alt+V）'
+          : '开启数据源预览（Ctrl+Alt+V）'
       })
     }
     const el = getPanelButtonEl(editor, 'options', '.data-source-preview-toggle')
@@ -133,7 +133,7 @@ export default function(editor: Editor/*, opts: EleventyPluginOptions*/): void {
       break
     default:
       button.set('className', `${REFRESH_BUTTON_BASE_CLASS} fa-refresh`)
-      button.set('title', 'Refresh data sources (reload dynamic content) - Ctrl+Alt+R')
+      button.set('title', '刷新数据源（重新加载动态内容）- Ctrl+Alt+R')
     }
   }
 

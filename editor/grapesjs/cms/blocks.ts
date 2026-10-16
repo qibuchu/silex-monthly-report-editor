@@ -5,7 +5,7 @@ export default function(editor: Editor/*, opts: EleventyPluginOptions*/): void {
   // **
   // Shortcode
   editor.BlockManager.add('eleventy-shortcode', {
-    label: 'Shortcode',
+    label: '短代码',
     category: 'Eleventy',
     content: { type: 'eleventy-shortcode' },
     media: '<span style="font-size: 50px;">{%</span>',
@@ -15,12 +15,12 @@ export default function(editor: Editor/*, opts: EleventyPluginOptions*/): void {
       defaults: {
         traits: [{
           type: 'shortcode-name',
-          label: 'Shortcode name',
+          label: '短代码名称',
           name: 'shortcode_name',
           placeholder: 'shortcode_name',
         }, {
           type: 'shortcode-attributes',
-          label: 'Shortcode attributes',
+          label: '短代码属性',
           name: 'shortcode_attributes',
           placeholder: 'param1, "example param 2"',
         }],

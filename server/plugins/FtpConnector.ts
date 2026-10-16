@@ -22,7 +22,7 @@ import { requiredParam } from '~/server/utils/validation.js'
 import { WEBSITE_DATA_FILE, WEBSITE_META_DATA_FILE, LEGACY_WEBSITE_PAGES_FOLDER } from '~/common/constants.js'
 import { ConnectorType, ConnectorUser, WebsiteMeta, FileMeta, JobData, JobStatus, WebsiteId, PublicationJobData, WebsiteMetaFileContent, EMPTY_WEBSITE, WebsiteData, ConnectorOptions } from '~/common/types.js'
 import { ServerConfig } from '~/server/config.js'
-import { join } from 'path'
+import { join, posix } from 'path'
 import { tmpdir } from 'os'
 import { v4 as uuid } from 'uuid'
 import { JobManager } from '~/server/jobs.js'
@@ -398,7 +398,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
 
   async setWebsiteMeta(session: FtpSession, id: string, data: WebsiteMetaFileContent): Promise<void> {
     const websiteId = requiredParam<WebsiteId>(id, 'website id')
-    const path = join(this.rootPath(session), websiteId, WEBSITE_META_DATA_FILE)
+    const path = posix.join(this.rootPath(session), websiteId, WEBSITE_META_DATA_FILE)
     const ftp = await this.getClient(this.sessionData(session))
     await this.write(ftp, path, stringify(data))
     this.closeClient(ftp)
@@ -409,8 +409,8 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
       const websiteId = requiredParam<WebsiteId>(id, 'website id')
       const ftp = await this.getClient(this.sessionData(session))
       // Get stats for the website folder
-      const folder = join(this.rootPath(session), websiteId)
-      const path = join(this.rootPath(session), websiteId, WEBSITE_META_DATA_FILE)
+      const folder = posix.join(this.rootPath(session), websiteId)
+      const path = posix.join(this.rootPath(session), websiteId, WEBSITE_META_DATA_FILE)
       const readable = await this.read(ftp, path)
       const meta = JSON.parse(await contentToString(readable)) as WebsiteMetaFileContent
       this.closeClient(ftp)
@@ -439,13 +439,13 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
     // const rootPath = join(this.storageRootPath(session), id)
     // await this.mkdir(ftp, rootPath)
     // create assets folder
-    const assetsPath = join(this.rootPath(session), id, '/assets')
+    const assetsPath = posix.join(this.rootPath(session), id, 'assets')
     await this.mkdir(ftp, assetsPath)
     // create website data file
-    const websiteDataPath = join(this.rootPath(session), id, WEBSITE_DATA_FILE)
+    const websiteDataPath = posix.join(this.rootPath(session), id, WEBSITE_DATA_FILE)
     await this.write(ftp, websiteDataPath, stringify(EMPTY_WEBSITE))
     // create website meta data file
-    const websiteMetaDataPath = join(this.rootPath(session), id, WEBSITE_META_DATA_FILE)
+    const websiteMetaDataPath = posix.join(this.rootPath(session), id, WEBSITE_META_DATA_FILE)
     await this.write(ftp, websiteMetaDataPath, stringify({}))
     // Clean up
     this.closeClient(ftp)
@@ -469,7 +469,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
   async readWebsite(session: FtpSession, websiteId: string): Promise<WebsiteData | Readable> {
     const storageRootPath = this.rootPath(session)
     const ftp = await this.getClient(this.sessionData(session))
-    const websiteDataPath = join(storageRootPath, websiteId, WEBSITE_DATA_FILE)
+    const websiteDataPath = posix.join(storageRootPath, websiteId, WEBSITE_DATA_FILE)
 
     try {
       const websiteDataStream = await this.read(ftp, websiteDataPath)
@@ -479,7 +479,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
       const parsedData = JSON.parse(websiteDataContent)
       // Use the merge function to reconstruct website data
       const pageLoader = async (pagePath: string): Promise<string> => {
-        const fullPath = join(storageRootPath, websiteId, pagePath)
+        const fullPath = posix.join(storageRootPath, websiteId, pagePath)
         const pageStream = await this.read(ftp, fullPath)
         return await contentToString(pageStream)
       }
@@ -505,7 +505,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
 
     // **
     // Delete pages that are not in the new website data
-    const pagesPath = join(storageRootPath, websiteId, pagesFolder)
+    const pagesPath = posix.join(storageRootPath, websiteId, pagesFolder)
     try {
       const existingPageFiles = await this.readdir(ftp, pagesPath)
       const newPageFiles = new Set(
@@ -516,7 +516,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
 
       for (const existingFile of existingPageFiles) {
         if (existingFile.name.endsWith('.json') && !newPageFiles.has(existingFile.name)) {
-          await this.unlink(ftp, join(pagesPath, existingFile.name))
+          await this.unlink(ftp, posix.join(pagesPath, existingFile.name))
         }
       }
     } catch (error) {
@@ -530,7 +530,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
     }
 
     for (const file of filesToWrite) {
-      const filePath = join(storageRootPath, websiteId, file.path)
+      const filePath = posix.join(storageRootPath, websiteId, file.path)
       await this.write(ftp, filePath, file.content)
     }
 
@@ -540,7 +540,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
   async deleteWebsite(session: FtpSession, websiteId: string): Promise<void> {
     const storageRootPath = this.rootPath(session)
     const ftp = await this.getClient(this.sessionData(session))
-    const websitePath = join(storageRootPath, websiteId)
+    const websitePath = posix.join(storageRootPath, websiteId)
     await this.rmdir(ftp, websitePath)
     this.closeClient(ftp)
   }
@@ -549,8 +549,8 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
     const newWebsiteId = uuid()
     const storageRootPath = this.rootPath(session)
     const ftp = await this.getClient(this.sessionData(session))
-    const websitePath = join(storageRootPath, websiteId)
-    const newWebsitePath = join(storageRootPath, newWebsiteId)
+    const websitePath = posix.join(storageRootPath, websiteId)
+    const newWebsitePath = posix.join(storageRootPath, newWebsiteId)
     const tempDir = await mkdtemp(tmpdir())
     await ftp.downloadToDir(websitePath, tempDir)
     await ftp.uploadFromDir(tempDir, newWebsitePath)
@@ -596,7 +596,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
           message: `Writing file ${file.path}`,
           status: JobStatus.IN_PROGRESS,
         })
-        const dstPath = join(this.options.path, rootPath, id, relativePath, file.path)
+        const dstPath = posix.join(this.options.path, rootPath, id, relativePath, file.path)
         lastFile = file
         const result = await this.write(ftp, dstPath, file.content, message => {
           statusCbk && statusCbk({
@@ -624,7 +624,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
     if (!this.sessionData(session)) throw new Error('Not logged in')
     const storageRootPath = this.rootPath(session)
     const ftp = await this.getClient(this.sessionData(session))
-    const dirPath = join(this.options.path, storageRootPath, id, this.options.assetsFolder, path)
+    const dirPath = posix.join(this.options.path, storageRootPath, id, this.options.assetsFolder, path)
     const asset = await this.read(ftp, dirPath)
     this.closeClient(ftp)
     return asset
@@ -634,7 +634,7 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
     const storageRootPath = this.rootPath(session)
     const ftp = await this.getClient(this.sessionData(session))
     await Promise.all(
-      paths.map((path) => this.unlink(ftp, join(this.options.path, storageRootPath, id, this.options.assetsFolder, path)))
+      paths.map((path) => this.unlink(ftp, posix.join(this.options.path, storageRootPath, id, this.options.assetsFolder, path)))
     )
     this.closeClient(ftp)
   }
@@ -655,8 +655,8 @@ export default class FtpConnector implements StorageConnector<FtpSession> {
     const rootPath = this.rootPath(session)
     const ftp = await this.getClient(this.sessionData(session))
     await this.mkdir(ftp, rootPath)
-    await this.mkdir(ftp, join(rootPath, this.options.assetsFolder))
-    await this.mkdir(ftp, join(rootPath, this.options.cssFolder))
+    await this.mkdir(ftp, posix.join(rootPath, this.options.assetsFolder))
+    await this.mkdir(ftp, posix.join(rootPath, this.options.cssFolder))
     // Write files
     // Do not await for the result, return the job and continue the publication in the background
     this.writeFile(session, '', files, '', async ({status, message}) => {

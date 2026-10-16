@@ -53,6 +53,13 @@ test('uses the same page slug algorithm as Silex serialization', () => {
   assert.equal(pageSlug('New Page', 1), 'new-page')
 })
 
+test('preserves semantic data bindings for editable template slots', () => {
+  const source = fixture()
+  source.deck.pages[0].objects[0].attributes['data-binding-id'] = 'report.title'
+  const result = createSilexProject(source)
+  assert.equal(result.pages[0].frames[0].component.components[0].components[0].attributes['data-binding-id'], 'report.title')
+})
+
 test('writes split Silex website files and refuses accidental overwrite', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'silex-monthly-adapter-'))
   const result = createSilexProject(fixture())

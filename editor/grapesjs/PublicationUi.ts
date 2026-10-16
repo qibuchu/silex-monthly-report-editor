@@ -266,7 +266,7 @@ export class PublicationUi {
   }
   async renderLoginDialog(status: PublicationStatus): Promise<TemplateResult> {
     try {
-      render(html`<main><p>Loading</p></main>`, this.el)
+      render(html`<main><p>正在加载</p></main>`, this.el)
       const hostingConnectors = await connectorList({ type: ConnectorType.HOSTING })
       const loggedConnectors: ConnectorData[] = hostingConnectors.filter(connector => connector.isLoggedIn)
       // `notice` says the server refused the hosting this website was saved

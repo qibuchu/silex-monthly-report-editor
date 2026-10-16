@@ -96,6 +96,7 @@ module.exports = {
   extensionAlias: { '.js': ['.ts', '.js'], '.mjs': ['.mts', '.mjs'] },
   alias: pluginAliases,
   modules: [
+    'node_modules',
     path.resolve(__dirname, 'node_modules'),
   ],
 },

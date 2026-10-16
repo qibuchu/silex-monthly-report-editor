@@ -3,7 +3,9 @@
 import onboarding from './js/client-plugins/onboarding.js'
 
 export default async function (config) {
-    config.addPlugin(onboarding, {})
+    // Local report projects do not use SaaS email onboarding. Avoid unnecessary
+    // network requests and notifications on offline/internal deployments.
+    if (!new URL(location.href).searchParams.has('serviceProject')) config.addPlugin(onboarding, {})
     config.addPublicationTransformers({
         transformPermalink: (path, type) => {
             // Replace /index.html with /

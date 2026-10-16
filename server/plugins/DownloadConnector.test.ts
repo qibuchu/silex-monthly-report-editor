@@ -1,5 +1,6 @@
 import { expect, jest, beforeEach, it, describe } from '@jest/globals'
 import { ServerEvent } from '~/server/events'
+import { join } from 'path'
 
 const unlink = jest.fn((_path, cb: (err?: Error) => void) => cb())
 
@@ -47,8 +48,9 @@ describe('DownloadConnector download route', () => {
 
     await handler({params: {tmpZipFile: 'website-123.zip'}}, res)
 
-    expect(sendFile).toHaveBeenCalledWith('/tmp/website-123.zip', {}, expect.any(Function))
-    expect(unlink).toHaveBeenCalledWith('/tmp/website-123.zip', expect.any(Function))
+    // This is an OS-local path, unlike FTP paths which always use POSIX.
+    expect(sendFile).toHaveBeenCalledWith(join('/tmp', 'website-123.zip'), {}, expect.any(Function))
+    expect(unlink).toHaveBeenCalledWith(join('/tmp', 'website-123.zip'), expect.any(Function))
     expect(res.status).not.toHaveBeenCalled()
   })
 

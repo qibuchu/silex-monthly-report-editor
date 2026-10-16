@@ -160,9 +160,10 @@ function renderPages(editor, config) {
   const pages = editor.Pages.getAll()
   const selected = editor.Pages.getSelected()
   const getPageFromEvent = (e) => {
-    const el = e.target.hasAttribute('data-page-id') ? e.target : e.target.parentNode
+    const el = (e.target as HTMLElement).closest('[data-page-id]')
     e.stopPropagation()
-    return editor.Pages.get(el.getAttribute('data-page-id'))
+    if (!el) throw new Error('未找到目标页面。')
+    return editor.Pages.get(el.getAttribute('data-page-id')!)
   }
 
   // Drag and drop handlers
@@ -274,7 +275,7 @@ function renderPages(editor, config) {
                  @dragstart=${(e: DragEvent) => handleDragStart(e, page)}
                  @dragend=${handleDragEnd}
                ></i>
-               ${ name }
+               <span class="pages__label" title=${name}>${ name }</span>
              </div>
               <i class="pages__icon pages__clone-btn fa fa-clone" title="复制页面" @click=${(e: Event) => { e.stopPropagation(); clonePage(editor, getPageFromEvent(e)) }}></i>
               <i class="pages__icon fa fa-cog" title="页面设置" @click=${(e: Event) => { e.stopPropagation(); settingsPage(editor, config, getPageFromEvent(e)) }}></i>

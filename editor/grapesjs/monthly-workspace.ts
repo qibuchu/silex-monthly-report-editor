@@ -1,8 +1,9 @@
 import { Component, Editor, Page } from 'grapesjs'
 import { cmdOpenTableTools, cmdOpenGeometry, cmdToggleFreePosition, cmdToggleLock } from './presentation-mode'
 import { cmdImportPptx } from './pptx-import'
+import { cmdPublish } from './PublicationUi'
+import { serviceProjectId, submitMarkedRequest, openServiceExport } from './monthly-service-storage'
 
-export const cmdToggleWorkspaceMode = 'monthly-workspace:toggle-mode'
 export const cmdSaveProject = 'monthly-workspace:save'
 export const cmdUndo = 'monthly-workspace:undo'
 export const cmdRedo = 'monthly-workspace:redo'
@@ -10,8 +11,6 @@ export const cmdCreateAiRequest = 'monthly-ai:create-request'
 export const cmdApplyAiPatch = 'monthly-ai:apply-patch'
 const cmdToggleBlocks = 'open-blocks'
 const cmdToggleLayers = 'open-layers'
-
-type WorkspaceMode = 'basic' | 'advanced'
 
 export type AiObjectRequest = {
   id: string
@@ -241,11 +240,11 @@ function openAiDialog(editor: Editor, marked: Set<Component>, initialMode: boole
     <label>修改需求<textarea data-requirement placeholder="例如：将这些卡片统一成浅色背景，并把标题改为本月重点产品。"></textarea></label>
     <div class="monthly-ai-dialog__actions">
       <button data-action="mark-selection">标记当前所选</button><button data-action="clear">清除标记</button>
-      <button data-action="generate" class="primary">生成结构化请求</button><button data-action="copy">复制请求</button>
+      ${serviceProjectId ? '<button data-action="submit-service" class="primary">提交给服务器 AI</button>' : '<button data-action="generate" class="primary">生成结构化请求</button><button data-action="copy">复制请求</button>'}
     </div>
-    <label>结构化 AI 请求<textarea data-request readonly></textarea></label>
+    ${serviceProjectId ? '<p>提交后，本地 AI 可通过 MCP 读取标记需求。修改方案可在月报服务中预览并确认。</p>' : `<label>结构化 AI 请求<textarea data-request readonly></textarea></label>
     <label>导入 AI 补丁<textarea data-patch placeholder='{"schema":"monthly-editor-ai-patch/v1","objects":[{"id":"对象ID","text":"新文本","style":{"color":"#00366b"}}]}'></textarea></label>
-    <div class="monthly-ai-dialog__actions"><button data-action="example">填入示例补丁</button><button data-action="apply" class="primary">按对象 ID 应用补丁</button></div>`
+    <div class="monthly-ai-dialog__actions"><button data-action="example">填入示例补丁</button><button data-action="apply" class="primary">按对象 ID 应用补丁</button></div>`}`
   let markMode = initialMode
   const refreshMarked = () => {
     const target = panel.querySelector('.monthly-ai-dialog__marked')!
@@ -264,6 +263,10 @@ function openAiDialog(editor: Editor, marked: Set<Component>, initialMode: boole
     if (!action) return
     try {
       if (action === 'toggle-mode') setMode(!markMode)
+      if (action === 'submit-service') {
+        const request = await submitMarkedRequest(editor, [...marked], (panel.querySelector('[data-requirement]') as HTMLTextAreaElement).value)
+        notify(editor, 'success', `已提交需求 ${request.id}，本地 AI 可通过 MCP 读取。`)
+      }
       if (action === 'mark-selection') editor.getSelectedAll().forEach(component => marked.add(component))
       if (action === 'clear') marked.clear()
       if (action === 'generate') {
@@ -327,6 +330,59 @@ function replaceImage(editor: Editor, component: Component) {
   })
 }
 
+function slideInsertionTarget(editor: Editor): Component {
+  const root = editor.Pages.getSelected()?.getMainComponent() || editor.getWrapper()
+  if (!root) throw new Error('请先打开一个页面。')
+  return root.find('[data-report-page]')[0] || root
+}
+
+function insertSimpleElement(editor: Editor, kind: 'text' | 'image', src?: string) {
+  const target = slideInsertionTarget(editor)
+  const onSlide = Boolean(target.getAttributes()['data-report-page'])
+  const commonStyle = onSlide ? { position: 'absolute', left: '320px', top: '240px' } : { margin: '12px' }
+  const component = target.components().add(kind === 'text' ? {
+    type: 'text', tagName: 'div', components: '双击编辑文字',
+    attributes: { 'data-kind': 'text', 'data-name': '新文字', 'data-report-object': 'true' },
+    style: { ...commonStyle, width: '320px', padding: '8px', color: '#00366b', 'font-size': '24px', 'line-height': '1.4' },
+  } : {
+    type: 'image', tagName: 'img',
+    attributes: { src: src || '', alt: '新图片', 'data-kind': 'image', 'data-name': '新图片', 'data-report-object': 'true' },
+    style: { ...commonStyle, width: '320px', height: '180px', 'object-fit': 'contain' },
+  }) as Component
+  component.addAttributes({ 'data-object-id': component.getId(), 'data-binding-id': component.getId() })
+  editor.select(component)
+  return component
+}
+
+function insertImage(editor: Editor) {
+  editor.AssetManager.open({
+    select(asset, complete) {
+      insertSimpleElement(editor, 'image', asset.getSrc())
+      if (complete) editor.AssetManager.close()
+    },
+    types: ['image'],
+  })
+}
+
+function fontSizeTargets(component: Component): Component[] {
+  const root = component.get('type') === 'textnode' ? component.parent() || component : component
+  const textDescendants = root.find('*').filter(child => /^(p|span|h[1-6]|a|li)$/i.test(String(child.get('tagName') || '')))
+  return [root, ...textDescendants]
+}
+
+function fontSizeValue(component: Component): number {
+  const targets = fontSizeTargets(component)
+  const styled = [...targets].reverse().find(target => Number.parseFloat(String(target.getStyle()['font-size'])) > 0)
+  const element = (styled || targets[targets.length - 1]).getEl()
+  const value = styled?.getStyle()['font-size'] || element?.ownerDocument.defaultView?.getComputedStyle(element).fontSize || '24px'
+  return Math.round(Number.parseFloat(String(value)) || 24)
+}
+
+function setFontSize(component: Component, size: number) {
+  if (!Number.isFinite(size) || size < 1 || size > 400) return
+  fontSizeTargets(component).forEach(target => target.setStyle({ ...target.getStyle(), 'font-size': `${size}px` }))
+}
+
 function editSelected(editor: Editor) {
   const component = editor.getSelected()
   if (!component) throw new Error('请先选择对象。')
@@ -343,13 +399,14 @@ function renderSelectionInspector(editor: Editor, panel: HTMLElement, quick: HTM
   if (!component || component === page?.getMainComponent()) {
     panel.innerHTML = `<header><strong>页面属性</strong><span>${escapeHtml(page?.getName() || '')}</span></header><p>选择对象后可编辑文字、图片、表格、图表或卡片属性。</p>`
     quick.classList.remove('visible')
+    panel.append(quick)
     return
   }
   const kind = businessKind(component)
   const style = component.getStyle() as Record<string, string>
   panel.innerHTML = `<header><strong>${escapeHtml(kindLabels[kind] || '对象')}属性</strong><span>${escapeHtml(businessName(component))}</span></header>
     <label>业务名称<input data-property="name" value="${escapeHtml(businessName(component))}"></label>
-    ${kind === 'text' || kind === 'shape' ? `<div class="monthly-property-grid"><label>字号<input data-style="font-size" value="${escapeHtml(style['font-size'] || '')}" placeholder="24px"></label><label>颜色<input data-style="color" type="color" value="${escapeHtml(/^#[0-9a-f]{6}$/i.test(style.color || '') ? style.color : '#00366b')}"></label></div>` : ''}
+    ${kind === 'text' || kind === 'shape' ? `<div class="monthly-property-grid"><label>字号（px）<input data-font-size type="number" min="1" max="400" step="1" value="${fontSizeValue(component)}"></label><label>颜色<input data-style="color" type="color" value="${escapeHtml(/^#[0-9a-f]{6}$/i.test(style.color || '') ? style.color : '#00366b')}"></label></div>` : ''}
     ${kind === 'image' ? '<button data-inspector-action="replace-image">替换图片</button><label>适应方式<select data-style="object-fit"><option value="cover">裁切填充</option><option value="contain">完整显示</option><option value="fill">拉伸填充</option></select></label>' : ''}
     ${kind === 'table' ? '<button data-inspector-action="table">批量粘贴与行列设置</button>' : ''}
     ${kind === 'chart' ? '<button data-inspector-action="chart">编辑图表数据</button><p>图表数据编辑器将在下一阶段接入；当前可调整位置与尺寸。</p>' : ''}
@@ -358,6 +415,9 @@ function renderSelectionInspector(editor: Editor, panel: HTMLElement, quick: HTM
   panel.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-style]').forEach(input => {
     if (input instanceof HTMLSelectElement && style[input.dataset.style!]) input.value = style[input.dataset.style!]
     input.addEventListener('change', () => component.setStyle({ ...component.getStyle(), [input.dataset.style!]: input.value }))
+  })
+  panel.querySelector<HTMLInputElement>('[data-font-size]')?.addEventListener('input', event => {
+    setFontSize(component, Number((event.target as HTMLInputElement).value))
   })
   panel.querySelector<HTMLInputElement>('[data-property="name"]')?.addEventListener('change', event => {
     const value = (event.target as HTMLInputElement).value.trim()
@@ -371,6 +431,7 @@ function renderSelectionInspector(editor: Editor, panel: HTMLElement, quick: HTM
     if (action === 'table') editor.runCommand(cmdOpenTableTools)
     if (action === 'geometry' || action === 'chart') editor.runCommand(cmdOpenGeometry)
   }
+  panel.append(quick)
   quick.classList.add('visible')
   quick.querySelector('[data-quick="edit"]')!.textContent = kind === 'image' ? '替换' : '编辑'
 }
@@ -388,26 +449,25 @@ function injectStyles() {
   const style = document.createElement('style')
   style.id = 'monthly-workspace-style'
   style.textContent = `
-    .monthly-command-bar { position:fixed; z-index:1001; left:70px; right:250px; top:4px; min-height:40px; display:flex; align-items:center; gap:5px; padding:4px 8px; border:1px solid #3f4a55; border-radius:7px; color:#e8eef4; background:#242b32; box-shadow:0 4px 16px #0005; }
-    .monthly-command-group { display:flex; align-items:center; gap:3px; padding-right:6px; border-right:1px solid #46515c; }
+    .monthly-command-bar { position:fixed; z-index:1001; left:35px; right:var(--viewsPanelWidth); top:42px; min-height:44px; box-sizing:border-box; display:flex; flex-wrap:wrap; align-content:center; align-items:center; gap:4px 5px; padding:4px 8px; border:1px solid #3f4a55; border-radius:7px; color:#e8eef4; background:#242b32; }
+    .silex-squeeze-left .monthly-command-bar { left:calc(var(--viewsProjectPanelWidth) + 35px); }
+    body.monthly-advanced-mode .gjs-cv-canvas { top:124px!important; height:calc(100% - 124px - var(--footerHeight))!important; }
+    .monthly-command-group { display:flex; flex:none; align-items:center; gap:3px; padding-right:6px; border-right:1px solid #46515c; }
     .monthly-command-group:last-child { border:0; } .monthly-command-group strong { color:#aeb9c4; padding:0 4px; font-size:10px; font-weight:600; }
     .monthly-command-bar button,.monthly-selection-panel button,.monthly-quick-actions button,.monthly-ai-dialog button { padding:6px 9px; border:1px solid transparent; border-radius:4px; color:#e8eef4; background:#303944; cursor:pointer; white-space:nowrap; }
     .monthly-command-bar button:hover,.monthly-selection-panel button:hover,.monthly-quick-actions button:hover,.monthly-ai-dialog button:hover { border-color:#5999d0; background:#394857; }
-    .monthly-command-bar button.active { color:#fff; background:#2275b8; } .monthly-save-status { margin-left:auto; min-width:105px; color:#9fc5a9; font-size:11px; text-align:right; }
+    .monthly-command-bar button.active { color:#fff; background:#2275b8; } .monthly-save-status { flex:none; margin-left:auto; min-width:105px; color:#9fc5a9; font-size:11px; text-align:right; }
     .monthly-save-status.dirty { color:#e4b15a; } .monthly-save-status.error { color:#f27c7c; }
-    .monthly-selection-panel { position:fixed; z-index:999; right:12px; top:58px; width:225px; max-height:calc(100vh - 120px); overflow:auto; padding:12px; border:1px solid #3f4a55; border-radius:7px; color:#e8eef4; background:#242b32; box-shadow:0 4px 16px #0005; }
-    body.monthly-advanced-mode .monthly-selection-panel { right:270px; }
+    .monthly-selection-panel { position:relative; z-index:1; box-sizing:border-box; width:calc(100% - 16px); max-height:35vh; overflow:auto; margin:8px; padding:12px; border:1px solid #3f4a55; border-radius:7px; color:#e8eef4; background:#242b32; }
     .monthly-selection-panel header { display:grid; gap:3px; padding-bottom:10px; border-bottom:1px solid #46515c; } .monthly-selection-panel header span,.monthly-selection-panel p { color:#aeb9c4; font-size:11px; }
     .monthly-selection-panel label { display:grid; gap:4px; margin-top:10px; color:#bdc8d2; font-size:11px; } .monthly-selection-panel input,.monthly-selection-panel select,.monthly-ai-dialog textarea { box-sizing:border-box; width:100%; padding:7px; border:1px solid #4d5a67; border-radius:4px; color:#fff; background:#1b2026; }
     .monthly-selection-panel button { width:100%; margin-top:10px; } .monthly-property-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
-    .monthly-quick-actions { position:fixed; z-index:1000; left:50%; bottom:14px; display:none; gap:4px; padding:5px; transform:translateX(-50%); border:1px solid #46515c; border-radius:7px; background:#242b32; box-shadow:0 4px 18px #0007; } .monthly-quick-actions.visible { display:flex; }
+    .monthly-quick-actions { display:none; flex-wrap:wrap; gap:4px; padding-top:8px; } .monthly-quick-actions.visible { display:flex; }
+    .monthly-selection-panel .monthly-quick-actions button { flex:1 1 calc(33.33% - 4px); width:auto; margin-top:0; }
     .monthly-ai-dialog { min-width:620px; display:grid; gap:12px; color:#ddd; } .monthly-ai-dialog__mode { display:flex; align-items:center; gap:8px; } .monthly-ai-dialog__mode span { flex:1; color:#aeb8c2; font-size:12px; }
     .monthly-ai-dialog__marked { display:flex; flex-wrap:wrap; gap:6px; } .monthly-ai-dialog__marked strong { width:100%; } .monthly-ai-dialog__marked span { display:grid; padding:5px 8px; border-radius:4px; background:#303944; font-size:12px; } .monthly-ai-dialog__marked small { color:#95a3af; }
     .monthly-ai-dialog label { display:grid; gap:5px; } .monthly-ai-dialog textarea { min-height:90px; font:12px/1.45 monospace; resize:vertical; } .monthly-ai-dialog [data-request] { min-height:150px; }
     .monthly-ai-dialog__actions { display:flex; justify-content:flex-end; gap:6px; } .monthly-ai-dialog .primary { background:#2275b8; }
-    body.monthly-basic-mode .gjs-clm-tags, body.monthly-basic-mode .gjs-sm-header, body.monthly-basic-mode [data-sector-title="选择器"], body.monthly-basic-mode .project-bar__panel .gjs-clm-tags { display:none!important; }
-    body.monthly-basic-mode .gjs-pn-views-container { display:none!important; }
-    body.monthly-basic-mode [title^="符号"], body.monthly-basic-mode [title^="字体"], body.monthly-basic-mode [title="CSS 变量"], body.monthly-basic-mode [title^="设置 ("] { display:none!important; }
     body.monthly-ai-mark-mode .monthly-command-bar [data-action="ai"] { color:#fff; background:#ad651e; }
   `
   document.head.append(style)
@@ -420,32 +480,46 @@ function createWorkspaceUi(editor: Editor) {
   bar.innerHTML = `
     <div class="monthly-command-group"><strong>文件</strong><button data-command="${cmdSaveProject}">保存</button><button data-command="${cmdImportPptx}">导入PPT</button></div>
     <div class="monthly-command-group"><strong>历史</strong><button data-command="${cmdUndo}">撤销</button><button data-command="${cmdRedo}">重做</button></div>
-    <div class="monthly-command-group"><strong>插入</strong><button data-command="${cmdToggleBlocks}">组件</button></div>
+    <div class="monthly-command-group"><strong>插入</strong><button data-action="insert-text">文字</button><button data-action="insert-image">图片</button><button data-command="${cmdToggleBlocks}">更多组件</button></div>
     <div class="monthly-command-group"><strong>排列</strong><button data-command="${cmdToggleFreePosition}">自由移动</button><button data-command="${cmdOpenGeometry}">位置尺寸</button><button data-command="${cmdToggleLayers}">对象树</button></div>
     <div class="monthly-command-group"><strong>数据</strong><button data-command="${cmdOpenTableTools}">表格</button><button data-action="ai">AI 标记</button></div>
-    <div class="monthly-command-group"><strong>查看</strong><button data-command="preview">预览</button><button data-action="export">导出</button><button data-action="mode">高级模式</button></div>
+    <div class="monthly-command-group"><strong>查看</strong><button data-command="preview">预览</button><button data-action="export">导出</button></div>
     <span class="monthly-save-status">已自动保存</span>`
   const inspector = document.createElement('aside')
   inspector.className = 'monthly-selection-panel'
   const quick = document.createElement('div')
   quick.className = 'monthly-quick-actions'
   quick.innerHTML = '<button data-quick="edit">编辑</button><button data-quick="duplicate">复制</button><button data-quick="back">下移</button><button data-quick="front">上移</button><button data-quick="lock">锁定</button><button data-quick="delete">删除</button>'
-  document.body.append(bar, inspector, quick)
+  inspector.append(quick)
+  const stylesPanel = document.querySelector('.gjs-pn-views-container')
+  if (stylesPanel) stylesPanel.prepend(inspector)
+  else document.body.append(inspector)
+  document.body.append(bar)
   return { bar, inspector, quick }
 }
 
 export default function monthlyWorkspacePlugin(editor: Editor) {
-  let mode: WorkspaceMode = 'basic'
+  const fitSlideFrame = () => {
+    const element = editor.Canvas.getDocument()?.querySelector<HTMLElement>('[data-report-page], [data-pptx-page]')
+    if (!element) return
+    const frame = editor.Canvas.getFrame()
+    const width = element.offsetWidth || 1920
+    const height = element.offsetHeight || 1080
+    const device = editor.Devices.getAll().at(0)
+    if (device) { device.set({ width: `${width}px`, height: `${height}px`, widthMedia: '' }); editor.Devices.select(String(device.id)) }
+    frame?.set({ width, height })
+    requestAnimationFrame(() => editor.Canvas.fitViewport({ frame, gap: 32 }))
+  }
+  editor.on('canvas:frame:load', fitSlideFrame)
+  editor.on('load', fitSlideFrame)
+  editor.on('component:mount', (component: Component) => {
+    const attrs = component.getAttributes()
+    if (attrs['data-report-page'] || attrs['data-pptx-page']) requestAnimationFrame(fitSlideFrame)
+  })
   let aiMarkMode = false
   const marked = new Set<Component>()
   let statusTimer: number | undefined
 
-  editor.Commands.add(cmdToggleWorkspaceMode, () => {
-    mode = mode === 'basic' ? 'advanced' : 'basic'
-    document.body.classList.toggle('monthly-basic-mode', mode === 'basic')
-    document.body.classList.toggle('monthly-advanced-mode', mode === 'advanced')
-    window.setTimeout(() => editor.refresh(), 0)
-  })
   editor.Commands.add(cmdSaveProject, async () => editor.store())
   editor.Commands.add(cmdUndo, () => editor.UndoManager.undo())
   editor.Commands.add(cmdRedo, () => editor.UndoManager.redo())
@@ -459,20 +533,32 @@ export default function monthlyWorkspacePlugin(editor: Editor) {
   })
 
   editor.on('load', () => {
-    document.body.classList.add('monthly-basic-mode')
-    document.body.classList.remove('monthly-advanced-mode')
+    if (new URL(location.href).searchParams.get('ui') !== 'legacy') {
+      injectStyles()
+      assignBusinessNames(editor)
+      if (serviceProjectId) editor.Commands.add(cmdPublish, () => openServiceExport(editor))
+      editor.Commands.add('monthly-ai:open-native', () => openAiDialog(editor, marked, aiMarkMode, active => { aiMarkMode = active; updateAiHighlight(editor, marked, active) }))
+      editor.Panels.addButton('options', { id: 'monthly-ai-native', className: 'fa-solid fa-wand-magic-sparkles', command: 'monthly-ai:open-native', togglable: false, attributes: { title: 'AI 标记与需求', 'aria-label': 'AI 标记与需求' } })
+      editor.on('component:selected', (component: Component) => {
+        if (!aiMarkMode) return
+        marked.add(component)
+        updateAiHighlight(editor, marked, true)
+      })
+      return
+    }
+    document.body.classList.remove('monthly-basic-mode')
+    document.body.classList.add('monthly-advanced-mode')
     assignBusinessNames(editor)
     const { bar, inspector, quick } = createWorkspaceUi(editor)
     const status = bar.querySelector('.monthly-save-status') as HTMLElement
-    const modeButton = bar.querySelector('[data-action="mode"]') as HTMLButtonElement
-    const updateModeButton = () => { modeButton.textContent = mode === 'basic' ? '高级模式' : '基础模式'; modeButton.classList.toggle('active', mode === 'advanced') }
     const setStatus = (text: string, state = '') => { status.textContent = text; status.className = `monthly-save-status ${state}`.trim() }
     const guarded = (action: () => void) => { try { action() } catch (error) { notify(editor, 'error', error instanceof Error ? error.message : String(error)) } }
     bar.addEventListener('click', event => {
       const button = (event.target as HTMLElement).closest('button') as HTMLButtonElement | null
       if (!button) return
       if (button.dataset.command) guarded(() => editor.runCommand(button.dataset.command!))
-      if (button.dataset.action === 'mode') { editor.runCommand(cmdToggleWorkspaceMode); updateModeButton() }
+      if (button.dataset.action === 'insert-text') guarded(() => insertSimpleElement(editor, 'text'))
+      if (button.dataset.action === 'insert-image') guarded(() => insertImage(editor))
       if (button.dataset.action === 'ai') {
         if (!aiMarkMode) {
           aiMarkMode = true
@@ -482,7 +568,7 @@ export default function monthlyWorkspacePlugin(editor: Editor) {
           openAiDialog(editor, marked, aiMarkMode, active => { aiMarkMode = active; document.body.classList.toggle('monthly-ai-mark-mode', active); updateAiHighlight(editor, marked, active) })
         }
       }
-      if (button.dataset.action === 'export') guarded(() => editor.runCommand('publish'))
+      if (button.dataset.action === 'export') guarded(() => editor.runCommand(cmdPublish))
     })
     quick.addEventListener('click', event => {
       const action = (event.target as HTMLElement).closest('button')?.dataset.quick
@@ -518,7 +604,6 @@ export default function monthlyWorkspacePlugin(editor: Editor) {
     editor.on('storage:end:store', () => setStatus(`已保存 ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`))
     editor.on('storage:error:store', () => setStatus('保存失败，请重试', 'error'))
     renderSelectionInspector(editor, inspector, quick)
-    updateModeButton()
   })
 
   editor.on('ai-capabilities:ready', (addCapability: (capability: unknown) => void) => {

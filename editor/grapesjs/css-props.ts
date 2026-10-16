@@ -25,13 +25,44 @@ import { registerSector } from './sectors'
 // A css wide keyword is the value of a whole declaration, it is never one part of one
 const CSS_WIDE_KEYWORDS = ['inherit', 'initial', 'revert', 'unset']
 
+const STYLE_PROPERTY_LABELS_ZH: Record<string, string> = {
+  'Display': '显示方式', 'Visibility': '可见性', 'Position': '定位方式', 'Container Type': '容器类型',
+  'Top': '上', 'Bottom': '下', 'Right': '右', 'Left': '左', 'Content': '内容',
+  'Width': '宽度', 'Height': '高度', 'Min width': '最小宽度', 'Max width': '最大宽度',
+  'Min height': '最小高度', 'Max height': '最大高度', 'Overflow': '溢出', 'Overflow X': '水平溢出', 'Overflow Y': '垂直溢出',
+  'Margin': '外边距', 'Margin top': '上外边距', 'Margin right': '右外边距', 'Margin bottom': '下外边距', 'Margin left': '左外边距',
+  'Padding': '内边距', 'Padding top': '上内边距', 'Padding right': '右内边距', 'Padding bottom': '下内边距', 'Padding left': '左内边距',
+  'Font size': '字号', 'Font weight': '字重', 'Letter spacing': '字符间距', 'Color': '文字颜色', 'Line height': '行高', 'Text align': '文本对齐',
+  'Word break': '单词换行', 'Word wrap': '文本换行', 'White space': '空白处理', 'Text decoration': '文本装饰',
+  'Text decoration line': '装饰线', 'Text decoration style': '装饰线样式', 'Text decoration color': '装饰线颜色',
+  'Text decoration thickness': '装饰线粗细', 'Text underline offset': '下划线偏移', 'Text transform': '大小写转换', 'Text overflow': '文本溢出',
+  'Background color': '背景颜色', 'Background image': '背景图片', 'Border radius': '圆角',
+  'Top left': '左上', 'Top right': '右上', 'Bottom right': '右下', 'Bottom left': '左下',
+  'Outline': '轮廓线', 'Outline width': '轮廓线宽度', 'Outline style': '轮廓线样式', 'Outline color': '轮廓线颜色',
+  'Z index': '层级', 'Pointer events': '鼠标事件', 'Transition': '过渡', 'Property': '属性', 'Duration': '持续时间',
+  'Timing function': '速度曲线', 'Transform origin': '变换原点', 'X offset': 'X 偏移', 'Y offset': 'Y 偏移', 'Z offset': 'Z 偏移', 'Cursor': '鼠标指针',
+  'Column count': '分栏数', 'Column width': '分栏宽度', 'Column gap': '分栏间距', 'Row Gap': '行间距',
+  'Column rule': '分栏分隔线', 'Column rule width': '分隔线宽度', 'Column rule style': '分隔线样式', 'Column rule color': '分隔线颜色',
+  'Column span': '跨栏', 'Scroll Behavior': '滚动行为', 'Scroll Snap Type': '滚动捕捉类型', 'Direction': '方向', 'Mode': '模式',
+  'Scroll Padding': '滚动内边距', 'Scroll Snap Align': '滚动捕捉对齐',
+}
+
+function localizeStyleProperties(editor: Editor) {
+  const visit = (properties: any) => properties?.forEach?.((property: any) => {
+    const name = property.get?.('name')
+    if (STYLE_PROPERTY_LABELS_ZH[name]) property.set('name', STYLE_PROPERTY_LABELS_ZH[name])
+    visit(property.get?.('properties'))
+  })
+  editor.StyleManager.getSectors().forEach(sector => visit(sector.getProperties()))
+}
+
 export default (editor: Editor, opts) => {
   // custom StyleManager type for background-image with Asset Manager integration
   editor.StyleManager.addType('background-image-asset', {
     create() {
       const btn = document.createElement('button')
-      btn.textContent = 'Select / Replace Image'
-      btn.title = 'Replace background image'
+      btn.textContent = '选择或替换背景图片'
+      btn.title = '替换背景图片'
       btn.className = 'gjs-btn-prim silex-sm-background-image-btn'
 
       btn.addEventListener('click', () => {
@@ -396,15 +427,15 @@ export default (editor: Editor, opts) => {
       fixedValues: ['inherit', 'initial', 'unset', 'auto'],
       options: [
         { id: '', label: '' },
-        { id: '100', label: 'Thin' },
-        { id: '200', label: 'Extra-Light' },
-        { id: '300', label: 'Light' },
-        { id: '400', label: 'Normal' },
-        { id: '500', label: 'Medium' },
-        { id: '600', label: 'Semi-Bold' },
-        { id: '700', label: 'Bold' },
-        { id: '800', label: 'Extra-Bold' },
-        { id: '900', label: 'Ultra-Bold' }
+        { id: '100', label: '极细' },
+        { id: '200', label: '细体' },
+        { id: '300', label: '较细' },
+        { id: '400', label: '常规' },
+        { id: '500', label: '中等' },
+        { id: '600', label: '半粗' },
+        { id: '700', label: '粗体' },
+        { id: '800', label: '特粗' },
+        { id: '900', label: '黑体' }
       ]
     }, { at: 2 })
     editor.StyleManager.removeProperty('typography', 'letter-spacing')
@@ -441,10 +472,10 @@ export default (editor: Editor, opts) => {
       defaults: '',
       options: [
         { id: '', label: '' },
-        { id: 'left', label: 'left' },
-        { id: 'center', label: 'center' },
-        { id: 'right', label: 'right' },
-        { id: 'justify', label: 'justify' },
+        { id: 'left', label: '左对齐' },
+        { id: 'center', label: '居中' },
+        { id: 'right', label: '右对齐' },
+        { id: 'justify', label: '两端对齐' },
         { id: 'inherit', label: 'inherit' },
         { id: 'initial', label: 'initial' },
         { id: 'unset', label: 'unset' },
@@ -1040,32 +1071,33 @@ export default (editor: Editor, opts) => {
       info: 'Aligns elements to scroll snaps.',
     }, { at: 14 })
 
-    editor.SelectorManager.states.add({name: 'before', label: 'Before'})
-    editor.SelectorManager.states.add({name: 'after', label: 'After'})
-    editor.SelectorManager.states.add({name: 'active', label: 'Active'})
-    editor.SelectorManager.states.add({name: 'first-child', label: 'First child'})
-    editor.SelectorManager.states.add({name: 'last-child', label: 'Last child'})
-    editor.SelectorManager.states.add({name: 'focus', label: 'Focus'})
-    editor.SelectorManager.states.add({name: 'visited', label: 'Visited'})
-    editor.SelectorManager.states.add({name: 'link', label: 'Link'})
-    editor.SelectorManager.states.add({name: 'first-letter', label: 'First letter'})
-    editor.SelectorManager.states.add({name: 'first-line', label: 'First line'})
-    editor.SelectorManager.states.add({name: 'selection', label: 'Selection'})
-    editor.SelectorManager.states.add({name: 'empty', label: 'Empty'})
-    editor.SelectorManager.states.add({name: 'enabled', label: 'Enabled'})
-    editor.SelectorManager.states.add({name: 'disabled', label: 'Disabled'})
-    editor.SelectorManager.states.add({name: 'checked', label: 'Checked'})
-    editor.SelectorManager.states.add({name: 'indeterminate', label: 'Indeterminate'})
-    editor.SelectorManager.states.add({name: 'placeholder-shown', label: 'Placeholder shown'})
-    editor.SelectorManager.states.add({name: 'placeholder', label: 'Placeholder'})
-    editor.SelectorManager.states.add({name: 'default', label: 'Default'})
-    editor.SelectorManager.states.add({name: 'valid', label: 'Valid'})
-    editor.SelectorManager.states.add({name: 'invalid', label: 'Invalid'})
-    editor.SelectorManager.states.add({name: 'in-range', label: 'In range'})
-    editor.SelectorManager.states.add({name: 'out-of-range', label: 'Out of range'})
-    editor.SelectorManager.states.add({name: 'required', label: 'Required'})
-    editor.SelectorManager.states.add({name: 'optional', label: 'Optional'})
-    editor.SelectorManager.states.add({name: 'read-only', label: 'Read only'})
-    editor.SelectorManager.states.add({name: 'read-write', label: 'Read write'})
+    localizeStyleProperties(editor)
+    editor.SelectorManager.states.add({name: 'before', label: '之前'})
+    editor.SelectorManager.states.add({name: 'after', label: '之后'})
+    editor.SelectorManager.states.add({name: 'active', label: '激活'})
+    editor.SelectorManager.states.add({name: 'first-child', label: '第一个子元素'})
+    editor.SelectorManager.states.add({name: 'last-child', label: '最后一个子元素'})
+    editor.SelectorManager.states.add({name: 'focus', label: '聚焦'})
+    editor.SelectorManager.states.add({name: 'visited', label: '已访问'})
+    editor.SelectorManager.states.add({name: 'link', label: '链接'})
+    editor.SelectorManager.states.add({name: 'first-letter', label: '首字母'})
+    editor.SelectorManager.states.add({name: 'first-line', label: '首行'})
+    editor.SelectorManager.states.add({name: 'selection', label: '选中内容'})
+    editor.SelectorManager.states.add({name: 'empty', label: '空'})
+    editor.SelectorManager.states.add({name: 'enabled', label: '已启用'})
+    editor.SelectorManager.states.add({name: 'disabled', label: '已禁用'})
+    editor.SelectorManager.states.add({name: 'checked', label: '已勾选'})
+    editor.SelectorManager.states.add({name: 'indeterminate', label: '不确定'})
+    editor.SelectorManager.states.add({name: 'placeholder-shown', label: '显示占位符'})
+    editor.SelectorManager.states.add({name: 'placeholder', label: '占位符'})
+    editor.SelectorManager.states.add({name: 'default', label: '默认'})
+    editor.SelectorManager.states.add({name: 'valid', label: '有效'})
+    editor.SelectorManager.states.add({name: 'invalid', label: '无效'})
+    editor.SelectorManager.states.add({name: 'in-range', label: '范围内'})
+    editor.SelectorManager.states.add({name: 'out-of-range', label: '超出范围'})
+    editor.SelectorManager.states.add({name: 'required', label: '必填'})
+    editor.SelectorManager.states.add({name: 'optional', label: '可选'})
+    editor.SelectorManager.states.add({name: 'read-only', label: '只读'})
+    editor.SelectorManager.states.add({name: 'read-write', label: '可读写'})
   })
 }

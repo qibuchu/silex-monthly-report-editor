@@ -19,7 +19,7 @@
   },
   "scripts": {
     "start": "grapesjs-cli serve",
-    "build": "grapesjs-cli build --patch=false",
+    "build": "node build.cjs",
     "lint": "eslint src/**/*"
   },
   "keywords": [

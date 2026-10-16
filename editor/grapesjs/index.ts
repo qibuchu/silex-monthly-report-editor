@@ -20,6 +20,7 @@ import grapesjs, { Editor, EditorConfig } from 'grapesjs'
 // @ts-ignore locale modules do not include TypeScript declarations
 import zh from 'grapesjs/locale/zh.mjs'
 import openImport from './openImport'
+import { zhEditor } from './zh-editor'
 
 /**
  * @fileoverview This is where grapes config gets created
@@ -77,6 +78,7 @@ import ViewButtons from './view-buttons'
 import presentationMode from './presentation-mode'
 import pptxImportPlugin from './pptx-import'
 import monthlyWorkspacePlugin from './monthly-workspace'
+import tableEditorPlugin from './table-editor'
 import { storagePlugin } from './storage'
 import { API_PATH, API_WEBSITE_ASSETS_WRITE, API_WEBSITE_PATH, SILEX_VERSION } from '~/common/constants'
 import { ClientConfig } from '../config'
@@ -103,6 +105,7 @@ const plugins = [
   {name: './presentation-mode', value: presentationMode},
   {name: './pptx-import', value: pptxImportPlugin},
   {name: './monthly-workspace', value: monthlyWorkspacePlugin},
+  {name: './table-editor', value: tableEditorPlugin},
   {name: './semantic', value: semanticPlugin},
   {name: './rich-text', value: richTextPlugin},
   {name: 'grapesjs-style-filter', value: styleFilterPlugin},
@@ -205,6 +208,9 @@ export function getEditorConfig(config: ClientConfig): EditorConfig {
         },
         zh: {
           ...zh,
+          ...zhEditor,
+          domComponents: { ...zh.domComponents, names: { ...zh.domComponents?.names, '': '容器', wrapper: '页面根容器' } },
+          deviceManager: { ...zh.deviceManager, devices: { desktop: '桌面', tablet: '平板', mobileLandscape: '手机横屏', mobilePortrait: '手机竖屏' } },
           traitManager: {
             ...zh.traitManager,
             label: '',
@@ -219,6 +225,8 @@ export function getEditorConfig(config: ClientConfig): EditorConfig {
               decorations: '背景与边框',
               extra: '效果',
               flex: '弹性布局',
+              content: '内容',
+              list: '列表',
             },
           },
         },
@@ -399,6 +407,8 @@ export function getEditorConfig(config: ClientConfig): EditorConfig {
       },
       [filterStyles.toString()]: {
         appendBefore: '.gjs-sm-sectors',
+        placeholder: config.lang === 'zh' ? '搜索样式…' : 'Search...',
+        modifiedTitle: config.lang === 'zh' ? '只显示已修改样式' : 'Show modified only',
       },
       [internalLinksPlugin.toString()]: {
         // FIXME: warn the user about links in error

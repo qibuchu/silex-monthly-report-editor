@@ -296,6 +296,9 @@ export class FsStorage implements StorageConnector<FsSession> {
     for (const fileStatus of filesStatuses) {
       const {file} = fileStatus
       const path = join(this.options.path, id, assetsFolder, file.path)
+      // Imported projects may contain only pages and metadata. Ensure the
+      // asset directory (including any nested folders) exists before writing.
+      await fs.mkdir(dirname(path), { recursive: true })
       if (typeof file.content === 'string' || Buffer.isBuffer(file.content)) {
         fileStatus.message = 'Writing'
         this.updateStatus(filesStatuses, JobStatus.IN_PROGRESS, statusCbk)

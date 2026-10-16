@@ -582,7 +582,7 @@ export default function presentationMode(editor: Editor) {
   })
   editor.Commands.add(cmdZoomOut, () => editor.Canvas.setZoom(Math.max(25, editor.Canvas.getZoom() - 10)))
   editor.Commands.add(cmdZoomIn, () => editor.Canvas.setZoom(Math.min(200, editor.Canvas.getZoom() + 10)))
-  editor.Commands.add(cmdZoomFit, () => editor.Canvas.fitViewport({ padding: 32 }))
+  editor.Commands.add(cmdZoomFit, () => editor.Canvas.fitViewport({ gap: 32 }))
   ;(['left', 'center', 'right', 'top', 'middle', 'bottom'] as AlignMode[]).forEach(mode => {
     editor.Commands.add(`presentation:align-${mode}`, () => runPresentationAction(editor, () => align(editor, mode)))
   })
@@ -590,7 +590,7 @@ export default function presentationMode(editor: Editor) {
     editor.Commands.add(`presentation:distribute-${mode}`, () => runPresentationAction(editor, () => distribute(editor, mode)))
   })
 
-  editor.Panels.addButton('options', [{
+  if (new URL(location.href).searchParams.get('ui') === 'legacy') editor.Panels.addButton('options', [{
     id: 'presentation-free-position',
     className: 'fa-solid fa-up-down-left-right',
     command: cmdToggleFreePosition,
@@ -713,6 +713,65 @@ export default function presentationMode(editor: Editor) {
     }
     if (smartGuides && editor.getDragMode() === 'absolute') snapToSmartGuides(editor, data?.target || editor.getSelected())
   })
+  editor.on('component:resize:init', (options: { component: Component, resizable: Component['resizable'] }) => {
+    const component = options.component
+    const tag = String(component.get('tagName') || '').toLowerCase()
+    const attributes = component.getAttributes()
+    if (!/^(div|section|article|figure)$/.test(tag) || isLocked(component)
+      || attributes['data-report-page'] || attributes['data-pptx-page']
+      || component === editor.Pages.getSelected()?.getMainComponent()) return
+    options.resizable = { tl: true, tc: true, tr: true, cl: true, cr: true, bl: true, bc: true, br: true, minDim: 24, currentUnit: false }
+  })
+  // Silex's nested slide markup can display GrapesJS handles while its native
+  // resize action selects the parent instead. Keep the handle interaction tied
+  // to the selected component and write explicit pixel dimensions.
+  document.addEventListener('pointerdown', event => {
+    const handle = (event.target as HTMLElement).closest<HTMLElement>('.gjs-resizer-h')
+    const component = editor.getSelected()
+    if (!handle || !component || isLocked(component)) return
+    let page: Component | undefined = component
+    while (page && !page.getAttributes()['data-report-page'] && !page.getAttributes()['data-pptx-page']) page = page.parent()
+    if (!page || page === component) return
+    const element = component.getEl() as HTMLElement | undefined
+    if (!element) return
+    const direction = [...handle.classList].find(name => /^gjs-resizer-h-(tl|tc|tr|cl|cr|bl|bc|br)$/.test(name))?.split('-').pop()
+    if (!direction) return
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    const rect = element.getBoundingClientRect()
+    const scale = (element.offsetWidth ? rect.width / element.offsetWidth : editor.Canvas.getZoom() / 100) || 1
+    const width = element.offsetWidth || rect.width / scale
+    const height = element.offsetHeight || rect.height / scale
+    const startX = event.clientX
+    const startY = event.clientY
+    const baseStyle = component.getStyle()
+    const move = (motion: PointerEvent) => {
+      const dx = (motion.clientX - startX) / scale
+      const dy = (motion.clientY - startY) / scale
+      const next: Record<string, string> = {}
+      if (direction.includes('l')) next.width = `${Math.max(24, Math.round(width - dx))}px`
+      if (direction.includes('r')) next.width = `${Math.max(24, Math.round(width + dx))}px`
+      if (direction.includes('t')) next.height = `${Math.max(24, Math.round(height - dy))}px`
+      if (direction.includes('b')) next.height = `${Math.max(24, Math.round(height + dy))}px`
+      const position = baseStyle.position || getComputedStyle(element).position
+      if (position === 'absolute' || position === 'fixed') {
+        const left = Number.parseFloat(String(baseStyle.left ?? getComputedStyle(element).left)) || 0
+        const top = Number.parseFloat(String(baseStyle.top ?? getComputedStyle(element).top)) || 0
+        if (direction.includes('l')) next.left = `${Math.round(left + dx)}px`
+        if (direction.includes('t')) next.top = `${Math.round(top + dy)}px`
+      }
+      component.setStyle({ ...baseStyle, ...next })
+      motion.preventDefault()
+    }
+    const end = () => {
+      document.removeEventListener('pointermove', move, true)
+      document.removeEventListener('pointerup', end, true)
+      document.removeEventListener('pointercancel', end, true)
+    }
+    document.addEventListener('pointermove', move, true)
+    document.addEventListener('pointerup', end, true)
+    document.addEventListener('pointercancel', end, true)
+  }, true)
   editor.on('component:resize', () => {
     if (gridSnap && editor.getDragMode() === 'absolute') editor.getSelectedAll().forEach(snapComponent)
   })

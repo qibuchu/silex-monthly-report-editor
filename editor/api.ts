@@ -120,6 +120,11 @@ export async function websiteMetaWrite({websiteId, data, connectorId}: {websiteI
 }
 
 export async function websiteMetaRead({websiteId, connectorId}: {websiteId: WebsiteId, connectorId?: ConnectorId}): Promise<WebsiteMeta> {
+  if (new URL(location.href).searchParams.has('serviceProject')) {
+    const { serviceRequest } = await import('./grapesjs/monthly-service-storage')
+    const value = await serviceRequest('status')
+    return { websiteId, name: value.title || `Steam ${value.month} 月报`, updatedAt: new Date(value.updatedAt), connectorUserSettings: {} }
+  }
   return api<ApiWebsiteMetaReadQuery, null, ApiWebsiteMetaReadResponse>(ApiRoute.WEBSITE_META_WRITE, 'GET', { websiteId, connectorId })
 }
 
@@ -143,14 +148,15 @@ export async function api<ReqQuery, ReqBody, ResBody>(route: ApiRoute | string, 
         .filter(([key, value]) => !!value)
         .map(([key, value]) => [key, typeof value === 'string' ? value : JSON.stringify(value)])
     ).toString()}`
-  const response = await fetch(url, {
+  const { fetchWithConnectionError } = await import('./network-request')
+  const response = await fetchWithConnectionError(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
     },
     body: payload && JSON.stringify(payload), // assuming that the payload needs to be stringified
     credentials: 'include', // sends the cookies with the request
-  })
+  }, '编辑器服务')
 
   if (!response.ok) {
     let json

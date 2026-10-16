@@ -24,6 +24,7 @@ import { ClientEvent } from '../events'
 import { Page, PageProperties, ProjectData } from 'grapesjs'
 import { html, render, TemplateResult } from 'lit-html'
 import { unsafeHTML } from 'lit-html/directives/unsafe-html.js'
+import { serviceProjectId, loadServiceProject, storeServiceProject, attachServiceSync } from './monthly-service-storage'
 
 export const cmdPauseAutoSave = 'pause-auto-save'
 
@@ -37,7 +38,7 @@ function renderLoader(text: string, current: number, total: number) {
 
 if (loader) {
   loader.innerHTML = ''
-  renderLoader('Loading', 0, 0)
+  renderLoader('正在加载', 0, 0)
   setTimeout(() => loader.classList.add('silex-loader--active'))
 }
 
@@ -66,6 +67,7 @@ let lastPendingSaving: WebsiteData = null
 let isSaving = false
 
 export const storagePlugin = (editor: PublishableEditor) => {
+  attachServiceSync(editor)
   // Add useful commands
   editor.Commands.add(cmdPauseAutoSave, {
     run: () => {
@@ -82,12 +84,16 @@ export const storagePlugin = (editor: PublishableEditor) => {
   // Add the storage connector
   editor.Storage.add('connector', {
     async load(options: { id: WebsiteId, connectorId: ConnectorId, mode: '' | 'progressive' }): Promise<ProjectData> {
+      if (serviceProjectId) {
+        renderLoader('正在加载服务器月报', 1, 1)
+        return loadServiceProject(editor)
+      }
       try {
-        renderLoader('Loading user data', 0, 3)
+        renderLoader('正在加载用户数据', 0, 3)
         await nextFrame()
         const user: ConnectorUser = await getCurrentUser(editor) ?? await updateUser(editor, ConnectorType.STORAGE, options.connectorId)
         if (!user) throw new ApiError('Not logged in', 401)
-        renderLoader('Loading website', 1, 3)
+        renderLoader('正在加载项目', 1, 3)
         await nextFrame()
         const data = await websiteLoad({ websiteId: options.id, connectorId: user.storage.connectorId }) as WebsiteData
         editor.runCommand(cmdPauseAutoSave)
@@ -103,7 +109,7 @@ export const storagePlugin = (editor: PublishableEditor) => {
           } else {
             const { pages, pagesFolder, ...rest } = data
             // Load any additional project data, e.g. symbols, but not the ones we progressive load
-            renderLoader('Loading styles, assets and symbols', 0, pages.length + 1)
+            renderLoader('正在加载样式、素材和符号', 0, pages.length + 1)
             await nextFrame()
             // Add to the project, everything but pages
             editor.loadProjectData(rest)
@@ -160,6 +166,7 @@ export const storagePlugin = (editor: PublishableEditor) => {
     },
 
     async store(data: WebsiteData, options: { id: WebsiteId, connectorId: ConnectorId }) {
+      if (serviceProjectId) return storeServiceProject(editor, data)
       // Be sure that it is immutable
       const myData = { ...data }
       return await this.addToQueue(myData, options)
@@ -271,7 +278,7 @@ async function progressiveLoadPages(editor: PublishableEditor, pages: Page[]) {
   editor.Pages.getAll().forEach(page => editor.Pages.remove(page))
   let i = 0
   for (const page of pages) {
-    renderLoader(`Loading page <strong>${++i}</strong> / ${pages.length + 1}`, i, pages.length + 1)
+    renderLoader(`正在加载页面 <strong>${++i}</strong> / ${pages.length + 1}`, i, pages.length + 1)
     await nextFrame()
     const newPage = editor.Pages.add({
       ...page,

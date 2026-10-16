@@ -61,8 +61,8 @@ export default (editor: Editor) => {
       {
         attributes: {
           class: 'fa-solid fa-align-center',
-          title: 'Center horizontally',
-          'aria-label': 'Center horizontally',
+          title: '水平居中',
+          'aria-label': '水平居中',
         },
         command: CENTER_COMMAND,
       },

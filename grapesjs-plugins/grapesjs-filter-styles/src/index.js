@@ -2,6 +2,7 @@ export default (editor, opts = {}) => {
   editor.on('load', () => {
     const options = {
       placeholder: 'Search...',
+      modifiedTitle: 'Show modified only',
       appendTo: null,
       appendBefore: null,
       ...opts
@@ -86,7 +87,7 @@ export default (editor, opts = {}) => {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </span>
         <input id="${id}" type="text" placeholder="${options.placeholder}" />
-        <button id="${id}-modified-btn" title="Show modified only">
+        <button id="${id}-modified-btn" title="${options.modifiedTitle}">
           <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M19 6h-14c-1.1 0-1.4.6-.6 1.4l4.2 4.2c.8.8 1.4 2.3 1.4 3.4v5l4-2v-3.5c0-.8.6-2.1 1.4-2.9l4.2-4.2c.8-.8.5-1.4-.6-1.4z"/>
           </svg>
