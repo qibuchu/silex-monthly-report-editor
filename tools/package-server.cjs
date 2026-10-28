@@ -22,6 +22,6 @@ fs.copyFileSync(path.join(root,'deployment/steam-monthly/silex.config.cjs'),path
 const pkg=JSON.parse(fs.readFileSync(path.join(root,editor,'package.json')));
 fs.writeFileSync(path.join(target,editor,'package.json'),JSON.stringify({name:'steam-monthly-silex-runtime',version:'0.1.0',private:true,dependencies:pkg.dependencies},null,2));
 const manifest=[];function walk(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){const f=path.join(dir,ent.name);if(ent.isDirectory())walk(f);else manifest.push({path:path.relative(target,f).split(path.sep).join('/'),size:fs.statSync(f).size,sha256:crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')});}}walk(target);
-const revision=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',windowsHide:true});
+const revision=spawnSync('git',['-c',`safe.directory=${root.replaceAll('\\','/')}`,'rev-parse','HEAD'],{cwd:root,encoding:'utf8',windowsHide:true});
 fs.writeFileSync(path.join(target,'server-manifest.json'),JSON.stringify({builtAt:new Date().toISOString(),sourceRevision:revision.status===0?revision.stdout.trim():null,files:manifest},null,2));
 console.log(JSON.stringify({release:target,files:manifest.length,bytes:manifest.reduce((s,f)=>s+f.size,0)}));
