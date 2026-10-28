@@ -43,6 +43,6 @@ if [[ $healthy != true ]]; then
   sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app
   echo '健康检查未通过，已回滚' >&2; exit 1
 fi
-sudo docker run --rm --user "$(id -u):$(id -g)" -v "$base:/srv" node:24-alpine \
+sudo docker run --rm -v "$base:/srv" node:24-alpine \
   node /srv/current/deployment/steam-monthly/prune-releases.mjs /srv "$previous"
 echo "发布完成：$release_id；回滚版本：$previous"
