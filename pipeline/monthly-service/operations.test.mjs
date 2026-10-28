@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createCore} from './core.mjs';
+import {canvas} from './project-operations.mjs';
+const here=path.dirname(fileURLToPath(import.meta.url));
+test('structural AI edits preserve native metadata, isolate copies, reject conflicts and roll back atomically',async()=>{
+ const dir=fs.mkdtempSync(path.join(here,'.operations-test-'));
+ try{
+  const object={attributes:{id:'title','data-object-id':'title','data-kind':'text'},classes:['object'],style:{left:'20px',top:'20px',width:'200px',height:'70px'},content:'<p id="child">原文</p>'};
+  const node={type:'text',attributes:object.attributes,components:[{type:'text',attributes:{id:'child'},content:'原文',customFlag:true}],traits:[{name:'private-property'}],style:{...object.style}};
+  const project={format:'steam-grapesjs-v2',deck:{css:'',pages:[{name:'首页',objects:[object]}]},silexState:{settings:{custom:true},symbols:[{id:'symbol'}],styles:[{selectors:['#child'],style:{color:'red'}}],pages:[{id:'first',frames:[{component:{attributes:{'data-report-page':'1'},components:[node]}}]}]}};
+  const core=createCore({dataDir:dir,publicUrl:'http://localhost:4320'}),id=core.importProject({project}).projectId;
+  const patch=(revision,operations)=>core.call('apply_structure_patch',{projectId:id,baseRevision:revision,requirement:'调整页面结构',operations});
+  const result=await patch(1,[{op:'add_page',name:'第二页'},{op:'duplicate_object',id:'title',pageIndex:1,style:{left:'50px'}},{op:'move_object',id:'title',pageIndex:1,index:0}]);
+  let saved=core.project(id).project;
+  assert.equal(saved.deck.pages[0].objects.length,0);assert.equal(saved.deck.pages[1].objects.length,2);
+  assert.deepEqual(saved.silexState.settings,{custom:true});assert.equal(saved.silexState.symbols[0].id,'symbol');
+  const copied=canvas(saved.silexState.pages[1]).components[1];
+  assert.equal(copied.components[0].customFlag,true);assert.notEqual(copied.components[0].attributes.id,'child');
+  assert.equal(copied.attributes['data-object-id'],result.addedObjectIds[0]);
+  assert.ok(saved.silexState.styles.some(r=>r.selectors[0]==='#'+copied.components[0].attributes.id));
+  await assert.rejects(patch(1,[{op:'remove_object',id:'title'}]),e=>e.status===409);
+  core.updateEditorContext(id,{sessionId:'human',pageIndex:1,dirty:true});
+  await assert.rejects(patch(2,[{op:'remove_object',id:'title'}]),e=>e.status===409);
+  core.updateEditorContext(id,{sessionId:'human',closed:true});
+  await assert.rejects(patch(2,[{op:'remove_object',id:'title'},{op:'remove_object',id:'missing'}]));
+  assert.equal(core.project(id).revision,2);assert.equal(core.project(id).project.deck.pages[1].objects.length,2);
+  await patch(2,[{op:'duplicate_page',pageIndex:1,index:0},{op:'move_page',pageIndex:2,index:1},{op:'remove_page',pageIndex:2}]);
+  saved=core.project(id).project;assert.equal(saved.deck.pages.length,2);assert.equal(saved.silexState.pages.length,2);
+  const ids=saved.deck.pages.flatMap(p=>p.objects.map(o=>o.attributes['data-object-id']));assert.equal(new Set(ids).size,ids.length);
+  await patch(3,[{op:'add_object',pageIndex:0,object:{content:'<p>新增文字</p>',style:{left:'10px',top:'10px',width:'100px',height:'40px'}}}]);
+  await assert.rejects(patch(4,[{op:'add_object',pageIndex:0,object:{content:'<script>bad()</script>',style:{}}}]));
+  await assert.rejects(patch(4,[{op:'add_page',width:-1}]));
+  assert.equal(core.project(id).revision,4);
+  await core.call('apply_object_patch',{projectId:id,baseRevision:4,requirement:'只调整字号',changes:[{id:'title',style:{'font-size':'24px'}}]});
+  const original=canvas(core.project(id).project.silexState.pages[1]).components.find(o=>o.attributes['data-object-id']==='title');
+  assert.equal(original.components[0].customFlag,true);assert.equal(original.style['font-size'],'24px');
+ }finally{if(!path.resolve(dir).startsWith(here+path.sep))throw Error('Unsafe cleanup');fs.rmSync(dir,{recursive:true,force:true});}
+});

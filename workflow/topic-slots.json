@@ -1,0 +1,9 @@
+{
+  "description": "专题页固定结构；图片和复杂文案留空，数据单独填充。",
+  "blankText": ["s3o8", "s3o9", "s3o12", "s3o14", "s3o16", "s3o21", "s6o9", "s6o12", "s6o24", "s7o26", "s7o27", "s7o28", "s7o29", "s7o30", "s7o34", "s7o36", "s8o25", "s8o27", "s8o28", "s8o32", "s8o34"],
+  "blankImages": ["s3o24", "s3o25", "s3o26", "s3o27", "s6o2", "s6o3", "s6o4", "s7o12", "s7o33", "s7o35", "s7o38", "s8o3", "s8o30", "s8o31", "s8o33", "s8o35"],
+  "blankCharts": ["s3o28"],
+  "blankTables": ["s8o29"],
+  "dataSlots": ["s6o6", "s6o7", "s6o10", "s6o22", "s6o26", "s6o27", "s7o14", "s7o15", "s7o16", "s7o17", "s7o18", "s7o19", "s8o14", "s8o16", "s8o19", "s8o20", "s8o21", "s8o22"],
+  "caseTitles": {"s3o4": "入选游戏异动", "s7o4": "Steam亮眼独游", "s8o6": "Steam亮眼独游"}
+}

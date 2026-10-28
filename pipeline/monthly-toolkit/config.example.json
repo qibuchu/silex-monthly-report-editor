@@ -1,0 +1,6 @@
+{
+  "python": "python",
+  "steamautoSkillDir": "./steamauto-data-query",
+  "silexStorageDir": "./silex/storage",
+  "editorUrl": "http://localhost:6805/"
+}

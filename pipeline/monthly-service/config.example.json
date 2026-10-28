@@ -1,0 +1,9 @@
+{
+  "host": "127.0.0.1",
+  "port": 4320,
+  "publicUrl": "http://127.0.0.1:4320",
+  "silexUrl": "http://localhost:6805/",
+  "dataDir": "./data",
+  "toolkitDir": "../../releases/monthly-toolkit-portable",
+  "workspaceRoot": "../.."
+}

@@ -1,0 +1,3456 @@
+{
+  "version": "0.2.0",
+  "builtAt": "2026-10-28T08:31:23.863Z",
+  "files": [
+    {
+      "path": "pipeline/monthly-service/.gitignore",
+      "size": 49,
+      "sha256": "2a19b6b7d10ed2ed0721114ac9b3a3f322bc52684a4196ca33ef947772f6c71f"
+    },
+    {
+      "path": "pipeline/monthly-service/asset-store.mjs",
+      "size": 2942,
+      "sha256": "75c8802ef73c4aadb91950db525b8f7442e1533f8f4406f6e7bbbd9b7447e86b"
+    },
+    {
+      "path": "pipeline/monthly-service/assets.test.mjs",
+      "size": 2462,
+      "sha256": "b9e0309f090d93df547eaa9ef8730c443f0f265bc9a7f063e21b55e17305b0f5"
+    },
+    {
+      "path": "pipeline/monthly-service/chat.cjs",
+      "size": 1855,
+      "sha256": "126696a719708b00f5fee705c8493308ef6843f6a49b12951ad8e94bab8414e6"
+    },
+    {
+      "path": "pipeline/monthly-service/CHAT.md",
+      "size": 7560,
+      "sha256": "37aa11534781adb35dec98efbb61cb0475aefd0c5620a2d277d4bd7f0e450b74"
+    },
+    {
+      "path": "pipeline/monthly-service/chat.test.mjs",
+      "size": 3816,
+      "sha256": "a4d9aba4a36d794af55893912a9acd5a6078a4f0650d81cfc251d0d66fd9249d"
+    },
+    {
+      "path": "pipeline/monthly-service/config.example.json",
+      "size": 232,
+      "sha256": "86ace8dd94a17fbf38745b69db4cfcb1f24ac29484b5033efc6550e0f6591c0a"
+    },
+    {
+      "path": "pipeline/monthly-service/core.mjs",
+      "size": 83452,
+      "sha256": "a7e8a181c806ed1bb9a6210ddbec92329519b99c4a06028bff8b9261e839ba6f"
+    },
+    {
+      "path": "pipeline/monthly-service/dashboard.html",
+      "size": 18920,
+      "sha256": "565855176e971e979afc3a71f5c5f4650d49592e1e08419f8785155dca993714"
+    },
+    {
+      "path": "pipeline/monthly-service/data-interface.mjs",
+      "size": 2622,
+      "sha256": "facf04651b79bb097e532ea56ff879c8eae3dd317797dda646fcd20994944e07"
+    },
+    {
+      "path": "pipeline/monthly-service/data-interface.test.mjs",
+      "size": 1683,
+      "sha256": "185edbf2f118b070a09becb9bf82dd9c0af1703be8bc47c923cd8f7932d72c0b"
+    },
+    {
+      "path": "pipeline/monthly-service/data-sentence.mjs",
+      "size": 7964,
+      "sha256": "d9d3e4edfd89cc3509450e4e69dbcf91921a0f2beeb8d877b7444004a71f10a8"
+    },
+    {
+      "path": "pipeline/monthly-service/data-sentence.test.mjs",
+      "size": 6162,
+      "sha256": "fd6a80180445b5024d305d9886d5480c9324062c2819062e717797b0318bf7e4"
+    },
+    {
+      "path": "pipeline/monthly-service/demo/monthly-report-2026-08.json",
+      "size": 351858,
+      "sha256": "9d988fd279fee1efb46c1ecbf30adf68d716c697e846a51bbdeef476c20d15e4"
+    },
+    {
+      "path": "pipeline/monthly-service/DEMO.md",
+      "size": 4389,
+      "sha256": "3280e4f1c7c94e3480d2b87def2f4a3a3d2934d52461bf7ea382ea50e0843e0e"
+    },
+    {
+      "path": "pipeline/monthly-service/DEPLOY.md",
+      "size": 6363,
+      "sha256": "9e7ca55e4c802535d92f17fb33dc79b459a1f6a3106d85a63732cfeb0c6c7ec8"
+    },
+    {
+      "path": "pipeline/monthly-service/editing-target.test.mjs",
+      "size": 4447,
+      "sha256": "565022457e4a7a3632d7a75fa4abb88c8c15b769e637c2c01a6728c17f803606"
+    },
+    {
+      "path": "pipeline/monthly-service/image-slot.mjs",
+      "size": 642,
+      "sha256": "d6a98533b4c85ee161048525d455337216e5835370791140eaa2e308c7205be6"
+    },
+    {
+      "path": "pipeline/monthly-service/image-slot.test.mjs",
+      "size": 6225,
+      "sha256": "1e35559c4a414cd7f7439bc67f569c6d56823348962d08a41048d3c8d45f73c5"
+    },
+    {
+      "path": "pipeline/monthly-service/maintenance.mjs",
+      "size": 5244,
+      "sha256": "535e9f90d66cca6488c7ae4112541ce5ddc43afef1474b8f64feaed302388a23"
+    },
+    {
+      "path": "pipeline/monthly-service/maintenance.test.mjs",
+      "size": 1704,
+      "sha256": "47fa5110838978510fb9139a58b9c40c3ede56ec23b1974efbd481839f009fbc"
+    },
+    {
+      "path": "pipeline/monthly-service/mcp-bridge.mjs",
+      "size": 2556,
+      "sha256": "3725c79a7bd86cd544b8474a2f82514e194a26f0ea258c8ad4c10e817151a0b1"
+    },
+    {
+      "path": "pipeline/monthly-service/minigame-data-fields.mjs",
+      "size": 1502,
+      "sha256": "4caaa1fea73ce9bb4fff33d69c8d6369ff4335e5ed8e4d0ee008e025698b6977"
+    },
+    {
+      "path": "pipeline/monthly-service/operations.test.mjs",
+      "size": 4093,
+      "sha256": "1e29b24e9cdbb1217a8a76b25e51f844e08f6eb376109a8c95371be7d710e010"
+    },
+    {
+      "path": "pipeline/monthly-service/package-lock.json",
+      "size": 42833,
+      "sha256": "543a715e47abb79b54d1b5a97f3fd3dabab1d665b2eaa49cd189992fac2720d6"
+    },
+    {
+      "path": "pipeline/monthly-service/package.json",
+      "size": 615,
+      "sha256": "7e567d0aee9631af786e1186f67aff74719940057915c507ccd6e68f3db56fd5"
+    },
+    {
+      "path": "pipeline/monthly-service/ppt-data-regions.mjs",
+      "size": 5236,
+      "sha256": "8e6eb1f66bec780cc9dbbe50e9ec088c7cd50ca3313afcce0c02b78872c124d1"
+    },
+    {
+      "path": "pipeline/monthly-service/ppt-data-regions.test.mjs",
+      "size": 6313,
+      "sha256": "86017b21f6e48a66fe00bae2bb14a6d5b768ae1e1e188f409a92ca4b19317d01"
+    },
+    {
+      "path": "pipeline/monthly-service/PPTX上传说明与验收.md",
+      "size": 4468,
+      "sha256": "1b20c5098ecbf6f934f315bae8166b091ae6a591fc5026e4e58a76211142bc42"
+    },
+    {
+      "path": "pipeline/monthly-service/probe-local-ai.mjs",
+      "size": 1841,
+      "sha256": "7b5be57eb64221b4c97eae168e0ea6e3820688b682f92e501c9a1ec9c0eef53a"
+    },
+    {
+      "path": "pipeline/monthly-service/project-operations.mjs",
+      "size": 11514,
+      "sha256": "e4bf20ce1487df04289d9736ae3881973635c32e459da02f5ce47ae2db9cec6f"
+    },
+    {
+      "path": "pipeline/monthly-service/README.md",
+      "size": 7160,
+      "sha256": "65f9c27e1b9b76b4b8d5f4aaf24cf67c86cc5e9320389927062745e5af8817cf"
+    },
+    {
+      "path": "pipeline/monthly-service/recognition.test.mjs",
+      "size": 6365,
+      "sha256": "a7477da1a90448d6fab8624fa3456f23bd5050b30d3e10492cb831da439726b1"
+    },
+    {
+      "path": "pipeline/monthly-service/server.mjs",
+      "size": 16676,
+      "sha256": "1e00696afc8d3725cf18af5c4458eaeaf65518ab59d8f9fe4e2def7db37b0c95"
+    },
+    {
+      "path": "pipeline/monthly-service/STATE.md",
+      "size": 5363,
+      "sha256": "5b252d32510aff27df041be8a12bf55518cb536f625c3917d1ace80a2dded154"
+    },
+    {
+      "path": "pipeline/monthly-service/template-ai-worker.mjs",
+      "size": 2640,
+      "sha256": "3c2e4aa77ee59dc9c2273b7e3ed769254d0c508298c5e8c7dcd0d88dc34a696f"
+    },
+    {
+      "path": "pipeline/monthly-service/template-ai.mjs",
+      "size": 4528,
+      "sha256": "450dc078fdcf6089db6870447242c2850d9163c366c33f97fc9154a47e8dc3d7"
+    },
+    {
+      "path": "pipeline/monthly-service/template-ai.test.mjs",
+      "size": 2825,
+      "sha256": "dee51a038f7b0443e4d5b342fa745ca080bdc8c4eb6aaf52684089cb43e43f69"
+    },
+    {
+      "path": "pipeline/monthly-service/template-chart-render.mjs",
+      "size": 15596,
+      "sha256": "aa2bf21408f80d01b4b9fe97eff15d2cebb1c78b9b9914d439fef8e43b127ccd"
+    },
+    {
+      "path": "pipeline/monthly-service/template-data.mjs",
+      "size": 28093,
+      "sha256": "9527b1d034da387d79433a2c82360c1578e365f5c657f89291c67af7f911656d"
+    },
+    {
+      "path": "pipeline/monthly-service/template-data.test.mjs",
+      "size": 6149,
+      "sha256": "b49991b8777896ad9f008544dfa57950d50818d439ec47b7bd563e83b9511bbf"
+    },
+    {
+      "path": "pipeline/monthly-service/template-recognition.mjs",
+      "size": 14284,
+      "sha256": "a29b79c868d0726b46878af8c96481db1f4c6d8aa759ad8873524f224e6e2c5b"
+    },
+    {
+      "path": "pipeline/monthly-service/template-sources.mjs",
+      "size": 3068,
+      "sha256": "3cdce5c34b7e9fc381c9063ca03abfc835f17061f4c7ab0c08395cd9e051767c"
+    },
+    {
+      "path": "pipeline/monthly-service/template-sources.test.mjs",
+      "size": 2325,
+      "sha256": "1dc5b62855cc368f0caab8f7e74424aaa6ea07e2d0de2f1df23a13878a4bdf0b"
+    },
+    {
+      "path": "pipeline/monthly-service/TEMPLATES.md",
+      "size": 14384,
+      "sha256": "6f7a4f278da29e3bea6039772c2a4cd6a945a32c00c3897e923c891593c89796"
+    },
+    {
+      "path": "pipeline/monthly-service/templates.mjs",
+      "size": 7903,
+      "sha256": "c7387549ec1ae88a3c7b5ed54aa3f8772114a302a1e0039d34dea687940c98a0"
+    },
+    {
+      "path": "pipeline/monthly-service/templates.test.mjs",
+      "size": 9993,
+      "sha256": "b998f79c9ea5a4063882549c06a267ba99ff7f6f42655d626e34074818330838"
+    },
+    {
+      "path": "pipeline/monthly-service/TEMPLATE_AI.md",
+      "size": 2019,
+      "sha256": "f986a19a933f5e227c8c26d65803b78132b952890de53d41f32a9c9d126a37ab"
+    },
+    {
+      "path": "pipeline/monthly-service/test.mjs",
+      "size": 13976,
+      "sha256": "2f77e30abf8fd8980153f35871453d267bf4c5ee9fb058832fcc44b3daec5ce3"
+    },
+    {
+      "path": "pipeline/monthly-service/ui/dashboard.css",
+      "size": 22404,
+      "sha256": "f0dcf7350b91a4eee7dcb4564f80f82409945f1433c3644324f0a4b328e4c212"
+    },
+    {
+      "path": "pipeline/monthly-service/ui/dashboard.js",
+      "size": 45341,
+      "sha256": "caa56ba10ec8941fa18a0bcee5cc0a3e1e7ac41c2780c9a5d55ab959cfb27025"
+    },
+    {
+      "path": "pipeline/monthly-service/ui/monthly-data-reader.js",
+      "size": 12937,
+      "sha256": "d86d4a48b7cf1bcdb5949b405298ae32ea576869024701c86eedb9b60f2f39e8"
+    },
+    {
+      "path": "pipeline/monthly-service/ui/pptx-reader.js",
+      "size": 32177,
+      "sha256": "79f78b8284cbaf3ba2812c7c999c182eeaaf34050536785e0dd26aba7e26dc89"
+    },
+    {
+      "path": "pipeline/monthly-service/ui/template-data.js",
+      "size": 9048,
+      "sha256": "054c0e568efbb086f6ed1b7071f838f7ece9e8d093d5951f2b2b8ba944dc31c6"
+    },
+    {
+      "path": "pipeline/monthly-service/ui/visual-rules.css",
+      "size": 5085,
+      "sha256": "46c97fa4ad06de00abf25aed986ff139898f36133fd9cadf887ec9221c16ecb1"
+    },
+    {
+      "path": "pipeline/monthly-service/ui/visual-rules.js",
+      "size": 24936,
+      "sha256": "44e0c5e1026f06679f198a6b5166e84e859c9f88c686fa4619bf3dd14856d1e1"
+    },
+    {
+      "path": "pipeline/monthly-service/verify-workbuddy.mjs",
+      "size": 1244,
+      "sha256": "e7bc9c92c5b2e779551003d2a10b89934d771177ca2a17b0ec0e4da133d5b432"
+    },
+    {
+      "path": "pipeline/monthly-service/visual-rules.html",
+      "size": 3110,
+      "sha256": "9e6ecc3affc2f581062702b07a878ca3683d5cb857b52e27953011f2071a5d6e"
+    },
+    {
+      "path": "pipeline/monthly-service/visual-template-rules.mjs",
+      "size": 6625,
+      "sha256": "a4795ab04a40b470c933082ab6f5ecd103f2fd14c10c2da4fe5de05638505f70"
+    },
+    {
+      "path": "pipeline/monthly-service/visual-template-rules.test.mjs",
+      "size": 8931,
+      "sha256": "a3327cb786c1840ce0de1d7fbfde7ac3eb4521737a324ce99389b1f309e145d2"
+    },
+    {
+      "path": "pipeline/monthly-service/wb-batch4.test.mjs",
+      "size": 9694,
+      "sha256": "ace107a9d77c382fc16a5d91cc6d23b1b6520a1022778de4cea8695030be5ad0"
+    },
+    {
+      "path": "pipeline/monthly-service/原生Silex集成验收.md",
+      "size": 1905,
+      "sha256": "a2425e5c22a2fa6c9f71ae6fa8f333269dee8142e1ace24afdbd2cdcf960362e"
+    },
+    {
+      "path": "pipeline/monthly-service/数据图表缺失-2026-09.md",
+      "size": 892,
+      "sha256": "6381ffe55b937c6df61e9907568673e5f324c880f996989ad701a3eb685cbc5f"
+    },
+    {
+      "path": "pipeline/monthly-service/问题修复与验收-2026-10-16.md",
+      "size": 5789,
+      "sha256": "1781e06a0a3fb09fbe48f999a9481efb5de7fc64a80e04b69fb89ff0116184d9"
+    },
+    {
+      "path": "pipeline/monthly-service/项目完整性检查-2026-10-16.md",
+      "size": 8672,
+      "sha256": "a67ebc18651b6509cfee123c92d8007e7348a1abef8d880ef90d7b395ca0ac5e"
+    },
+    {
+      "path": "pipeline/monthly-toolkit/AGENTS.md",
+      "size": 1443,
+      "sha256": "751e51bb630e957e5191cfd2913e5542e59707c8159826a61aea770e8371716d"
+    },
+    {
+      "path": "pipeline/monthly-toolkit/config.example.json",
+      "size": 155,
+      "sha256": "9a4c5b46cff57dd6c68575a2f3883c904e61d0d4a3fc18bb74b1815cacbe9ef4"
+    },
+    {
+      "path": "pipeline/monthly-toolkit/README.md",
+      "size": 3779,
+      "sha256": "c5e20a3da296a5ba16c05d8408861b4b87318887cc53952db3ec420744f35d46"
+    },
+    {
+      "path": "pipeline/monthly-toolkit/run.cjs",
+      "size": 7509,
+      "sha256": "e8359333d5a0e467c679b266ef1adcf78613694e2d395c309b9157493f60d786"
+    },
+    {
+      "path": "pipeline/monthly-toolkit/templates/steam-ppt-v1.json",
+      "size": 3804729,
+      "sha256": "2b565b055a356ed2582f199719e5762ed417a1522c5c63b3e80b1bc726b0fd74"
+    },
+    {
+      "path": "pipeline/monthly-toolkit/验证记录.md",
+      "size": 1287,
+      "sha256": "743928e333f4c54d8c770b081b87914774db1456eedcb0a0fe63b2328fab4a5b"
+    },
+    {
+      "path": "tools/audit-monthly-data.cjs",
+      "size": 9291,
+      "sha256": "1a93a26d048b29984656633641b3f59dfb9aaf633d59b0b1630ff440cb67bc13"
+    },
+    {
+      "path": "tools/bin/gh.exe",
+      "size": 42755384,
+      "sha256": "df05089117a23889b3f6ea08d7644849afe7b6025647a09f33b45c71f1418f75"
+    },
+    {
+      "path": "tools/build-monthly-data-reader.cjs",
+      "size": 1144,
+      "sha256": "289ac5c58fdcdb6d52465b87ca44c5b0e9a5dfb166d38dae2adf41a734ffd048"
+    },
+    {
+      "path": "tools/build-pptx-reader.cjs",
+      "size": 874,
+      "sha256": "c62565398e9a8771dc84368b450ecc459a7c226197b6988a47dad55595b031d0"
+    },
+    {
+      "path": "tools/gh.zip",
+      "size": 15473232,
+      "sha256": "bc6c814367b193cd8e713611d61e36013c0ef843b8f516458fe3eda039192794"
+    },
+    {
+      "path": "tools/github-askpass.cmd",
+      "size": 185,
+      "sha256": "67979504e085f7b9be38ece43be02884cd181297d3de9f6ec8e4650ca7c490c6"
+    },
+    {
+      "path": "tools/LICENSE",
+      "size": 1089,
+      "sha256": "8999137010582da29456c10e0a628bf3fa7ead05ab3ae5f424ad25cd0dd94574"
+    },
+    {
+      "path": "tools/package-demo.cjs",
+      "size": 2801,
+      "sha256": "ced069fbd8cf125b844b09d70ac0828c807e91bfb8257eb52baf855b77f5e87e"
+    },
+    {
+      "path": "tools/package-monthly.cjs",
+      "size": 1651,
+      "sha256": "a3b2a6b6e7269db9e95ce42955a538aa1f96b8baec8b13d191f592576dc79d4a"
+    },
+    {
+      "path": "tools/package-server.cjs",
+      "size": 2815,
+      "sha256": "cb22f84db1052ac21470404d3952c7e336ab1bd391e8434c54b7989755e6e2b8"
+    },
+    {
+      "path": "tools/prepare-demo.cjs",
+      "size": 2888,
+      "sha256": "41d92d14a7d5c85905a5b8d4f0823d30a6f6283b2034e74a182c4fca64e9da73"
+    },
+    {
+      "path": "tools/start-demo.cjs",
+      "size": 3599,
+      "sha256": "f99bf0d7be11d8bb65a990538df2a7a59e3459a07d6fe3ebe2c2aecf4f8762b9"
+    },
+    {
+      "path": "tools/verify-release.cjs",
+      "size": 902,
+      "sha256": "52bc9ad797ecc3e4f69915241f150f3b8c11cf9bed2330dd7a8630efa34db986"
+    },
+    {
+      "path": "deployment/steam-monthly/client-config.js",
+      "size": 47,
+      "sha256": "15fc556c53e0a08e89c03f4a83da9ba31109adb4d4d5b89e16761c64f16dffa9"
+    },
+    {
+      "path": "deployment/steam-monthly/compose.yaml",
+      "size": 929,
+      "sha256": "b167378a4274d14d4a8edd0ff01a5ace7e0d3f97668b5afde66d506fddac00be"
+    },
+    {
+      "path": "deployment/steam-monthly/deploy-release.sh",
+      "size": 2419,
+      "sha256": "e2753660fbfd8f331012e105bbd49c2fc7c3a62bec72b4fdf54085f546ddbb9a"
+    },
+    {
+      "path": "deployment/steam-monthly/gateway.mjs",
+      "size": 1853,
+      "sha256": "fc6eb07cc1019538641260508b5927f1ac1c1a2e555cbecdbfa8cf2f5bd152f9"
+    },
+    {
+      "path": "deployment/steam-monthly/gateway.test.mjs",
+      "size": 1326,
+      "sha256": "2d642ebcbaad792eb7363c3c18b5c0d48df87265e8f6c06746183bf7fb0966f7"
+    },
+    {
+      "path": "deployment/steam-monthly/health.mjs",
+      "size": 330,
+      "sha256": "a4726da2e58e215cfbfd1f70f430c48dd680e9b535f0cc026ff11c003d8f9bf4"
+    },
+    {
+      "path": "deployment/steam-monthly/prune-releases.mjs",
+      "size": 1777,
+      "sha256": "c109a6326c6d9e8329ac5108ad95e40088e649b788ed4e6a850f4aa62e412ed3"
+    },
+    {
+      "path": "deployment/steam-monthly/prune-releases.test.mjs",
+      "size": 1213,
+      "sha256": "9cbab5956c48fe46315bf751981ce233afb7da71c3e6a27c6131f95f32f4fe8d"
+    },
+    {
+      "path": "deployment/steam-monthly/README.md",
+      "size": 6079,
+      "sha256": "3338e77deb6cf58aeec081d7c09d2177f69914d1273a0c8cec48c693e63409f3"
+    },
+    {
+      "path": "deployment/steam-monthly/silex.config.cjs",
+      "size": 674,
+      "sha256": "fc07aca0524df63f3f2c7b21586da6fc2be338cc1d8443aa27b8c96f148e4ab3"
+    },
+    {
+      "path": "deployment/steam-monthly/start.mjs",
+      "size": 1623,
+      "sha256": "7432d50133d44e48b9b296e0b0009744c6a335c9f14d00aa79837471448541d5"
+    },
+    {
+      "path": "AGENTS.md",
+      "size": 2740,
+      "sha256": "f414d4140ca941a7fd5408114d6ae8d026ca16cef0a9520c608316e674b85907"
+    },
+    {
+      "path": "README.md",
+      "size": 1478,
+      "sha256": "f400dd0f567aed0cd8ba021f2630d963308936c6b710e193c90d2846fd9f847e"
+    },
+    {
+      "path": ".gitignore",
+      "size": 189,
+      "sha256": "a9626fcdd7166d40b380a27a6e976636df9e9fc35714933dabaae51783a597b6"
+    },
+    {
+      "path": "启动月报Demo.cmd",
+      "size": 90,
+      "sha256": "34d19983c9257822d927fbe54ba86469447f68d2839ef48ec4853c99e23e99a2"
+    },
+    {
+      "path": "启动月报MCP服务.cmd",
+      "size": 82,
+      "sha256": "e4d429cbcd44a5ed05d3df323fa1613f8ff345e6001fc10a5ac8cae3be12a380"
+    },
+    {
+      "path": "outputs/monthly-editor/chart.js",
+      "size": 3087,
+      "sha256": "9f643cbcdd62ec73fafc092e89ce99f10dce04c3dd0649cae5c58eda34a0436e"
+    },
+    {
+      "path": "workflow/generate-draft.cjs",
+      "size": 16478,
+      "sha256": "802bc0ac94a1f69dd3629b831423dfb7f182272ef09805f631af19aacd3e6e8c"
+    },
+    {
+      "path": "workflow/topic-template.cjs",
+      "size": 1699,
+      "sha256": "55effe48acdf30f6425dc2f3502fb67c4aad66131bb5a0598b558d548d6da2f3"
+    },
+    {
+      "path": "workflow/topic-slots.json",
+      "size": 800,
+      "sha256": "721b2a0ce18a459ad1ad7f99b3a81353317c48774b1c530ae0febfe9f427e633"
+    },
+    {
+      "path": "workflow/market-details.cjs",
+      "size": 4443,
+      "sha256": "75eaa4bc511abd802c265b7e9cebb4758b84df3031a21baf43c4d73c4785f3db"
+    },
+    {
+      "path": "workflow/market-source.cjs",
+      "size": 1329,
+      "sha256": "b3664fc11ea8e4dbfc9b33bf85bc3d9e05dcd35caa2fcff7d37dbba6a136f6f4"
+    },
+    {
+      "path": "workflow/market-source.test.cjs",
+      "size": 4438,
+      "sha256": "be475bcb96ee1ab3390c1728b1ce38fc0dbed3f36056727b6727ae4ce8b584e3"
+    },
+    {
+      "path": "workflow/binding-contract.cjs",
+      "size": 5006,
+      "sha256": "a6f4756f8460736ae01b54245828b5038b69ecbea05d1d71760f3871414722f6"
+    },
+    {
+      "path": "workflow/page-layout.cjs",
+      "size": 16665,
+      "sha256": "dafb4f52eb504735c9b5e0d621531506276ada542e3cf21ef95102e27b953d89"
+    },
+    {
+      "path": "workflow/data-quality.cjs",
+      "size": 6042,
+      "sha256": "5ccda3fad28e16e9256df91fa9254676daab50bfc1ef4963e72b4a532bdaf06f"
+    },
+    {
+      "path": "workflow/data-quality.test.cjs",
+      "size": 2495,
+      "sha256": "d17f9816f5240a6d0216830c2f3bcdcd8e5b032714e65d9a2bb0d0cbd0fdbe0c"
+    },
+    {
+      "path": "workflow/generate-draft.test.cjs",
+      "size": 3513,
+      "sha256": "1e7aa4eac962d26430bc76c0e97f76ed52b1c81be4b40342e57e1e5d48c9d960"
+    },
+    {
+      "path": "workflow/page-layout.test.cjs",
+      "size": 4821,
+      "sha256": "8b0d3e72e11c969366b1adeb093c3ff665ff20dd8ffe92f13ea30a60b7221297"
+    },
+    {
+      "path": "workflow/README.md",
+      "size": 4611,
+      "sha256": "5364ed92c2a1365c6205ed34e925611d519360da37164628cd13320025611e44"
+    },
+    {
+      "path": "workflow/fixtures/acceptance-base.json",
+      "size": 3797878,
+      "sha256": "33352f54957d4f80f9686ae69541f4bbb8d99685c94d468e713251c13ae26831"
+    },
+    {
+      "path": "workflow/fixtures/july-selection.json",
+      "size": 75,
+      "sha256": "c0de0f88d2795c566f49f1a34cce8503c0d32bf0dedf5a9f37921144c61cd658"
+    },
+    {
+      "path": "workflow/fixtures/monthly-2026-06.json",
+      "size": 440033,
+      "sha256": "e7547044307f3be81402a91c0060e9b2b3bcac2c50630b947465e628850fdbb3"
+    },
+    {
+      "path": "workflow/fixtures/monthly-2026-07.json",
+      "size": 322367,
+      "sha256": "259a2360f3599240a034ffa101565d05947b0002598d7dada0f4caa7b6ea9af9"
+    },
+    {
+      "path": "workflow/fixtures/monthly-2026-08.json",
+      "size": 351857,
+      "sha256": "72ff28cb465b098edc459117b00901318edca380f1423b7d14c4f938cc7050d0"
+    },
+    {
+      "path": "workflow/大盘直取字段规范.md",
+      "size": 2706,
+      "sha256": "8274164c9622abeffd9a636e25dc2bdf64a421acbea32b8978e1f3b1019e4231"
+    },
+    {
+      "path": "work/silex-poc/editor/api.ts",
+      "size": 10653,
+      "sha256": "30df0252c804ac9ea49244888136e8489eab9913823476fbd0426238516edd98"
+    },
+    {
+      "path": "work/silex-poc/editor/assetUrl.test.ts",
+      "size": 9491,
+      "sha256": "663150921347381db0460e1d852adda62a34c6e1321f24158f0f8f379af54cf7"
+    },
+    {
+      "path": "work/silex-poc/editor/assetUrl.ts",
+      "size": 7839,
+      "sha256": "ee3bb931e7e7eb18ad70dee4a76e6f9647b1fb5e841b48f6a654d69dd46ed4a2"
+    },
+    {
+      "path": "work/silex-poc/editor/browser-compat.test.ts",
+      "size": 663,
+      "sha256": "bab2482df1f8bd5c0a623e28e8ac7d423acae5ba4378382361ab7f8b1beb6ba1"
+    },
+    {
+      "path": "work/silex-poc/editor/browser-compat.ts",
+      "size": 668,
+      "sha256": "32fe3130612b2548714e017554ed2608dfbb4626ce4bb468a0707d6622d58e8b"
+    },
+    {
+      "path": "work/silex-poc/editor/config.ts",
+      "size": 6496,
+      "sha256": "1437536d6284501318f3ec79dfb1c57ab6165780b9b8e39790c2b0d2c0d3b9cb"
+    },
+    {
+      "path": "work/silex-poc/editor/css/design-system.scss",
+      "size": 13435,
+      "sha256": "00dc2ee9b4c085d8ada2630d54db3e6f27a800809b550c06e88734fa5771795f"
+    },
+    {
+      "path": "work/silex-poc/editor/css/dialog.scss",
+      "size": 1564,
+      "sha256": "0bf0153f3817d0e099bb2f3f11ee3f7e98166e877d39ab932a96d858b38572ba"
+    },
+    {
+      "path": "work/silex-poc/editor/css/dialogs.scss",
+      "size": 5316,
+      "sha256": "b62f380570c282d39715982de266b4c9aeaf517ddd0441758e25c2a3a52876e1"
+    },
+    {
+      "path": "work/silex-poc/editor/css/fonts.scss",
+      "size": 640,
+      "sha256": "cc394ac4d39d51e6039983984fcc00cc2a792df219a4cf98ea7438003f7e526f"
+    },
+    {
+      "path": "work/silex-poc/editor/css/footer.scss",
+      "size": 225,
+      "sha256": "a843d122e2b2bb799a8ffa0011ff0bbe5d5340a40e7215419f80b66aae1e5a2f"
+    },
+    {
+      "path": "work/silex-poc/editor/css/grapesjs-plugins.scss",
+      "size": 7631,
+      "sha256": "3618446760de09536f0521375a9336cc530719921c428510d13363e18edf8746"
+    },
+    {
+      "path": "work/silex-poc/editor/css/grapesjs.scss",
+      "size": 9465,
+      "sha256": "c9cf761e4d1dbd85aaf507ff3c3cc7094c73b1c94b809a540997864b20b683a7"
+    },
+    {
+      "path": "work/silex-poc/editor/css/index.scss",
+      "size": 630,
+      "sha256": "bbad0569f38aba0995b8bba4950865e0c8476c4d924a18ced643d7cffff6a475"
+    },
+    {
+      "path": "work/silex-poc/editor/css/loader.scss",
+      "size": 1392,
+      "sha256": "2a1f8ab1d427c92ca324ba3f3f1990578a41588f8215830b4ae88bb0069c6d3e"
+    },
+    {
+      "path": "work/silex-poc/editor/css/page-panel.scss",
+      "size": 2299,
+      "sha256": "c4b7100808cc3f50a99fdd3a51e5dbf11e1cd5415fe0013a3b2d12e09381b8c0"
+    },
+    {
+      "path": "work/silex-poc/editor/css/panels.scss",
+      "size": 4716,
+      "sha256": "dc594730d8eac2a7922ad0d5a93b0e7fa0c3eb03dd9a6c9402167a97f74276d9"
+    },
+    {
+      "path": "work/silex-poc/editor/css/project-bar.scss",
+      "size": 2744,
+      "sha256": "66604cdf00c072097277381ad7e858995df992e31054c5ac702444cf1c16c169"
+    },
+    {
+      "path": "work/silex-poc/editor/css/silex.scss",
+      "size": 13480,
+      "sha256": "219bbc687ffe9ec63e52318f68542162a38d1543352b48d2551484a0a8c1bfc6"
+    },
+    {
+      "path": "work/silex-poc/editor/css/theme-base.scss",
+      "size": 3243,
+      "sha256": "f0a8110a22cc163590aff0c0a4210d0d810ec9e5cae4bb47d7d3ebf016d54c3e"
+    },
+    {
+      "path": "work/silex-poc/editor/css/website-info.scss",
+      "size": 311,
+      "sha256": "fc360c4b798bed60168fb598c9a3d8feb4aa6de9ab0e3f0d21d487d6399bc60d"
+    },
+    {
+      "path": "work/silex-poc/editor/css/_mixins.scss",
+      "size": 100,
+      "sha256": "a2211c6037ce5df93590712e6bf0bfbc51c58dcbb9c5d3473c4b4c22aa4ba988"
+    },
+    {
+      "path": "work/silex-poc/editor/css/_variables.scss",
+      "size": 2673,
+      "sha256": "797e5dd31ddab114c477d7bb337a9b061062f44a566abaf79fbc154b3b5f5703"
+    },
+    {
+      "path": "work/silex-poc/editor/events.ts",
+      "size": 3503,
+      "sha256": "fde65b2dd051b76197c7146e878f8bc59be2d709df94345008476c6c9f036ff8"
+    },
+    {
+      "path": "work/silex-poc/editor/expose.ts",
+      "size": 1194,
+      "sha256": "594983e3b45f2c64e46490af1a7d1bab5d078f9ff043373aa3c79c82e0335226"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/blocks.ts",
+      "size": 6749,
+      "sha256": "736c42310cb09b42e763f187ea54b9c5d8952e80af3d7e48f8de061f93052e58"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/body-remap.ts",
+      "size": 1578,
+      "sha256": "66823faa1f46df86180f8a843cf54aa2757ed296124a3909566af2e5dcb7578d"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/breadcrumbs.ts",
+      "size": 2456,
+      "sha256": "f49a28d7f599f5968542ff0accb7d7a02b283be9f92c5edee9c174004b3ff8a2"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/center.ts",
+      "size": 1989,
+      "sha256": "5f5fb759f2ee916c8311cdda69a6f183e5d369161dd1f94aead777ef7d2ccc63"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/blocks.ts",
+      "size": 4024,
+      "sha256": "54589b1e98d1fe5a312c8349dca96bf617465afecce1ef264d78ed4c52f29a3f"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/buttons.ts",
+      "size": 5340,
+      "sha256": "8c60ff6f3ed993f92af45638224734a39a3e44e40ba201add821e907a5d496f0"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/collection-pages.ts",
+      "size": 6641,
+      "sha256": "b18fb2d0c31d6afc3f2a64ac31c6572c687b80a3128cd1a865957fd022118259"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/config.ts",
+      "size": 1274,
+      "sha256": "22062b9a8ec8f18230a07fa7898b073b83ddbd488a9597dee5be69cfca6a3234"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/DataSource.ts",
+      "size": 8239,
+      "sha256": "004d69cda22092cf3d6ac1ce0fc04cee23515a1db91dcb7448b194cf47ce83e0"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/filters.ts",
+      "size": 1926,
+      "sha256": "9128224bd23a0a41011dd5770a5adab4e50431744945843d7c47e3e3241c7755"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/index.ts",
+      "size": 5448,
+      "sha256": "c1888c7d8b16266b411f9790d770061567ee2174f794fee948b569dd52f73b45"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/liquid.mock.ts",
+      "size": 3442,
+      "sha256": "eda676de01b2b20447e019fd2756ba0832f6a4158d3007dbde41381b208fb75f"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/liquid.test.ts",
+      "size": 8786,
+      "sha256": "25830e0186d8ba88f5351244ed8947209a53ae38f415e996b7c24bcc65376630"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/liquid.ts",
+      "size": 15294,
+      "sha256": "04de1fb2646802b6e92b2c5b712311da241a9e74102d3406bdaf56371921bddb"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/page-settings.ts",
+      "size": 14351,
+      "sha256": "0f8e97d2af619b7aa7c234691d12922a749d579cfc19a0cf66edc407d2ad98e3"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/publication.test.ts",
+      "size": 6852,
+      "sha256": "f20281ec37c5887b7984964b0ef4e2c215ea8309529ffc4693bf9962a49628e1"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/publication.ts",
+      "size": 27568,
+      "sha256": "437d2b71a750d44a8b9e3e7ab25b155e7747d1c7c3dc257b040bc931d9daeee9"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/site-settings.ts",
+      "size": 3028,
+      "sha256": "7104c488ad0812496ad6afa9667b302d5c46fddec75b295435baa8d88037723a"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/states.ts",
+      "size": 4630,
+      "sha256": "3c887764e9bbad92bade0e8a5cb1b589ce8685c81400fa5058e564b3eb0d696f"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/cms/traits.ts",
+      "size": 2663,
+      "sha256": "c08dd6213e0c5a0d223873e391ae33556b63b001bcb37698292e3e5392499fb2"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/core-commands.ts",
+      "size": 10893,
+      "sha256": "1a39f1678fc5e9e95907658b3d63245fe8d0b98816950b18340a1f6ad8b93b45"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/css-props.test.ts",
+      "size": 11408,
+      "sha256": "fe69f9b38d71bb45f593616446735280161db9bc675a213ae7d79b7d1856b743"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/css-props.ts",
+      "size": 49475,
+      "sha256": "83a53563c901d7e2808a4cde79443fe0e9f26cbb7741181537d685cc3feb1103"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/eleventy.ts",
+      "size": 1562,
+      "sha256": "cc5fea5e568e610e246c522128f9dbbb3720e5c6fa5ae8ea69bfdafb6d279510"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/flex.ts",
+      "size": 3679,
+      "sha256": "fed0e345bbb541b8f8cc9714edf058059f1e0c7c77df1770e5505848149407e6"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/footer.ts",
+      "size": 1285,
+      "sha256": "4dc47571eaba84a33cb51e33111c9aed5cf968cc83013a2d4312cc2beea29f08"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/img.ts",
+      "size": 6319,
+      "sha256": "0366879126080432c817775bf2740aff762bdca9f19b22ea0b6ac0d041f4d32a"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/index.ts",
+      "size": 24650,
+      "sha256": "ec6eb9ccf372ef3354564678d9da6f08b294fa1eca918fed71cb6c3189b6b888"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/internal-links.test.ts",
+      "size": 3169,
+      "sha256": "2a9d8aa311ee8b178f636e3e0152c72a26456dc089a8c0c7a082c5fe08e11f47"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/internal-links.ts",
+      "size": 8276,
+      "sha256": "e5f582ee932a037b71c1f193f53a47ed9dbb49db99f51179af7fd8517b43c61c"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/keymaps.ts",
+      "size": 5904,
+      "sha256": "760b3131b07acaacaebbddbaad23fa9c7d5781fe808eb80d076880205e30a17b"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/li.ts",
+      "size": 2676,
+      "sha256": "363216c5be783ab9bb8d46edda937c19373fc048773e3b2ed75e235d64cd890f"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/LoginDialog.ts",
+      "size": 7328,
+      "sha256": "22c3c0ee5318b6ce4ab1c947847a786c0f504c782d92755c7ebaaefef88d355a"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/monthly-data-reader.test.ts",
+      "size": 1948,
+      "sha256": "d2a8bf412dda06d2538dda22c5661f68ce3a5d8f95e47eb958388c76a169ee53"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/monthly-data-reader.ts",
+      "size": 6223,
+      "sha256": "58a7909fdfc68cd1240e621f7556b6dcd56a153af65337ee4daaff5f3dc1b7f5"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/monthly-service-storage.ts",
+      "size": 18789,
+      "sha256": "a50d700bac36e18a93a37e5a4236bd52dc99935c5c1f259aff1d2089eb02c5d0"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/monthly-workspace.test.ts",
+      "size": 2641,
+      "sha256": "012bca625e32f13ec2eca3a5316c9e340ef049f17047e64a25b3b23a4259c915"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/monthly-workspace.ts",
+      "size": 39272,
+      "sha256": "f43203fb2e726dd8f845953086db59ef64930c71908fe23a6123eec57e4307a2"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/new-page-dialog.ts",
+      "size": 2958,
+      "sha256": "9775383d7296c161decde3deef656a96b7c2675b6669832adc66d82193ad170e"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/openImport.ts",
+      "size": 2724,
+      "sha256": "499c3a585b927c543a92c16da6111ea3cd989aa11814b34f2322f24f098c9aa2"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/page-panel.ts",
+      "size": 14680,
+      "sha256": "b1b4acc95f5dbbcd8bc6f9fd15240ab623ebcc44d3c17a15ed81a7a21a9e6294"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-archive.test.ts",
+      "size": 1192,
+      "sha256": "70b4261d4f3837246639d27c126a9833e1d8be030523990168570947fa6fa1f2"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-archive.ts",
+      "size": 1031,
+      "sha256": "8857c58ddb0e6251df42480a629b2eca5cda96bef88bd9b3ce2df7eeb75b2b87"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-chart.test.ts",
+      "size": 2624,
+      "sha256": "2e4cae187e17b92534576a311de4e38f6ef34f9d75ba87d7f92337ec6492fd46"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-chart.ts",
+      "size": 7509,
+      "sha256": "24be4a18c6be8c2e9e48bff55fee5f604b891a54ebc33f28f8e5d22086631a14"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-import-dialog.test.ts",
+      "size": 831,
+      "sha256": "7855fd52a0eb6860db83835aa0a986a3a6d5b998997a070e390dee2950e2be18"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-import-transaction.test.ts",
+      "size": 3427,
+      "sha256": "4746fc72616dfb5d1b30453b13b62c5a42f9f073768a31e32101a0bb8cc58fd4"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-import.real.test.ts",
+      "size": 1473,
+      "sha256": "c66e168010115d7ed200fdc16ab53d2d15382290c91c3433cf1278c6ab75e373"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-import.test.ts",
+      "size": 6957,
+      "sha256": "8ca077a2a448fba00a204f4ca6937a476bb3b5a9faf3f1e0732bb08ed9214950"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-import.ts",
+      "size": 38661,
+      "sha256": "a4b15e0f5965373cae0447c119f9d8a65d0664aa469dedd4283769123202b21d"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-template-reader.test.ts",
+      "size": 2493,
+      "sha256": "0ddfa6c9665a23f8265c5d28d8a8e48cffa9a313c06fbc54bd22d2611c7090b3"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/pptx-template-reader.ts",
+      "size": 2943,
+      "sha256": "844b43ea10f67729a6f7eda03f08faba40073656350ea1fd84dc45257426ca6b"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/presentation-mode.test.ts",
+      "size": 594,
+      "sha256": "429616391ae0cecdf9c7e6972a78965f07394632050632612a107fa54503d75a"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/presentation-mode.ts",
+      "size": 34772,
+      "sha256": "24c9c3e3b97b8d11b52404fa5deb6598a93713c51ad3b2f6c8b2ca37a87224e6"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/project-bar.ts",
+      "size": 5671,
+      "sha256": "d074fa7a4ff6f69a2e78b8c51498815213412ad5a92f394bb39ae891f018e6c4"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/PublicationManager.test.ts",
+      "size": 2244,
+      "sha256": "2036d817d9e2b52b51dc552799ef4b8a43af76edeca23325fa7a2f207cfc5357"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/PublicationManager.ts",
+      "size": 28371,
+      "sha256": "0b60c1886d575b1e215ec6776e5b68b0c9b21c2f8aa4be0c65aeaa8564b77273"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/PublicationUi.ts",
+      "size": 20452,
+      "sha256": "2683fb0c1e7df0939de70980397317345018e967ec3141554ddcefa083eefe1d"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/resize-panel.ts",
+      "size": 641,
+      "sha256": "e84b9098b2be80daffb96064f71eb30b67585dd7ba4b98400646339c00aab458"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/rich-text.ts",
+      "size": 2047,
+      "sha256": "3815a66521104fadc8abcae94c87b171189a0affa81bf6e54c43696580a3b3f5"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/sectors.ts",
+      "size": 2538,
+      "sha256": "81005b0f99ed086c6e9d61c54a28146dd946ebb6495a3092fa3a463a38d34935"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/semantic.ts",
+      "size": 5925,
+      "sha256": "602b098ceda4ff044a211a20113d27b7a4db6164b642dd70a4cf2c8f861d5fae"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/service-save-repro.test.ts",
+      "size": 1851,
+      "sha256": "60e79f71775143eadfbb165d8217461252edcb68fcd767e72d6e7ac3cc2d4dad"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/service-save.test.ts",
+      "size": 3042,
+      "sha256": "c69e364a6bc6156ccde6f7695b6e98a9007e88f6de56a9e43d27fe3775465d6b"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/service-save.ts",
+      "size": 1447,
+      "sha256": "b40a08aa99d0bc30f87ee4bcfe4a24216929fc7523cc13d2ec6d7cd85f6e3c8e"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/settings-sections.ts",
+      "size": 15524,
+      "sha256": "dcd2d9bea8bd31f99561a211b26d0adac84b1f99c4e5e8a52c0c71431b875a61"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/settings.ts",
+      "size": 17242,
+      "sha256": "e0eb0d947c06f096523269e218ba3d73718aa40fbb6c9281581fe48513c42b51"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/static-plugins.ts",
+      "size": 2882,
+      "sha256": "bcd7399b5d21fbe7b36dd5ea85d46efb77bb03e904aaddd869374c02a967a2c9"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/storage.ts",
+      "size": 11548,
+      "sha256": "23efa73f9151fa91ae08cd5502d3327aa2fec90a1ceed0698b898a924d658b12"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/symbolDialogs.ts",
+      "size": 1331,
+      "sha256": "b4b24690cd0d5e6d1ba565abb8ab4a1e8c4f0d15fb3fb632d3315cd916498ebb"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/table-editor.test.ts",
+      "size": 7870,
+      "sha256": "218efcd5ace1101a5f3ddb86371ce463b958775462559888a66f18cda554ea54"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/table-editor.ts",
+      "size": 20425,
+      "sha256": "862bbb30c021ed10a67bfa31d974f55901648e36ad2dc91aec8429cf9f6b1b99"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/table-interaction.test.ts",
+      "size": 1961,
+      "sha256": "70a219989ec0febcf51b972616ac71ed87ede9c8ff08f2dd105d4099a6c6f030"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/table-interaction.ts",
+      "size": 15059,
+      "sha256": "636fe949eb85922cfb053e44868195698af6db8b8c16b3f765580e4820ff047d"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/upload-progress.ts",
+      "size": 1434,
+      "sha256": "b9ff7460f1c832ffb32ec8fc18c2c1cfb7f598be3e134d4a0fdd8d7349b85db6"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/view-buttons.ts",
+      "size": 2895,
+      "sha256": "0fabdfcb4ae25fbd0e2ba31ee2fd5c69e8fae857d80d6b3be5eba150eb475e40"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/website-info.ts",
+      "size": 2335,
+      "sha256": "c0d76529edb2632ca03ec1f60f5d5816ab5b2b0c9d65d2a28eafbe5a64c869ae"
+    },
+    {
+      "path": "work/silex-poc/editor/grapesjs/zh-editor.ts",
+      "size": 1212,
+      "sha256": "94efc728ca7e945d0e45066fd7da5e60f7bc99f76d3369eb93759f161de441cf"
+    },
+    {
+      "path": "work/silex-poc/editor/index.ejs",
+      "size": 1144,
+      "sha256": "b00616b06c524784a18cba4b0eabbaf5638e31528a878f4ef214d0a00f8083ed"
+    },
+    {
+      "path": "work/silex-poc/editor/index.ts",
+      "size": 3250,
+      "sha256": "632eaaa083926c0bbdd4298ff65a257302a40777fff00c9b64474ab7864b5750"
+    },
+    {
+      "path": "work/silex-poc/editor/network-request.test.ts",
+      "size": 1494,
+      "sha256": "dd49bdae6e4c7cb0ba097656309544ff55063c85845a07edc243c9b63a3abd32"
+    },
+    {
+      "path": "work/silex-poc/editor/network-request.ts",
+      "size": 784,
+      "sha256": "d648e1515e5fdc9343afe626c6c709ea1029314f7519d4334a52a414f6e3c58b"
+    },
+    {
+      "path": "work/silex-poc/editor/publication-transformers.test.ts",
+      "size": 8432,
+      "sha256": "771d2490992c3d0947b6c919c343310eb914c92f634b717e433467acb7c2ceef"
+    },
+    {
+      "path": "work/silex-poc/editor/publication-transformers.ts",
+      "size": 11368,
+      "sha256": "b20c20c35a61132b9e0d06bdcf9e8cfc5141192dfc459ee2fa3c04b18cf10061"
+    },
+    {
+      "path": "work/silex-poc/editor/publish-custom-code-block.ts",
+      "size": 1187,
+      "sha256": "c7cd8d6c0c26675417567e5504fe15831d0772426b803bafcd63441fd564b451"
+    },
+    {
+      "path": "work/silex-poc/editor/publish-fonts.ts",
+      "size": 1538,
+      "sha256": "53b6b832aa5281bfab1f6a4bf81d3d61e91d16763748077fd5333c404d65c8d2"
+    },
+    {
+      "path": "work/silex-poc/editor/scss.d.ts",
+      "size": 24,
+      "sha256": "55cba6851b2422d5ebd928451cdf48d9b7bbaf0b176615c4b431330c601d01c9"
+    },
+    {
+      "path": "work/silex-poc/editor/utils.ts",
+      "size": 3041,
+      "sha256": "d0f8a535a489a621cc8c5ef6063b28f91f1fb2e116911ed7cb71bfd3afdb8099"
+    },
+    {
+      "path": "work/silex-poc/server/api/api.ts",
+      "size": 654,
+      "sha256": "dc36021b139d52eeed3236e1697e510da84a8adca906acce5a0d2aeb4e0d4c96"
+    },
+    {
+      "path": "work/silex-poc/server/api/connectorApi.ts",
+      "size": 20010,
+      "sha256": "d020a49d71db496f0b6f7c7ac22335cddbf4f657f246d8c950a8f37c965089d6"
+    },
+    {
+      "path": "work/silex-poc/server/api/publicationApi.ts",
+      "size": 6905,
+      "sha256": "8386a15c36c72a73487bd0f31197ac183de41dfc912a68bf7fdebfd428a7cb6e"
+    },
+    {
+      "path": "work/silex-poc/server/api/websiteApi.ts",
+      "size": 19594,
+      "sha256": "c1f15e490824057b7021a1bcec78a1d9e3b3e22a30103c6ca0c4f2dce7d39c5d"
+    },
+    {
+      "path": "work/silex-poc/server/config.test.ts",
+      "size": 2786,
+      "sha256": "43a7fbaa50d30906cb51acc43db5a0bcf638edabcffa50f8370049ce4ee7aea7"
+    },
+    {
+      "path": "work/silex-poc/server/config.ts",
+      "size": 7839,
+      "sha256": "9e75d19a55d4c45a329b048bef013ee91e29e99a245bb44f134b30d00a9fee60"
+    },
+    {
+      "path": "work/silex-poc/server/connectors/connectors.ts",
+      "size": 7926,
+      "sha256": "12362ab52be53472e2bcad6ced75c02d4185af972b40f799bbc5bb1e84f189ce"
+    },
+    {
+      "path": "work/silex-poc/server/connectors/FsHosting.ts",
+      "size": 2843,
+      "sha256": "3e74f3586140399d48684d351be7ed122df314fcc523cf201819c3dbdfadc807"
+    },
+    {
+      "path": "work/silex-poc/server/connectors/FsStorage.test.ts",
+      "size": 1692,
+      "sha256": "40fdb7e6b6ca2237e1ea37e8fe897d7cc07be5e9b84ed62a56ed4baec2bbfabf"
+    },
+    {
+      "path": "work/silex-poc/server/connectors/FsStorage.ts",
+      "size": 13705,
+      "sha256": "9e150226a4d257ea34f9381bda4c5e3cf760d4a74d8d9fea5113b44855f5d1dd"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/.gitignore",
+      "size": 24,
+      "sha256": "6b2755903dcf57e1453e1f6d07250e63479b78b1cf2cba72b871698dc5f8bdfb"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/.nvmrc",
+      "size": 3,
+      "sha256": "5378796307535df3ec8d8b15a2e2dc5641419c3d3060cfe32238c0fa973f7aa3"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/.silex.js",
+      "size": 8213,
+      "sha256": "850bbd8bb7f08e6c9efd817bb718e534d74370e206566238cfe93d09fc32e869"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/client-config.js",
+      "size": 966,
+      "sha256": "31bccdfa92cd1959251585f1d8235888f41228355002e783c840fa5a9ac39037"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/client-plugins/.gitkeep",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/client-plugins/onboarding.js",
+      "size": 1813,
+      "sha256": "a18d0ca6f58a84a1118f69d7cc2fa1a806200d28ad9fdac0b91a9996f1c758b2"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/example.env",
+      "size": 537,
+      "sha256": "cb1db9d723ac35eb948b8bf5b81f875b2d7e633e93d20616307b9ab8c486962b"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/onboarding.json",
+      "size": 1706,
+      "sha256": "a9889af088531a981190f8db8762267b59bc3faa60dd60432890aeaccb88f812"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/picto-silex@3x.png",
+      "size": 3490,
+      "sha256": "eb79a7e87477e6fb9e4bfba5dea16ab429bc465355a04513a9d8f14d333bb507"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/server-plugins/dashboard.js",
+      "size": 2933,
+      "sha256": "e9ed33358e05cb0e22fe39ae29a721ba809adb7e5ffc70f3d43f84fcdab0b36b"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/server-plugins/onboarding.js",
+      "size": 6962,
+      "sha256": "08075557aecdf5457138660b9976482bf39a09e2f377cb45b024edf21c3d3bad"
+    },
+    {
+      "path": "work/silex-poc/server/deploy/silex-platform.yml",
+      "size": 3991,
+      "sha256": "1c8d5ea5512140a14081b8a0d657df93fc652e8ac4f3ba3137cc9f0f6851c5ea"
+    },
+    {
+      "path": "work/silex-poc/server/events.ts",
+      "size": 1703,
+      "sha256": "7a8a80721adf727020ec98f95ad37b31cdb7723b5a086cb07ffa79e96acc18a9"
+    },
+    {
+      "path": "work/silex-poc/server/expose.ts",
+      "size": 815,
+      "sha256": "86ea3ca41c79fa00150b1ce28c1ef891f970212d9825f2427a2878409f4778a5"
+    },
+    {
+      "path": "work/silex-poc/server/express.ts",
+      "size": 2271,
+      "sha256": "913e60f344a9f70fd1cdeeea9f9d8a5a3d548e933afb0b2dc9a8cae79ca8d2fa"
+    },
+    {
+      "path": "work/silex-poc/server/index.ts",
+      "size": 3446,
+      "sha256": "79780bb4ce55b41ab5c027ad6635540deb70abcc8358e3f9516d1e3551f9f132"
+    },
+    {
+      "path": "work/silex-poc/server/jobs.test.ts",
+      "size": 2473,
+      "sha256": "5561ee05ed6cedd1fd2c0de478d024ede710e746602dc12070382255c2e4ed4a"
+    },
+    {
+      "path": "work/silex-poc/server/jobs.ts",
+      "size": 2655,
+      "sha256": "b1fc710545439a0cb536a82666aa8f61f881cdf9434807ad3cb7dae17cdbb6d5"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/Cache.ts",
+      "size": 1223,
+      "sha256": "107396ff623b60021ff626bfd64f668e79d0ba368a1ae9302ec4fd3da457a75a"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/DownloadConnector.publish.test.ts",
+      "size": 1551,
+      "sha256": "2bc5a1105ecfd56d0ad02540bb3d0c41c013f3be57764fde3812f5228062ac3d"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/DownloadConnector.test.ts",
+      "size": 2242,
+      "sha256": "dc16b06d7760d60941e7d7ff688b2dbe71b6e8fae2d8d97666755eae998f817e"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/DownloadConnector.ts",
+      "size": 5925,
+      "sha256": "49a2fb1c915a43ddc2824a8ddecebdd9147a9ebe03bf413a2c2233fa35f0419b"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/FtpConnector.test.ts",
+      "size": 2332,
+      "sha256": "92ab877b46dfd079415ff97c692d14f048fb4249e395dd3caf7a7bcfd56dd35d"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/FtpConnector.ts",
+      "size": 22740,
+      "sha256": "837564f2fc9f7972c9f92363f3226a536ccd74e62af66f5e781573ed4000703a"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/GitlabConnector.ts",
+      "size": 45336,
+      "sha256": "1690686ad86821612a13e8c604d47f62b1bd4878086f8daebaf1469da7f1c91b"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/GitlabHostingConnector.ts",
+      "size": 23009,
+      "sha256": "1fd8e6a7d8b3698f2d4d724aed8c891b9c5644b7466d60490f8e144cfc73f305"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/SslPlugin.ts",
+      "size": 3017,
+      "sha256": "5241facf1dd4e98feb86c64cbd3dc1aca2f736c04f18f6bced865dd57da6680b"
+    },
+    {
+      "path": "work/silex-poc/server/plugins/StaticPlugin.ts",
+      "size": 1812,
+      "sha256": "d95899794efb58bd5c5e6fb08a9de8af1d060c3756c273d4d37d68b65ac33993"
+    },
+    {
+      "path": "work/silex-poc/server/utils/BackwardCompat.ts",
+      "size": 23386,
+      "sha256": "dd4df3296c2b1c42f95e468b4917a69c957e4a3544b0729cbf49ba731b6ce69e"
+    },
+    {
+      "path": "work/silex-poc/server/utils/buildPipeline.ts",
+      "size": 1633,
+      "sha256": "427dbcbcf297b3db4028c80930e0da9377876870bcbc1e944faf6148af2bb723"
+    },
+    {
+      "path": "work/silex-poc/server/utils/validation.ts",
+      "size": 1355,
+      "sha256": "6b64b902a68944e1ba04dfdaa7535cb845e5b360202325a7742ced0065f7e748"
+    },
+    {
+      "path": "work/silex-poc/server/utils/websiteDataSerialization.test.ts",
+      "size": 2739,
+      "sha256": "ec6623712a88b1b023970c56ff900469d737df99612e855a34f11a43754f99cc"
+    },
+    {
+      "path": "work/silex-poc/server/utils/websiteDataSerialization.ts",
+      "size": 4670,
+      "sha256": "57d86d77628803c946f3e1690e1ca46613fb9e612def3111f49fb0027c7932ec"
+    },
+    {
+      "path": "work/silex-poc/common/constants.ts",
+      "size": 3574,
+      "sha256": "4870d9605a62f07442fb073863a4f33717fd63a71e738dc1333c86f04ba64a00"
+    },
+    {
+      "path": "work/silex-poc/common/examples/plugin.js",
+      "size": 112,
+      "sha256": "7441074ec8d2c335869bc95d6b26643ea5e1d5bc657e5be635204e2746e14ab6"
+    },
+    {
+      "path": "work/silex-poc/common/externs.ts",
+      "size": 777,
+      "sha256": "c7a7dd7c7377f60c1ee5d829a2600de239c7eec4f976b73370e8102303c38f34"
+    },
+    {
+      "path": "work/silex-poc/common/page.ts",
+      "size": 1195,
+      "sha256": "014d96f326f88e453e43f83f3c41b926209bc1bc84916a9b033599eeff414cd7"
+    },
+    {
+      "path": "work/silex-poc/common/silex-plugins/config.test.ts",
+      "size": 2389,
+      "sha256": "635172dc3b2ee144fbda9eef8b9c4a993d3485ef20dcb7d429f6f96c5e1c9331"
+    },
+    {
+      "path": "work/silex-poc/common/silex-plugins/config.ts",
+      "size": 819,
+      "sha256": "cbe3c2e9fea8b8f67083306a98c64ac626a7d11b348ea2e510a7ea29e81bd3d0"
+    },
+    {
+      "path": "work/silex-poc/common/silex-plugins/index.ts",
+      "size": 56,
+      "sha256": "6b95c193dd5aba39ccb743ab3a2a8e2d1aa832e852352f11182c4ec490225c44"
+    },
+    {
+      "path": "work/silex-poc/common/silex-plugins/plugin.test.ts",
+      "size": 2063,
+      "sha256": "91ad6a513a3c7ca62a46c22644ec6ffc7590d3c7aee18090ae7fff2b47181c05"
+    },
+    {
+      "path": "work/silex-poc/common/silex-plugins/plugin.ts",
+      "size": 2144,
+      "sha256": "db589c87b95b163badcf54a3b925b12ebfd9213712ade69e4626cccba52c5201"
+    },
+    {
+      "path": "work/silex-poc/common/types.ts",
+      "size": 12113,
+      "sha256": "a8ac5884188a4d1aec8d6ee19915f983de4636dc9daa6b864de84c031d150bce"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/.gitignore",
+      "size": 35,
+      "sha256": "53e98b34af9bb2ab940aa5fe956fe1a538b2afc495c79fa2cfbf0d259510f0dd"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/.husky/pre-commit",
+      "size": 29,
+      "sha256": "7d0f8dc43a2adb447db7a7b6c422781809102dff82beac90e8028915f6af74cb"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/.prettierrc.json",
+      "size": 123,
+      "sha256": "90c18870351d7916e84024c9a7bacd35eed78fceb0600c8c66ccc4527ba41c6a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/.vscode/extensions.json",
+      "size": 445,
+      "sha256": "0f7a21bfb05703acef7092876092fdfc0405bc53838fbb72c38d70e40db2a91f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/babel.config.js",
+      "size": 109,
+      "sha256": "851dfef00aa4346e0ea64b4de8754ccca92c724e43d19999c1c884d351b8cf01"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/CHANGELOG.md",
+      "size": 2887,
+      "sha256": "8e6ee815a3b156ab20edf5cb38605c2e47566ebabbfab93aa72a2f1c2a153dcf"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/commitlint.config.js",
+      "size": 63,
+      "sha256": "cf092e9a174a3e50db1c1b6069cbfc93507cd1d76f2dd806ccbdae04d927c3c9"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/dev/expression-input.html",
+      "size": 4266,
+      "sha256": "59ea028ce2a9d5732f417066b61d27ade8fc5a8d981625fc8797cdba29cf1139"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/dev/input-chain.html",
+      "size": 3028,
+      "sha256": "e71d402fb33329852e9b904d4865f7737921b34d86bedffad1eeef494dea7bfb"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/dev/popin-form.html",
+      "size": 3152,
+      "sha256": "788099d2861afbb5b888de05ff0a883eb8b90d496453248653d306c53c8e7789"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/dev/README.md",
+      "size": 176,
+      "sha256": "574322fdc55f176c1bf647ba54ffc85cb7b2797080f871b794ece483250902d6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/docs/.nojekyll",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/docs/expression-input.md",
+      "size": 6702,
+      "sha256": "05bb855b498793d2ff3e7a8ff48d8b769f2b844cfea027625210c7657e5ee7b4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/docs/popin-form.md",
+      "size": 10801,
+      "sha256": "85d096eb4d2fa2e1b2b27839ea3c729578c729880443363d012ae20ca2b1eba4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/eslint.config.mjs",
+      "size": 1816,
+      "sha256": "61d26fbd9189ce0a837ce004fe18de7734637d85b4a5a08ceaaaff63e23b6685"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/LICENSE",
+      "size": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/package.json",
+      "size": 2918,
+      "sha256": "bf3b1de9123a5d640dba18f62e4834ffc47d2264a7dfa74003eb9241a7e9c06a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/playwright.config.ts",
+      "size": 143,
+      "sha256": "0423f1bedde7169ea5410b4ca266a06806bb36473576d614f97f2e0bb363ec59"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/README.md",
+      "size": 1475,
+      "sha256": "6e54015c9027ccab78bc11b2662a1bbeee57ea471ce2af2dfd39c8c3a4f69fce"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/rollup.config.js",
+      "size": 883,
+      "sha256": "7745432a608099cd44477335deee48eddd335c85d2ce7a39c02cdd4485bd9bb6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/src/expression-input.ts",
+      "size": 10075,
+      "sha256": "61d49b50b251e11dd00952438e39a317385d958d919981f824f100843537cf48"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/src/index.ts",
+      "size": 103,
+      "sha256": "2ad1813d3bafde2e25bcd1c71f7c4b23a53d3924a8def62d6f5e9de5b1256970"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/src/input-chain.ts",
+      "size": 6495,
+      "sha256": "29294fb6e9627ec474ea47b50750bd711e35c44a9fbcd2322f46082c31a21f9b"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/src/popin-form.ts",
+      "size": 6894,
+      "sha256": "bc460282350519f14e2ffabeaa6c58722e299e2c218309ffd7abf180b08c7394"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/src/popin-overlay.ts",
+      "size": 6253,
+      "sha256": "829150bd44746c942f3c4e4189b1b2e9f19e6b62852d9f85cac4079dc6a1f368"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/src/styles.ts",
+      "size": 10664,
+      "sha256": "d05ca5eec348e92169153755b4c268b20b832844bd64be8a17b11c93be421de0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/src/test/popin-form_test.ts",
+      "size": 1836,
+      "sha256": "80eaa4626e28278f4c15f548907fdb22d421c02ed196689afe0297f7cfdb3e74"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/tsconfig.json",
+      "size": 839,
+      "sha256": "28c38e3efdd9a10dfd6211241ce4e3efc8c7e2aee7156b06e3241804a4726f71"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/web-dev-server.config.js",
+      "size": 564,
+      "sha256": "711c1bc5841ae63496e93eee88233387b5cd9bb9caad05cb3a38871c260986e6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/expression-input/web-test-runner.config.js",
+      "size": 4701,
+      "sha256": "3571b8c8b2ec7ec8f6ad6983b49b299cb067c001eb397f8385867f8c3158458b"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/.editorconfig",
+      "size": 101,
+      "sha256": "c5e2c092f73f38cbc6ca872365c0e02de7d97a2e8c5a832ce1cae8b6eb3ab46a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/.gitignore",
+      "size": 75,
+      "sha256": "af658e9da599211af74d0dd7bbf0d1b6cebba80972fd76a43cd77155368254d2"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/.husky/pre-commit",
+      "size": 102,
+      "sha256": "5c47ea66fe3fed092ade7a66c3cc1b4eaf60f6614f43080c64077dda0c9a9174"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/babel.config.js",
+      "size": 56,
+      "sha256": "f2edb8a9f773cdfe7ef3216ec29337dcd629091352319d6709156dba9c5d234f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/eslint.config.mjs",
+      "size": 524,
+      "sha256": "c0be640e1885aeba4b5f3802f424c3af2c8f370cdfccf5dcf49926d08c738b20"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/index.html",
+      "size": 13230,
+      "sha256": "8ef0209de45849e314fc56170e304570d6a24ff9460a45fa4c90882827265a8c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/jest.config.cjs",
+      "size": 307,
+      "sha256": "14833b6c557370a9460763e5826dfae0dc1416536a4bc1f40d265ff41ce3d884"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/LICENSE",
+      "size": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/package.json",
+      "size": 2002,
+      "sha256": "78c49b082beaad76b1d3a398681716e3ac12f1707cf29479096c9f913a905bbc"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/public/simple-selector.html",
+      "size": 213,
+      "sha256": "9182061e8a34815c0e5d4e9551f53da9f4461f89c3f9c06a0c2e68f9aa190bee"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/README.md",
+      "size": 3932,
+      "sha256": "4c8e2934c662e8a3328298e3030f3ae63b70675a59174166962bb0bf84b63f58"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/capabilities.ts",
+      "size": 1958,
+      "sha256": "3bbc9c6508b792f5b5cf102ff204c5638c3bdf8210728d8837910491e0f4b2b3"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/commands.ts",
+      "size": 5536,
+      "sha256": "a566e8645f654f62da61e0f9d5ead670e65099cc8095330e7e608d20865451e9"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/components/complex-selector.ts",
+      "size": 6017,
+      "sha256": "e3a804715b74320d3a3b27462f1fd2d66f810df45a0689fe2d632b6772cf8fd6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/components/compound-selector.ts",
+      "size": 8252,
+      "sha256": "6c28ee73009e7186b0d2472a196f369b599d4f1d6f42bf1867887bbde0da52ff"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/components/current-selector-display.ts",
+      "size": 10718,
+      "sha256": "5ce213ea239ace4837562631ad203cbf48310f0e03f58c69c51c2de15cc66edb"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/components/inline-select.ts",
+      "size": 4918,
+      "sha256": "4d3930ff7d739f698dc71b46afdc774ebc144c3788a15df9ee25eb7461d16d9e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/components/resize-input.ts",
+      "size": 486,
+      "sha256": "fa159f636cca00ac147bdcca3f214a7557e871a7648917cf1feb30b08479d928"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/components/simple-selector.ts",
+      "size": 17193,
+      "sha256": "5e4f7b6168d93455baa30c1488d9efdabe25fe7e1d5418663d01b375668ac282"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/i18n/en.ts",
+      "size": 6316,
+      "sha256": "89e848efcc25777b39ed9067fd98526bab5482629303148a363f8e19cfbb78a4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/i18n/fr.ts",
+      "size": 6432,
+      "sha256": "52393731bdf465a3c81cd6365901ed8466854c1506ca680d2a546373db3e63a3"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/index.ts",
+      "size": 1425,
+      "sha256": "381958a3ed017b0d430c5ba5485dc27cb5f1394e482b86a7c58d06787257d6a1"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/ComplexSelector.test.ts",
+      "size": 12055,
+      "sha256": "983cbe5c62f6ce5c425d3c19a126215565dc989bda1c4551de58f5d28e4f93ee"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/ComplexSelector.ts",
+      "size": 9812,
+      "sha256": "e367a6605c0daf35fba0d11c43c4c574d38abea0f13601b2a6f2c19b18e06521"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/CompoundSelector.test.ts",
+      "size": 7005,
+      "sha256": "8dda98e84bc669f7c7946d20b765745a1cbe8915c57ea7e552d633252fae4ba2"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/CompoundSelector.ts",
+      "size": 5149,
+      "sha256": "83126eafe83a131f096235d5c3ecfcc882b36191882e12adb16d6460987ef819"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/GrapesJsSelectors.test.ts",
+      "size": 34173,
+      "sha256": "f5cafd6ac7bb7a9d1f3e75db842c3479e1a44daedcc2c9c65f0120f1bd692d58"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/GrapesJsSelectors.ts",
+      "size": 22957,
+      "sha256": "9a9d6084f134382569b4a7614252b2e3fb9fb6eeda7efe198538d8074fbe4706"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/Operator.test.ts",
+      "size": 2821,
+      "sha256": "9781ba729dc06e7f935690f26085d8920ab0fbcd3b34efc5e439d45fa250a5a4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/Operator.ts",
+      "size": 3559,
+      "sha256": "015443d298dd0bb90eed541be0ccad7d6c041b08d7eb4069f423944955e68a14"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/PseudoClass.test.ts",
+      "size": 1796,
+      "sha256": "d0b342ed371e711c4b975e0089e121b4ab69b86f286f222c1a64e3f87d6abdb4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/PseudoClass.ts",
+      "size": 8825,
+      "sha256": "6b1b9487feb1ffa13f1e1be37e48a377482b38e7a9b5184179f71e0de75f0990"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/SimpleSelector.test.ts",
+      "size": 11003,
+      "sha256": "d67fa3a521ce639e68f503760fe872dde54c85c2bfb86389d40629e498518950"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/model/SimpleSelector.ts",
+      "size": 14768,
+      "sha256": "c30de3e045a1af861917cd3e2ef4b0851e50f30bd113db9c6cf0553c89b53bd7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/plugin.ts",
+      "size": 9096,
+      "sha256": "6c4e5446f4182e0b60c602efcd7c2b307603dd14e1b6ae1c83f1e72c6170a7bb"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/StylableElement.ts",
+      "size": 440,
+      "sha256": "749d86f00e73f2f22bb329b7fe8ce35780625512bb74208626d0339a1dfb5cb1"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/styles.ts",
+      "size": 932,
+      "sha256": "609b99458fb1b4bfb2d40b50bea599a8782a6b7a98b6763283a17c745f20e05c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/src/test-data.json",
+      "size": 113528,
+      "sha256": "8646de565df140102d01f9e848de4667a08dee5ca3b50fbd52ab1f0c12094a9d"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-advanced-selector/tsconfig.json",
+      "size": 1012,
+      "sha256": "6bc6ad7982210c28617893ae6f9caa6cc031e7a06b038733ee6d3144e85ab736"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/.eslintrc.json",
+      "size": 538,
+      "sha256": "ccf478e66a229c90372717ab591192bca4a5ec3425b7128db3f379e2652b35cf"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/.gitignore",
+      "size": 56,
+      "sha256": "5d2b87d2c3bce4e7a3a64aebfb2023698d41defd5d542c566e0030e53058cb00"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/LICENSE",
+      "size": 702,
+      "sha256": "739200aec6a20a82a350252f950de921b48944c76d6e65cb13f7a0d11fa81635"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/package.json",
+      "size": 1009,
+      "sha256": "94fc08cb0e649c6786b45cb476fc4540078f75953ea03c102e9538c420f9af3c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/README.md",
+      "size": 4303,
+      "sha256": "86ad8385eef23b189edf74aafa58a52ec8d74b1cdd045e72367beeb622dfc612"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/src/index.js",
+      "size": 2870,
+      "sha256": "b5af2e6982eb9a3b275ce28659a55ac1dd115abbf9a6e5411d89dc6b8f3b92c9"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/test/index.test.js",
+      "size": 6891,
+      "sha256": "6e98e27d816b78164871da0f4f2c3ca7270914fb1d417cdde6c1c10bfcdbada6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/tsconfig.json",
+      "size": 616,
+      "sha256": "e3e05cb481ffaf930ab978c57b20aff859960fbcca5795c14dfd1714dedc252d"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-ai-capabilities/_index.html",
+      "size": 1160,
+      "sha256": "5d1f34cfd6c6a76e3b892f751c6d072db1bff823a648ee79f70e50f502251085"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/.eslintrc.json",
+      "size": 538,
+      "sha256": "17d41c2384cf250b3f8d9ea2449c214e5d83505f45a6723c47a2171977313228"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/.gitignore",
+      "size": 64,
+      "sha256": "3b5ac2f32de2eb97fcd68abff3ab79392b464586a2feb2bc7b06e8f82c16ab9e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/LICENSE",
+      "size": 34523,
+      "sha256": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/package.json",
+      "size": 1006,
+      "sha256": "80e6d0592207b7506850d4ef5eef2f15348c536187c9836002e1029cf71376de"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/README.md",
+      "size": 4254,
+      "sha256": "058a7a45bf94c13d04c8fd6a36cc8feccb7f771037a812a295a752efe842b373"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/src/capabilities.js",
+      "size": 4003,
+      "sha256": "396de40b126f37d886ca38b5613388d241613aa67a779846d08be71cb5a99ce0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/src/index.js",
+      "size": 1029,
+      "sha256": "790c0bf2b9a82f0f2aa7aa39457dc2ec59d6670b794deadd6450b48856e2d196"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/src/locale/en.js",
+      "size": 594,
+      "sha256": "2bf3d9c80779bf03935e4bf705203c9de8d39913a5d7ee258539a842fb3c5e8f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/src/locale/fr.js",
+      "size": 652,
+      "sha256": "6486ecf0917ee39e76ff0050d57bb560fad867fdb2ce7e35c10ba437cec18f1f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/src/modal.js",
+      "size": 21645,
+      "sha256": "9c49121f38afd1c0af2cc8aea02d355a4ef7d06a1d9a69a7a3b98516e252f534"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/src/style-manager.js",
+      "size": 14126,
+      "sha256": "b538ba3a61c4074ac35918e3cfbe57df12f4282f6570c5cf98c9dedad8ce3878"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/src/types.js",
+      "size": 220,
+      "sha256": "9e46f4edb065f003dfced4a51c7e1060b076d630e22b4ca9f1a66c887d33dee5"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/src/variables.js",
+      "size": 12381,
+      "sha256": "3c6e8a0f4e77fd93f1902dfa4dea52a683b8ea4fbfea5e6b4f5b97160ab7dc19"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/TEST_SCENARIOS.md",
+      "size": 9098,
+      "sha256": "808a0dffe144b2850cec067d637970e5f719278f583ed6aedf7f51e5e257aa5a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-css-variables/_index.html",
+      "size": 2519,
+      "sha256": "2cd488503b343501fe0cf324eab2d973d0a184dfd1cbd9005f8fe1ee9dd88a4c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/.gitignore",
+      "size": 77,
+      "sha256": "dc1d70ae823d62aba113f4ba352fe1b6485cb37647982723ae28ed43a5613b8c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/.husky/pre-commit",
+      "size": 98,
+      "sha256": "5c8d3e7f5c3437cfbf23c21eff49e51201a03ab08284b8d1cce6145ef7d6b7a4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/.nvmrc",
+      "size": 3,
+      "sha256": "5378796307535df3ec8d8b15a2e2dc5641419c3d3060cfe32238c0fa973f7aa3"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/babel.config.js",
+      "size": 143,
+      "sha256": "4768d94cb862232ab8586669e12bb0745fecaa987625b2ab4b1de20224bde017"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/eslint.config.mjs",
+      "size": 1238,
+      "sha256": "052c16a476120b59a93e86dca60b03282b72e4e826c3f2663ff9ec4d39747505"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/example.graphql",
+      "size": 4617,
+      "sha256": "762f9c28dd75c1067d78afd29e4bcf353369f544fcf92a0a1b24d50e2ef038aa"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/example.graphql.json",
+      "size": 459934,
+      "sha256": "f0713a6e708ac6ae6c1086a231f53ace0d4b8a2d0b192bc226db302bda0746d8"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/example.page.json",
+      "size": 179368,
+      "sha256": "3112d9dc03da6cfab3140d8a274d37232519db5068a86eee64340cbbd343023e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/base/graphql-response.json",
+      "size": 68,
+      "sha256": "1ed3a80a0c904a77f9fe02b7dfce4e50cb367620a21b9a7dbfa4768aa695091b"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/base/graphql-types.json",
+      "size": 66325,
+      "sha256": "9d1de02519e863b93366829ecd19e8d001571c479c2abd8d65e720511be40727"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/base/preview.html",
+      "size": 282,
+      "sha256": "bc04e3fd907c157f02db7d860fe7ec36650ad4def8af90732897af9af997d4d3"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/base/website.json",
+      "size": 1640,
+      "sha256": "39738761eec2c852f110fcebdbe6969edf7928fd202d88b5d4f29a46c6cefc12"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/countries-lists/graphql-response.json",
+      "size": 24715,
+      "sha256": "ef9f46ff9e8a123d94c3f91847550387849e384dd42c40fac035df9157c951b7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/countries-lists/graphql-types.json",
+      "size": 66325,
+      "sha256": "9d1de02519e863b93366829ecd19e8d001571c479c2abd8d65e720511be40727"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/countries-lists/preview.html",
+      "size": 33023,
+      "sha256": "554085eff5c6de8280e28b3fff46238d467346c4449c1e28c95530c3c230e9b5"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/countries-lists/website.json",
+      "size": 14166,
+      "sha256": "0e1e4d12092b4740af4e0b8b067d4a5f7732c98b86522c0568e566239fb25114"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/example.graphql-result.json",
+      "size": 585626,
+      "sha256": "37e16aa3cbb033a9b1a679b043ef5b004cce8507be95fb84205138f988b3734a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/example.graphql-types.json",
+      "size": 61673,
+      "sha256": "1ff6d9ae95282d27112a3a22a1040847e300069f60728969d9abe3f1536f2d3a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/graphql-modules.json",
+      "size": 5296,
+      "sha256": "16137e6fadd75abc7a303548a6dfd433d0a0f289f1757da8042fde0846dbe976"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/modules.html",
+      "size": 1331,
+      "sha256": "9f3e5708180a121d3c5ab673c6ce220a00b9fa2966b324f13db291ae40d4e1b4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/visibility-truthy/graphql-response.json",
+      "size": 24715,
+      "sha256": "ef9f46ff9e8a123d94c3f91847550387849e384dd42c40fac035df9157c951b7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/visibility-truthy/graphql-types.json",
+      "size": 66325,
+      "sha256": "9d1de02519e863b93366829ecd19e8d001571c479c2abd8d65e720511be40727"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/visibility-truthy/preview.html",
+      "size": 2783,
+      "sha256": "f4be40d478b412d0317de299f139243bf713374ec0bc1b3b86032091e315b5d4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/visibility-truthy/website.json",
+      "size": 8407,
+      "sha256": "92ed5944d294c6db71d31c6e905c47b963bbd3123164ddec58016525ee10dc6c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/integration-tests/website-modules.json",
+      "size": 23982,
+      "sha256": "01b706c4038689575aa7f745c334d7d54b0d08362214e7ee777c180b8faf3848"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/jest.config.js",
+      "size": 438,
+      "sha256": "f650b6b214cd843344c69aadd880380d1bbae32807f833bce607e2e751b841da"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/LICENSE",
+      "size": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/package.json",
+      "size": 2338,
+      "sha256": "29e85a34d82ece13114cb20ede232a3ba1d84ee8605661881331c15c542ad756"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/README.md",
+      "size": 24798,
+      "sha256": "c5753175ab77be5c7f37dac2947a4511cfc1d34a1236e5625bec2bbbf4141fdb"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/api.ts",
+      "size": 12815,
+      "sha256": "63b4294347ede72fd8d1b61b03aeab37f269fe6ed4932ffbfd2a268b68e5305e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/capabilities.ts",
+      "size": 2353,
+      "sha256": "05999f07bdde54b0fef997ff6108d5c3f681560bf2b7b82c66ade204d02c712e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/commands.ts",
+      "size": 9267,
+      "sha256": "3fb39096ade89b707c67adc44e7b24edd2e0f1c7c0a3a52b15acb0ab69aaec9a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/datasources/graphql-introspection-query.ts",
+      "size": 1821,
+      "sha256": "815b937eb8dab98bbac7f5b15abd73aec8bd954d9ebe822ae0a52214b4c0ed35"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/datasources/graphql.test.ts",
+      "size": 20093,
+      "sha256": "1b47dc5bc540709820549f11614a083c5f08ecd21e9fb5d76c703c4784e6f1a8"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/datasources/GraphQL.ts",
+      "size": 38232,
+      "sha256": "bd8d7236d8af5906ea08a50667fb2a8c05b936af8e272d46f7a114f321e83666"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/filters/index.ts",
+      "size": 3059,
+      "sha256": "967b4ef593f0045d9cfaf54c02ac6efe1f0220de7ef70c254fa97b14deb739fd"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/filters/liquid.test.ts",
+      "size": 2781,
+      "sha256": "334389700bd663930351fc1db5f8d29292aad06168f3016d7cd101bddbee4168"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/filters/liquid.ts",
+      "size": 35218,
+      "sha256": "4a64da84b5082f5a7a7e2837a4016f8403425256ea1827de2fa497400ed8ea4a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/index.ts",
+      "size": 3488,
+      "sha256": "2ab5f6bbfe83ccb2eb55d1864162e3aa5db22cd5f07ae20707d7014a556ac543"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/integration.test.ts",
+      "size": 16373,
+      "sha256": "a428646d169c3e83a74e0e32f2f0363b6884aa0b1a264da9dd297b09ad793e0e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/completion.ts",
+      "size": 8040,
+      "sha256": "fcfb940688fc4b2d849ef905b0a60663cbec98c2696b42b978705b1bb5785b53"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/dataSourceManager.ts",
+      "size": 8079,
+      "sha256": "3dcbaed840b5bc8c07f5fc54ffb3fb0d26e8643c403ea919adb510ffefe7e77f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/dataSourceRegistry.test.ts",
+      "size": 4975,
+      "sha256": "e80cccaa50cac3a6bd79f7d7bf90e505d2256fc574883b2307454cec743d4bc5"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/dataSourceRegistry.ts",
+      "size": 3116,
+      "sha256": "4711dc58749eb1c4b33d24d69b92000fd5b2bfcf9d7414ffd85d6d171c2d13e7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/expressionEvaluator.ts",
+      "size": 8240,
+      "sha256": "ee270d41c4b2ad272ae9e01eac368c5f22635c1137f16817292b7be5bf5b3586"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/ExpressionTree.test.ts",
+      "size": 5244,
+      "sha256": "c8202f490618ea37d41419c8023d72207d91962bc8036000bebe6aedac9e76ce"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/ExpressionTree.ts",
+      "size": 9932,
+      "sha256": "2987d374ac978e864b014e8cad751b1d8a70f421004a7c4c58f978a63cf01aa6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/previewDataLoader.ts",
+      "size": 6308,
+      "sha256": "4a2183fe134441244139deafa14b086b19787f0c7f9e9a319cb77e474a77f48a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/queryBuilder.ts",
+      "size": 4969,
+      "sha256": "7f865c85153639a2ba06e796279bd54bc154b2fb9adc1a921df58150caf2d699"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/state.test.ts",
+      "size": 3516,
+      "sha256": "e0900d0aad09df9deef86c445966428b5b3ee954d873404d292bb3a64a6e9004"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/state.ts",
+      "size": 7655,
+      "sha256": "c12a6cb4280de0e79a904ddbe373db105763b3a4b8efb0f45dceac9d9b3fbf4e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/model/token.ts",
+      "size": 11322,
+      "sha256": "0129bd0ca305d3f132e286684c53192efa10c65053ea01c6c44fad207182c1bc"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/storage.test.ts",
+      "size": 3452,
+      "sha256": "d7f06b7998884ae8d1f22939fa8cffc363f0bb91f1bc3d51691a0e85fac53863"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/storage.ts",
+      "size": 1855,
+      "sha256": "d17f4530609a700b6b3a422711b769543f1ac29ab06cab0749ca18c66beb99be"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/test-data.ts",
+      "size": 3640,
+      "sha256": "88a4ee2505f475f16f8b66dc54604e0478889629c99e52194b84dded920f0f91"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/types.ts",
+      "size": 8419,
+      "sha256": "e20a8807fbfba884fcf941b864c6fddd7c586678aefd7c0181579c7846d61ec7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/utils.test.ts",
+      "size": 3675,
+      "sha256": "6b17808063179bfc07a9216fcd2f3c5361e6a9accfc4039e41c79f2d640ed65e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/utils.ts",
+      "size": 13197,
+      "sha256": "13e8332aaf919c42269c4d6e253df16aaf1546a96a856fd44c6a2af89f54a11a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/view/canvas.ts",
+      "size": 24443,
+      "sha256": "a9005cf6682ed321750a07c9b803b8c9e20237670b7ac11c64a570b2675a2717"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/view/custom-states-editor.ts",
+      "size": 11303,
+      "sha256": "a3042c9021f6435efb01881c931d5bc53699626e4042a956a0bc35ed1446afaf"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/view/defaultStyles.ts",
+      "size": 11853,
+      "sha256": "ea16d7ff25079300ca8d9c83c984ca02679025b59a7ec8eaa954207672bd3a84"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/view/index.ts",
+      "size": 6055,
+      "sha256": "7d62188807df2fce071e04e1eb012b6d05776083e67ecb70f4d362234f0b4500"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/view/properties-editor.ts",
+      "size": 8243,
+      "sha256": "230d628153d92abfd5418062cd007c7d74c28904928bda81f0288ed6f0f8e655"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/view/settings.ts",
+      "size": 55596,
+      "sha256": "b904d7bf1062b9eded48a0a0d8d2230a0641f78b131be2386490e0d355fc1e78"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/src/view/state-editor.ts",
+      "size": 19669,
+      "sha256": "93ed7d3452128865af66ff6edcebaa440e80928ce10d249bb3094b291405fb49"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/.editorconfig",
+      "size": 249,
+      "sha256": "d839896ab2fff36a657f8b8bc5b426049cd9afef70b333e391930d64246d7cf2"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/.env.example",
+      "size": 177,
+      "sha256": "6471e7fafabfab21be059f36ea18739d7deab565a1f968ee57bf5a1c6c34d790"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/.eslintignore",
+      "size": 32,
+      "sha256": "0e67c2f4474541689dc04d98a8040326accc6c47e95a18af4561597f1dd9246a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/.eslintrc",
+      "size": 541,
+      "sha256": "bc6176e18f0e68250a7ea6e784f029a09a7df0e3706e726701a1856c651823c0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/.gitignore",
+      "size": 1154,
+      "sha256": "f883e534a14c11bd244947ada06af6b6b5e87aba8c77a33cedc69d03e6fa17ae"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/config/admin.js",
+      "size": 220,
+      "sha256": "18a9e9dccaf91db5c0206d598db98042057f33564afbc68ad658f12510c7b360"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/config/api.js",
+      "size": 99,
+      "sha256": "f372097c38d20f101a3220c38455c39b5701599baa7fbdbb1fce9e539f78da19"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/config/database.js",
+      "size": 3179,
+      "sha256": "da568ea9145aeabeef805e076e5aa1953ce7b04e1f5a62875320127f40c33fc1"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/config/middlewares.js",
+      "size": 224,
+      "sha256": "ba74e657785469080d773b90087a0ff1e17c78b680f65139c0f38764c7024e59"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/config/server.js",
+      "size": 237,
+      "sha256": "a950401849b70444f129f5f04fc3b7f59169a65641dd297cfe315088c23aadd1"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/database/migrations/.gitkeep",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/favicon.png",
+      "size": 497,
+      "sha256": "28467c1136874518aed0f61fba90a29ae71273ec5187140c9bb625562c118398"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/jsconfig.json",
+      "size": 132,
+      "sha256": "40ff07da4c9246f6626837900ec65b3a2e8fc492e77d0538228ec473343f60ba"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/package.json",
+      "size": 695,
+      "sha256": "3453e8a1b638571c9f8fbfa88f20070ae2074d3ea5764cdce75065452a893c30"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/public/robots.txt",
+      "size": 121,
+      "sha256": "2273da7d64f2fff204c15b38c198dd3192f6b5cc3f024573752143810c5cb535"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/public/uploads/.gitkeep",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/README.md",
+      "size": 2139,
+      "sha256": "6ab09e660930b69ff32eab6ce0730abd5b0adef15cd81da6185f7ece94d2c5c2"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/admin/app.example.js",
+      "size": 481,
+      "sha256": "f945add0eb65b93d2d879e5321d3833433bacd3d82b7c55de54121ee388ecf6a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/admin/webpack.config.example.js",
+      "size": 267,
+      "sha256": "080582486fae5d28aefd86cee5a9a01622976ba6d53c94795ca20e4c22f5e1ad"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/api/.gitkeep",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/api/post/content-types/post/schema.json",
+      "size": 454,
+      "sha256": "9e0a3396d41a4b24f7d560a4e1597e0b9deb74533ce4e35213d7a7399b0fad22"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/api/post/controllers/post.js",
+      "size": 171,
+      "sha256": "c023cf37e1b7fe7b80f984d648f47d303d29ce71347c41fc6f106ffab5ae388f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/api/post/routes/post.js",
+      "size": 159,
+      "sha256": "d1fad32d8c108f78f869ece8b7883bad59a03a4699176910c477ce2eb067dd94"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/api/post/services/post.js",
+      "size": 162,
+      "sha256": "ead8ca810926113db8dfc39d80475ad14868de771eae9d810ec16436b6973dc4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/extensions/.gitkeep",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/src/index.js",
+      "size": 481,
+      "sha256": "a725d91dee24be33d3e4a0f4749b801972a0c23c752a1482e8a4167eaa115e87"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/types/generated/components.d.ts",
+      "size": 119,
+      "sha256": "6e2dfa06a289d845205d44628ca8099b4c71a575624be22a70f5b73a3a2cf9fc"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/strapi/types/generated/contentTypes.d.ts",
+      "size": 18476,
+      "sha256": "ececfd71f5b3b46845668fe43bc84c5716f5dd97683c483ad4d117106837fe36"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/tmp/countries-lists.html",
+      "size": 32879,
+      "sha256": "cf4fe1feba91bfa918573603bef7b3733bc2e0395a7145e35ebc17ea6154a6a0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/tsconfig.cjs.json",
+      "size": 146,
+      "sha256": "5e2f0493281372c943352c2db4798db72d5b188109ba3580679f6fb15322891d"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/tsconfig.json",
+      "size": 1035,
+      "sha256": "633082d8939d58b8884a500765c8628f72e0f1b42f07fb68c1f7e9f9ca635880"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/_index.html",
+      "size": 3537,
+      "sha256": "4cba865c3c140abbdd228021e8fb7f86521fdaf4593ecf92514655294f2c8120"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/__mocks__/directus-schema.json",
+      "size": 2062735,
+      "sha256": "3b938cb046ec7cc5ec7a3cdb8d6069b50a287fb59834a68446c76edd7074c62a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/__mocks__/directus-test-schema.json",
+      "size": 234941,
+      "sha256": "cc0ce189d31c7cbfe4c3556b478552d1f166e6d4b5ef995f3c7f3fcba755d2a4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/__mocks__/graphql-mocks.js",
+      "size": 482,
+      "sha256": "975e2749fe5439f4237e67970a885d981ad32818ae5a13bd46eb948ac0b6e0e0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/__mocks__/simple-schema.json",
+      "size": 12111,
+      "sha256": "7365911436dd9fd52a95872b145aef357237cc17814ffda1aaa6fcf42868c3c3"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/__mocks__/squidex-schema.json",
+      "size": 210834,
+      "sha256": "12ef05c2d8bc1ae148cbabc2895472cc1178927715bca2b2fdbe6452590e2672"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-data-source/__mocks__/strapi-schema.json",
+      "size": 232652,
+      "sha256": "c39e118eddbbd0972ce0b6f688aa0b9247769ce47ce17e2b216ebd558e61a0d9"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-filter-styles/.gitignore",
+      "size": 76,
+      "sha256": "ae0d1e6830133fef9e12cd05a86b67c65d0f3248bb30541c9f7fa9450fd47c3a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-filter-styles/build.cjs",
+      "size": 595,
+      "sha256": "78737e2472bd590a40913a6809dbd2a0f46056e5b4033ae781d2583aa649565a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-filter-styles/eslint.config.mjs",
+      "size": 899,
+      "sha256": "5a431ab5e24310c47c0a5bdb1645f6185f55260dff87d2d9e256833234f87773"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-filter-styles/package.json",
+      "size": 822,
+      "sha256": "cc25b51612d5a98ebe0f66980c42655cfbec8f52d9ecfe39c1af45a4d73e13b6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-filter-styles/README.md",
+      "size": 2769,
+      "sha256": "f0058698e4e8c9159b3528846466e676ee97ea4457f51169219eacc60cd06a81"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-filter-styles/src/index.js",
+      "size": 8989,
+      "sha256": "6bf5200090b2a1f1052f08239ec625c948fad9ed2f8177fbd682ba88babdf215"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-filter-styles/tsconfig.json",
+      "size": 541,
+      "sha256": "6ed54c334b84982bb0f4b4ca04c9de75830d0792789e5c0b8dfefe9cda112972"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/.eslintrc.json",
+      "size": 538,
+      "sha256": "ccf478e66a229c90372717ab591192bca4a5ec3425b7128db3f379e2652b35cf"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/.gitignore",
+      "size": 64,
+      "sha256": "3b5ac2f32de2eb97fcd68abff3ab79392b464586a2feb2bc7b06e8f82c16ab9e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/LICENSE",
+      "size": 1078,
+      "sha256": "62c884c0221234d3d07772b85b58a1eb797f3ecad404578e67f5a2faa5d6c05f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/package.json",
+      "size": 887,
+      "sha256": "55de2cca34af2df543a4a2d23f3ff5e78b4c1abb7d269150b683ec6a9f671b93"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/README.md",
+      "size": 6106,
+      "sha256": "2b07b07aa370232b3da93c443330d7b8f6beabed383c2725932cbd52f1f749d1"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/src/capabilities.js",
+      "size": 1538,
+      "sha256": "9c0b5e7d74773a7cee0b0e0e08f755bf0486df1a9375a98bf9acfeb801916f57"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/src/commands.js",
+      "size": 3893,
+      "sha256": "46219bcacc83032b15838abd4c291934221826317a9994fc1729db59430913ba"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/src/fonts.js",
+      "size": 15060,
+      "sha256": "3176f94f94843d60889c221c50df93740d55cb2b40f4913259db148fcaea148b"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/src/index.js",
+      "size": 793,
+      "sha256": "cf42cf7bcee27840e1c9cf3219650f28c32101d5a14dadbed0a5e07117cb5cdb"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/src/locale/en.js",
+      "size": 595,
+      "sha256": "422a50ca497ad377ed0da43e60118c6994e63d7650f578ee8cc257a0c7a9cc40"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/src/locale/fr.js",
+      "size": 685,
+      "sha256": "be417f44166a201f99bc6f85a5d688d7ab065b1c544a700612451d20d9f11662"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/src/locale/ptbr.js",
+      "size": 620,
+      "sha256": "3616fdfa4c4367181a43707af4f007510b4a1701f8e27f7ef9501a2ec10c44b0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/tsconfig.json",
+      "size": 616,
+      "sha256": "e3e05cb481ffaf930ab978c57b20aff859960fbcca5795c14dfd1714dedc252d"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-fonts/_index.html",
+      "size": 2387,
+      "sha256": "a8d4915cc48919ed86e07924e1fc55e76a90d8cc5d172a055d220f78d3dea731"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-keymaps-dialog/.gitignore",
+      "size": 75,
+      "sha256": "af658e9da599211af74d0dd7bbf0d1b6cebba80972fd76a43cd77155368254d2"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-keymaps-dialog/package.json",
+      "size": 1248,
+      "sha256": "ce2eb9f4f4027f80e58fe7eeb0da57059521a6caa7ba249d2142add7424c9db2"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-keymaps-dialog/README.md",
+      "size": 2540,
+      "sha256": "ad2f5e01ded15ae47b93ec489cb26f0c0b99ddfcbb2cf263943907230b8fc43e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-keymaps-dialog/src/index.ts",
+      "size": 1951,
+      "sha256": "361843af65c360994441efadcf975a73375c6c51cfcd8b6e7822d1cbba0441b5"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-keymaps-dialog/src/KeymapsDialog.ts",
+      "size": 4233,
+      "sha256": "bdc8b6dd881686a3bcc4e493cee6e3cfb03717b9b8ead6108dd1a222fd578e48"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-keymaps-dialog/src/KeymapsDialogManager.ts",
+      "size": 2071,
+      "sha256": "3cdc71b1c6d5a71e90742b584e0ab5fab81df2b962d64feab14a93f5e06435b4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-keymaps-dialog/tsconfig.json",
+      "size": 612,
+      "sha256": "6153241b6ff54e9c06d6631bbccb95692f7e7d9a65160f1df0d479ce3fb70306"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/.eslintrc.json",
+      "size": 411,
+      "sha256": "287aae1d5dcfdb50acd58e18ffcd0a07ef7bdb76273db65b2a16adee863cb1fb"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/.gitignore",
+      "size": 64,
+      "sha256": "3b5ac2f32de2eb97fcd68abff3ab79392b464586a2feb2bc7b06e8f82c16ab9e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/eslint.config.mjs",
+      "size": 523,
+      "sha256": "037d17e21420d9dedbd25b5370051d42b2739c0ff4d748373612673ce2660658"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/grapesjs-loading.gif",
+      "size": 400595,
+      "sha256": "4fb36acc57d04e391f4b0c4289bade7e16cacf3c37833873af5d435f4c76fcea"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/package.json",
+      "size": 1060,
+      "sha256": "170466a2692352baf93b96a7a08e0477e676806ab526afade44efbf86777201f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/README.md",
+      "size": 2862,
+      "sha256": "93de55dee92c9dbd7df7e804bdc8c8acaaa4075e366d5d0af4f4042038cd019f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/src/index.ts",
+      "size": 1338,
+      "sha256": "d553aee297b9c179acd4aef6b87b86f852c776552bd56a267f1ec639895996f7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/tsconfig.json",
+      "size": 493,
+      "sha256": "02b632388777caaab8fbaee0efdd052d30567a24e36300fab127f8440fce678f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-loading/_index.html",
+      "size": 2359,
+      "sha256": "fafb31762bc6ae69e664a7dc5e275a05bd96790d372877d09d76c74255900ef4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/.gitignore",
+      "size": 64,
+      "sha256": "3b5ac2f32de2eb97fcd68abff3ab79392b464586a2feb2bc7b06e8f82c16ab9e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/LICENSE",
+      "size": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/package.json",
+      "size": 1526,
+      "sha256": "c96de93e8bcb4501ca7d5875e63c96a93798c971eea6c4d878eae4176967bda7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/README.md",
+      "size": 7515,
+      "sha256": "5355e36c22d2a8215884c684b09c7077793476c12178c34ca8e588b2f3e14ce7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/src/capabilities.ts",
+      "size": 958,
+      "sha256": "53c55383494ace0d237c7810f0bf255c52bb2227baeed90d01282cc14306c34e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/src/commands.ts",
+      "size": 253,
+      "sha256": "6358d10a5af9d3ad1a7905d6bc4f5af320d7acd4e799a4b52877308a5dc0cda5"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/src/index.ts",
+      "size": 3965,
+      "sha256": "0e5090e35da3728f5565ef21a0adedb7e7897c19ffbb7f28bcb120867b50ae58"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/src/locale/en.js",
+      "size": 220,
+      "sha256": "1d993cd8f005b0f831a95dbb560797f34517e7e870089f79f60cc1a86850d3b0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/src/Notification.ts",
+      "size": 3516,
+      "sha256": "d97e45a6be930c616bcc6c732b17da13c59a532a9ce87f8c78994399f1431fa9"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/src/NotificationManager.ts",
+      "size": 2796,
+      "sha256": "0fd61757df7711b8ca8669e63c6352d0ceda65a7dadd15de5c28215caa45b06e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/src/Storage.ts",
+      "size": 618,
+      "sha256": "a2a1476b6194b39ae8f3895ca698af5bbf8d4d6f4003847f112f9917b8ac1044"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/src/view.ts",
+      "size": 4518,
+      "sha256": "f1b91f923578dfcd1de44a74e641fcc7e6981a047f0726d0806dfa2c2f3a97c4"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/tsconfig.json",
+      "size": 640,
+      "sha256": "ef165ebdf39cc5b97cdcbc25bb91da9425be3b92b2109bb1f1e24322d93c4ce3"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-notifications/_index.html",
+      "size": 3603,
+      "sha256": "907c1f213c55156cc376707605143481ef51b439a7718f451c32e4d4dd91ba25"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-storage-rate-limit/.gitignore",
+      "size": 76,
+      "sha256": "ae0d1e6830133fef9e12cd05a86b67c65d0f3248bb30541c9f7fa9450fd47c3a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-storage-rate-limit/jest.config.js",
+      "size": 6498,
+      "sha256": "e85ae3e8cd5685e235962ac26a6014b736aa5e43bc1aae0ea72c3a65dad8cb5f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-storage-rate-limit/LICENSE",
+      "size": 33886,
+      "sha256": "672bb7c7d34a926acb8c1b214fc1062294fe9cc5ad8378dbc5da2c7b4bac5db9"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-storage-rate-limit/package.json",
+      "size": 1153,
+      "sha256": "f4417b52e5d094250b2a77d3e56ce64e621385bf82b7d66db80f9d3061f58857"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-storage-rate-limit/README.md",
+      "size": 2990,
+      "sha256": "458d66b3262a7e988648fc9c804443fdb98952d2f016dcbf49c186b091537e0d"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-storage-rate-limit/src/index.js",
+      "size": 2361,
+      "sha256": "05f3530cd5020bfa34f47825a673cedd0e3ac1bf89a8fb2dee6b6e5a9828640c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-storage-rate-limit/src/index.test.js",
+      "size": 3801,
+      "sha256": "5a6c20f5e3a918d4c6cf596470a236b641d80bc63fa5e1675872c04acf5d562f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/.eslintrc.cjs",
+      "size": 499,
+      "sha256": "591e798ddde79f4eff891a62ab87b27d153e5b80c33d45b9a587fc411047d468"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/.gitignore",
+      "size": 149,
+      "sha256": "4dd735dd41d2b9b18cc79940492e633ab0c49c51377e2a55dfcdec41752f9190"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/.husky/pre-commit",
+      "size": 112,
+      "sha256": "99a5b600ab444b76e99813006039e8c2536d5885becbd64eb3da184e5aa821ec"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/.nvmrc",
+      "size": 8,
+      "sha256": "1caf3ce39603c58f01e09bd4306d65ccf8fe95faab8df98f10157015f5dcd7d7"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/es5.html",
+      "size": 3560,
+      "sha256": "0457408c2f355df0080bb9545586b384c59068b1c75108de4912e0e59d27353a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/es6.html",
+      "size": 3161,
+      "sha256": "4c9083099a7965da82035543cfcea662e9967b19f1568487d60aca956b0363db"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/eslint.config.mjs",
+      "size": 1869,
+      "sha256": "999254ef86c1e2be96cd8ecb0de0bc487e18d414a2eb2f003aec36018326a55f"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/jest.config.js",
+      "size": 288,
+      "sha256": "18b671f77b2673ef2e7758f6dec8925e8143b6ff212b236e564e41bed3af8356"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/LICENSE",
+      "size": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/package.json",
+      "size": 1907,
+      "sha256": "529faa6fd422438027752279799c3f31338f69397868d91c54216c878e6d6cd1"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/README.md",
+      "size": 7736,
+      "sha256": "a126cba408476ecc64a471423e28de7ed6ae2fc4ab46e7f09f4552f94883a0c8"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/rollup.config.mjs",
+      "size": 525,
+      "sha256": "62a79f2dc8145ffaf78b73821724c5a4e11644eaace9e9ccfcc6b001552bdbb5"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/capabilities.ts",
+      "size": 1161,
+      "sha256": "c43f26370cef15e6d44400aba8f17b8ddd043a8aa2012dfb0c51dd26de454228"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/events.ts",
+      "size": 235,
+      "sha256": "54dff3f8f8cb80f89df9ba771fe214248586f60f41b99a531aa6e96ba880751c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/id-utils.ts",
+      "size": 5524,
+      "sha256": "c099ead887a5dac5c9efb0e1380bc3bb4b35c65cba6555d3d65c4c68a13d067d"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/index.ts",
+      "size": 1470,
+      "sha256": "172e0789537bef3b2603e626d6c93d0c43e1060e3054fcda894426fd78971b2e"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/SymbolsCommands.test.ts",
+      "size": 5546,
+      "sha256": "1289edac00d80f0d59edbe4f0a45c34b6f0b99d38f0fb8ca70e66d976e886182"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/SymbolsCommands.ts",
+      "size": 4940,
+      "sha256": "1bae5885576268bd2fc7ffb0f25c8f7f16fd495848c24adcffb67fd0dfa66a33"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/test-utils.ts",
+      "size": 1198,
+      "sha256": "be8891efd80d7645c6e6627db014bf36c8fcc9338ba80137283f949b610c5f5b"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/utils.test.ts",
+      "size": 4366,
+      "sha256": "ece67749f1179efbf449e838053237854939e4fbca181f5fa29f03b3103ad95b"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/utils.ts",
+      "size": 2526,
+      "sha256": "9911de3954fc3b6ec75635a63b70353e7ef8b42a7c4303f4f112bac6a469f335"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/view/SymbolsView.ts",
+      "size": 8290,
+      "sha256": "1d2a9fa644575672a6286e716ee8e2ae5a4c7b61ef0eb81cda425e8c9786bc05"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/src/view/traits.ts",
+      "size": 3561,
+      "sha256": "f3dbee0111743e1a9c6a6619a87c764dababeef1a20b04bc1b1f5c92956b9e53"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/tsconfig.json",
+      "size": 868,
+      "sha256": "d26054e1978c8b267ca215407b04f4a0cab4a6a7983cd061966031b02ee8fcf8"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/tsconfig.test.json",
+      "size": 217,
+      "sha256": "1cae1e8db20e1985da53890a8a2acd4a8caba58892f1303897444ccec1aed4e1"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-symbols/_index.html",
+      "size": 3057,
+      "sha256": "d5781461b0f0a98e2a96186ebf3e05b831c053d884a39304b0f046ed93a11a73"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/.gitignore",
+      "size": 64,
+      "sha256": "0b2e2715343b6287cb0f162485839f66791d7d8b805c620f776dc0dc9f7b89bf"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/babel.config.js",
+      "size": 122,
+      "sha256": "9d03c86c5812dbca2b6e94e5e4fa1e632091aea1203ec173ffb86ffc14f7fde8"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/LICENSE",
+      "size": 34523,
+      "sha256": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/package.json",
+      "size": 1804,
+      "sha256": "51c9fe79471e3f6c1152f3e797b440cba448e6c9f139f056ab6f6a758b5a2a1a"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/prompts/initial.txt",
+      "size": 6107,
+      "sha256": "5df0034fdf47d9b64fee19686b7a65237bb2c4ea27111ce652439f91ec92e523"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/README.md",
+      "size": 11457,
+      "sha256": "71b4edab4c6ae4ec1ef43dffb401e6ed27a1a09ffc9cd44ce5104e56bedd7359"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/src/event-system.js",
+      "size": 1303,
+      "sha256": "7efbee8a3ce3b77ebe2a07a46bbd71a8bca9b534ef73b1810395d16d6516930c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/src/index.js",
+      "size": 2416,
+      "sha256": "8c01e543e3afcdbdc1d15eb0951ca8ef307dc1c7f941c4aabc55d9bb539fb1a3"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/src/locale/en.js",
+      "size": 1188,
+      "sha256": "5e68527b8d2b3522cddd05d8ff53d1a5af0ee52bed128bb456b970b24cd95cc6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/src/locale/fr.js",
+      "size": 1334,
+      "sha256": "8f8fb65e1534ef61bfdf3d902de7cbe3eee3094e71c729ffffba3697c1737d77"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/src/modal-ui.js",
+      "size": 16321,
+      "sha256": "66b4b277498cdab07cbe98746db8d10d7a0bb2ffcfc10757eb6a0c6225354ad9"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/src/style-manager.js",
+      "size": 5653,
+      "sha256": "48b215e1292fa639a74a59cb989c75a413fe38ff70635c75f5b18eaf63bf4ffe"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/src/upgrade-engine.js",
+      "size": 7357,
+      "sha256": "b75d59f1c7cf00e5e72e4a069b14caa62858abcfc12ad8d44234908e7b32aea5"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/src/version-manager.js",
+      "size": 3846,
+      "sha256": "e839ac13fcbf1dbe503877edbab0a805fd3f76498c89e1de67ab76c2c1bb86d6"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/tests/index.test.js",
+      "size": 6467,
+      "sha256": "ccc5073a66494e336399dde4c38b867341be6d2782564d624c77add455b99b91"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/tests/integration.test.js",
+      "size": 7386,
+      "sha256": "8cc29a08853e67760ec2dde1aa696cf7868a4e14a49d0f1b6dc62f380fdefcef"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/tests/setup.js",
+      "size": 1652,
+      "sha256": "d78db1fcb2196ad24bff6b5e5c354428d2be377ff490777e180d88b4bd6cb674"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/tests/upgrade-engine.test.js",
+      "size": 11193,
+      "sha256": "f5e0ea76278b5d3aea23d0cfba06abd5e28ae74e43d7bb920c949d8ccfbe29c9"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/tests/version-manager.test.js",
+      "size": 5924,
+      "sha256": "25baf280ed798970782825719d13e9a886fcb8ce523ad5b5177282bc67cc9490"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/tests/version-storage.test.js",
+      "size": 6649,
+      "sha256": "d297c0f0033ba110fc8bfc1a528d05a1ddf256c8052e672733e02d1a0510586c"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/tsconfig.json",
+      "size": 541,
+      "sha256": "6ed54c334b84982bb0f4b4ca04c9de75830d0792789e5c0b8dfefe9cda112972"
+    },
+    {
+      "path": "work/silex-poc/grapesjs-plugins/grapesjs-version-flow/_index.html",
+      "size": 17516,
+      "sha256": "32dfd0c6d89b7c72fc9e9743763dbc4c2de426f0b4a4ca4d392d90b718c0a8ce"
+    },
+    {
+      "path": "work/silex-poc/public/assets/container.png",
+      "size": 377,
+      "sha256": "bd24e14047532d780417f594f5b4f0374e2e68889fd58b830a377fb9c81c4175"
+    },
+    {
+      "path": "work/silex-poc/public/assets/download.png",
+      "size": 11973,
+      "sha256": "011428ac068a2c78d925be7ebedc2f5616b29285a3fecba209d2f4df23a864ca"
+    },
+    {
+      "path": "work/silex-poc/public/assets/favicon.ico",
+      "size": 15406,
+      "sha256": "42d5e87aec170a9a595e4df45a54f2b74cb04d3a175219ee5761d7b186ce5fbf"
+    },
+    {
+      "path": "work/silex-poc/public/assets/favicon.png",
+      "size": 1129,
+      "sha256": "1e3c0fd064f08a73e3c33fb3baa15ab53be0a04c1399db37633fe40f7ac18ebb"
+    },
+    {
+      "path": "work/silex-poc/public/assets/ftp.png",
+      "size": 19325,
+      "sha256": "e2c3cfa836685b8c59a5d3b88f8dbcefe90474f97279242c2fa04361e9a894e5"
+    },
+    {
+      "path": "work/silex-poc/public/assets/gitlab.png",
+      "size": 81061,
+      "sha256": "0cf4db2fa6df11db2e863dacf5362ffa27d61828a7faba20f99c8e4b5e265540"
+    },
+    {
+      "path": "work/silex-poc/public/assets/gitlab2.png",
+      "size": 15586,
+      "sha256": "eb018c4551d22c7cce1e063d387ea5ae863e54f58b085f3b6600a7fded867b72"
+    },
+    {
+      "path": "work/silex-poc/public/assets/laptop.png",
+      "size": 7933,
+      "sha256": "48ac79c536ed3ec7928a748ef916fa2d0b029d582c462ed7ae38bb31e459617e"
+    },
+    {
+      "path": "work/silex-poc/public/assets/logo-silex-small.png",
+      "size": 2032,
+      "sha256": "45359dbfa1f2e12e69fa0ebed7c78858af68052a19f9e47650e0d71c0758021c"
+    },
+    {
+      "path": "work/silex-poc/public/robots.txt",
+      "size": 26,
+      "sha256": "331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1"
+    },
+    {
+      "path": "work/silex-poc/public/silex.js",
+      "size": 1017,
+      "sha256": "ff1a55249c067ec0e0332834234a801bb9cdb70ec5e2d17b65839c024326bf55"
+    },
+    {
+      "path": "work/silex-poc/scripts/build-desktop-repro.sh",
+      "size": 689,
+      "sha256": "886e0aedf773ddcffd932ce920a0d1a132934b5877fb579fa8225cc771093bae"
+    },
+    {
+      "path": "work/silex-poc/scripts/ci-rust.sh",
+      "size": 1946,
+      "sha256": "3cb9e68bc7b73c98adb0c6b5443c66e8ee90fa7e2ef79285c70f96926c0fc563"
+    },
+    {
+      "path": "work/silex-poc/scripts/copy-assets.mjs",
+      "size": 1496,
+      "sha256": "5b9ebf8d3e073fa376d0a22781bd216f9d3620a24f86c9c3116a5ba5ce1cca59"
+    },
+    {
+      "path": "work/silex-poc/scripts/generate-changelog.sh",
+      "size": 8986,
+      "sha256": "d0afd14af2092462b1d1acca0d7ee57c947d0b9545ad0c27feece241b2d3224c"
+    },
+    {
+      "path": "work/silex-poc/scripts/generate-contributors-doc.js",
+      "size": 6501,
+      "sha256": "a367c634b94c10884781fc7d8e20ff4ac97ac30db0eecf96219079fe0996f835"
+    },
+    {
+      "path": "work/silex-poc/scripts/insert-in-readme.js",
+      "size": 1081,
+      "sha256": "7a926830ca7fa58f2b376f4af635b90d0180aff540962a621aff0cb8220cd9b7"
+    },
+    {
+      "path": "work/silex-poc/scripts/monthly-report-adapter.cjs",
+      "size": 7364,
+      "sha256": "146f928bdfef66abf29de8aa2865f4e466a962a01155b3abeabfa2a686c1f4fc"
+    },
+    {
+      "path": "work/silex-poc/scripts/monthly-report-adapter.test.cjs",
+      "size": 2725,
+      "sha256": "caa118c6eb4be368f1773019c1c25a6cd5dd5c9c4c9bbbcd6afe965a28de0e56"
+    },
+    {
+      "path": "work/silex-poc/scripts/repro-env.sh",
+      "size": 475,
+      "sha256": "798e63e94ca43dc3504bb89681ef32933a47a1f89a585666808abf8fb7a2eafc"
+    },
+    {
+      "path": "work/silex-poc/scripts/set-version.sh",
+      "size": 384,
+      "sha256": "a6680f10fefca1810397ec473539512942d9972ee51455c7f2985945c8f240eb"
+    },
+    {
+      "path": "work/silex-poc/scripts/verify-update-signature.sh",
+      "size": 1382,
+      "sha256": "74e6305e3fc3deb1c1c5fffa42bbe0bacdf0f4fa27ff35fae8abf97dc54ae42a"
+    },
+    {
+      "path": "work/silex-poc/scripts/weekly-html.cjs",
+      "size": 6784,
+      "sha256": "75002610ad1ac272dbd9317c3f3e01b96e2219f77ca46c60875a6e84b8062e99"
+    },
+    {
+      "path": "work/silex-poc/desktop/.gitignore",
+      "size": 101,
+      "sha256": "e892eb63bc5a4857c913b95fc8fc85a39404b072c2deb942db52fcaf844672ad"
+    },
+    {
+      "path": "work/silex-poc/desktop/LICENSE",
+      "size": 31959,
+      "sha256": "8964b569715c349a1a9c5cd9c659eeaf16f980738e81ca1b28e7852fd6026f25"
+    },
+    {
+      "path": "work/silex-poc/desktop/MCP_E2E_TESTS.md",
+      "size": 18585,
+      "sha256": "b8f9f731de84808c457459ac7ead3115e0b62fc0f13c3569ada7292f5b855d4e"
+    },
+    {
+      "path": "work/silex-poc/desktop/package.json",
+      "size": 386,
+      "sha256": "4b32cf7df32084fbf71a1ae4848a157bb4335eaa9aa247ed05294379e0a2ef27"
+    },
+    {
+      "path": "work/silex-poc/desktop/README.md",
+      "size": 2693,
+      "sha256": "564dca64eed753187702fdfb1da27b75200635041882b18f2fcb962afadd9a5d"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/build.rs",
+      "size": 39,
+      "sha256": "487059eaf8a947b80f20a9aacac038a5047b2ad69d2401b827376c67d6fe847f"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/capabilities/default.json",
+      "size": 471,
+      "sha256": "4d6e47c0e13015243f07e6db83502ee4c1445426ddffc9524f8ac82fe8d8ac2e"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/Cargo.lock",
+      "size": 145587,
+      "sha256": "628c99b96d589097477de32fc75b06d4dd632db8636f4df85178ea863008f2d9"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/Cargo.toml",
+      "size": 2209,
+      "sha256": "253b6157deda9b7ecfb3a290fcb2fa0f7997cab55f6ed204c0ec00a679b232dd"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/frontend/icons/icon.png",
+      "size": 41429,
+      "sha256": "079b1f27ad23dc8429697a62ff31ee3a39629eb0d8ef9e0f7e93ea55462dbaec"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/frontend/icons/silex.png",
+      "size": 1808,
+      "sha256": "857979c52618390895a57f102773955178cc46dd778a121b5543e3c159ba5bd5"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/frontend/index.html",
+      "size": 262,
+      "sha256": "a029e16c52789c34d4cd43fd734bb4a2e5436b792edbd47802b05b3f810c9736"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/frontend/splash.html",
+      "size": 1097,
+      "sha256": "8898cf473179d5cb4f690670f6b670f78c016b7326930d9dc7bc65efe8fb66d6"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/gen/schemas/acl-manifests.json",
+      "size": 68928,
+      "sha256": "94f6cbce753185a4f12087b1cef6cb2c98f3c3ef9902dea3c0d105434b0b302d"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/gen/schemas/capabilities.json",
+      "size": 416,
+      "sha256": "2641225ee9aa21bbc5869818d1fcd903a97620d88bef3025d59b4bc9d484e467"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/gen/schemas/desktop-schema.json",
+      "size": 121607,
+      "sha256": "12376a7b7420151d6b8a1db883af8495d8e6a8ae72837eb2e29576f00d09410b"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/gen/schemas/linux-schema.json",
+      "size": 121607,
+      "sha256": "12376a7b7420151d6b8a1db883af8495d8e6a8ae72837eb2e29576f00d09410b"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/icons/128x128.png",
+      "size": 6287,
+      "sha256": "a657b1fb4c4bcd261346772be2c1b779f7c85f62adbdd5cc1387b34280273739"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/icons/128x128@2x.png",
+      "size": 16442,
+      "sha256": "e4c825dcf606944b693354d819d7e3ee861d97c80cb0cf40612b8e40f1a996e6"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/icons/32x32.png",
+      "size": 1320,
+      "sha256": "989a7245ae9e7c4e88c6c3213e14b8b75f292e1075f105991c7076cdfda3487d"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/icons/64x64.png",
+      "size": 2583,
+      "sha256": "b3ff25e919cb1f834f6521a2c267599433cf335ea98f8f79f34ac1d2bb8e6c4b"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/icons/icon.icns",
+      "size": 236175,
+      "sha256": "fc265331580562df1a39865e66b00d83a22185e6dad0da6b209ff679c969272a"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/icons/icon.ico",
+      "size": 24295,
+      "sha256": "aecd427e37b42fdf14e90f2a9f333cf8afe5a3d8c5c789c423ec6088d32f1667"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/icons/icon.png",
+      "size": 39664,
+      "sha256": "01d2e0a6f313412be733aa176481da615499d976c5944040547943e6fedbcfe7"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/icons/silex.svg",
+      "size": 18403,
+      "sha256": "1e9fcebad491392c9bca262f914c103a88f47726a9d1eb11be8b947510448ee7"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/resources/glitchtip.dsn",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/scripts/desktop-bridge.js",
+      "size": 7714,
+      "sha256": "b6c80ced1b035764378b0308ab96485d22de68030703d699bddd91c82638c9b5"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/actions.rs",
+      "size": 45189,
+      "sha256": "be62ded4af1df628f4db53cb3dfe8660d947de5faa8dbaf6b226e7cbe598ad97"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/frontend.rs",
+      "size": 1639,
+      "sha256": "9850ef3d92bccf02c243a7cb55ed7f70b6677ead9b0218c245cda3bd91630440"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/held.rs",
+      "size": 827,
+      "sha256": "7fa1dbb69067799f2d51913191159293d740dac046a19a70cbed11a429d2ca94"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/deploy.rs",
+      "size": 8207,
+      "sha256": "4a143ae8834d37f2294a7f9070c025a53046dc1175825da74e8a9e522cf567da"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/git.rs",
+      "size": 14650,
+      "sha256": "e7723eac6e269b9dda77911815d07a99a5f2a279459c4e1336bbb166927d88d4"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/glab.rs",
+      "size": 11805,
+      "sha256": "8e7d1deee80ed58d4c8622fa55d70bd57489818518b955c61fc4b350058e4a99"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/hut.rs",
+      "size": 7499,
+      "sha256": "c8a96946af35e806c0f310967529d2770b44c423e1fd173cbc23a5b6dba94127"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/pipeline.rs",
+      "size": 8566,
+      "sha256": "6723b414ec9d5ef908c85a9d0273dfe92a3d7027c0ac34a1bedf9841f5c755b8"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/pipelines/forgejo-pages.yml",
+      "size": 1408,
+      "sha256": "2a901cb491d784d3158b528e5b5095008fae4037e646c7790f63d397e557f4f9"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/pipelines/gitlab-ci.yml",
+      "size": 1347,
+      "sha256": "1ecd6fd9c0c216ccc2bd976285c5f54cbfe390e720abbc92f41748978089d51f"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/pipelines/sourcehut.build.yml",
+      "size": 947,
+      "sha256": "44d795bf1d72ca4166ed241465c0aff63bfb21197bcf9e22442bc0cdde0c1545"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/programs.rs",
+      "size": 5148,
+      "sha256": "b84fbe43839894a93a3ded1a9236bd4c82dfbd62e1fe551ef812dbc0c90b48ba"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/remote.rs",
+      "size": 11745,
+      "sha256": "3c05ae7f32616264817a0f9711f6dd6f086fa91bc0d547219eb4ee1c1a6e0cca"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/run.rs",
+      "size": 12592,
+      "sha256": "c46fe605d024a99f1292907b3f1fa864f29beca390a276553ca9b413f8619538"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations/tea.rs",
+      "size": 23810,
+      "sha256": "3dc2ed49b8ca62a24c4a4b6b53d0d407532d78968a2858e4bcc38b9eab49a8d0"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/integrations.rs",
+      "size": 17356,
+      "sha256": "d4a180bf565bae7e72f51680fa4879a78580e291fd0dddb2feb86af5ab49fa55"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/main.rs",
+      "size": 25783,
+      "sha256": "c86969f5077e8354dc97dd75491fe150a5aba5c1d6b2e9a4abda1e56071f5481"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/src/mcp.rs",
+      "size": 39251,
+      "sha256": "824a0103619ca742a53ee83fcc6117447160f79eb389c6e0e05f4be743e2861e"
+    },
+    {
+      "path": "work/silex-poc/desktop/src-tauri/tauri.conf.json",
+      "size": 1082,
+      "sha256": "60687901b44f762dc7ef211972690f8be92942396ed4fd298acd40e467125f5b"
+    },
+    {
+      "path": "work/silex-poc/.dockerignore",
+      "size": 607,
+      "sha256": "e7385b46a7988a63a40d0a1bae94e105da53abd4f98f0fcb3d310f1e9f01931d"
+    },
+    {
+      "path": "work/silex-poc/.editorconfig",
+      "size": 314,
+      "sha256": "8da2c587b7ba2d09231e9e55dd1d7422fbacf062e16680ff2f2d674fee1432e6"
+    },
+    {
+      "path": "work/silex-poc/.env.default",
+      "size": 942,
+      "sha256": "c755d083f355fa3610dfb08f701093b34079eb907db5dbf02e34669fd5613dd2"
+    },
+    {
+      "path": "work/silex-poc/.gitattributes",
+      "size": 96,
+      "sha256": "b652df67751d5959ebfd6a1c4c9cae5bc98fccccc8c525595a648b796eaee2e8"
+    },
+    {
+      "path": "work/silex-poc/.gitignore",
+      "size": 379,
+      "sha256": "f9f89883f2ba8a3acf0dd80d8f5449f86cf1956592f53b52016de30853e381a2"
+    },
+    {
+      "path": "work/silex-poc/.gitmodules",
+      "size": 271,
+      "sha256": "ce8767ae627b3fbd243fa36334b36581db5485ebac37b42b01ceff01094010f9"
+    },
+    {
+      "path": "work/silex-poc/.npmrc",
+      "size": 225,
+      "sha256": "8a11603fd346d5e0a15d3c64a158405686877bbc27cb87728f23d65b585f5ecd"
+    },
+    {
+      "path": "work/silex-poc/.nvmrc",
+      "size": 3,
+      "sha256": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53"
+    },
+    {
+      "path": "work/silex-poc/.prettierrc",
+      "size": 156,
+      "sha256": "018ac08c2b430a4f8179614cd44a3a1679d24c8986f6af1625fa53d4aaac1af0"
+    },
+    {
+      "path": "work/silex-poc/AGENTS.md",
+      "size": 4402,
+      "sha256": "43a8a749a092841f5dd58adee7e8849d91b58385e1f68bdba9b458e727dd897c"
+    },
+    {
+      "path": "work/silex-poc/captain-definition",
+      "size": 61,
+      "sha256": "fafcea7c40a882bf23c2da230437fea388dbdf0b5c6a63b161913ff07f6ed2a3"
+    },
+    {
+      "path": "work/silex-poc/Cargo.lock",
+      "size": 165931,
+      "sha256": "0115a1c9a17739e91fc07693e4a50b9d69b12b94278e50480ac1242c75194d33"
+    },
+    {
+      "path": "work/silex-poc/Cargo.toml",
+      "size": 85,
+      "sha256": "15ab366944dcc6ea044c5a41d080aedcb5c69b172308a9a37fe532358e7d0936"
+    },
+    {
+      "path": "work/silex-poc/CONTRIBUTING.md",
+      "size": 9680,
+      "sha256": "ec9a637452fa6715694a064df1773291b7698f35199b86e5d9a6e76ba25ac308"
+    },
+    {
+      "path": "work/silex-poc/docker-compose.yml",
+      "size": 799,
+      "sha256": "d5b3c87c80a629b096bdb3781b2ce2c7c92c3a457551433b7cb907f8c5689183"
+    },
+    {
+      "path": "work/silex-poc/Dockerfile",
+      "size": 1677,
+      "sha256": "87b4eb4fbcc94cf4aa2231a5a981b340e9c42f934f80ff050c96a54e217df948"
+    },
+    {
+      "path": "work/silex-poc/eslint.config.mjs",
+      "size": 1573,
+      "sha256": "8f645ceed4371bcd23cb53be77fdd14a6629fbc561679a1d1b66d704f7e20a12"
+    },
+    {
+      "path": "work/silex-poc/jest.config.js",
+      "size": 2244,
+      "sha256": "5ff8a226857dab36e952827ed1bc1bca5c5687f4adae87271af6394a43682058"
+    },
+    {
+      "path": "work/silex-poc/LICENSE",
+      "size": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "path": "work/silex-poc/MONTHLY_REPORT_POC.md",
+      "size": 8495,
+      "sha256": "d62dc5cbc15a9400605c967f163b6d3f4a9b15c128f1a22a263e5607da587e6c"
+    },
+    {
+      "path": "work/silex-poc/MONTHLY_REPORT_REQUIREMENTS.md",
+      "size": 5989,
+      "sha256": "cef757ce58a86516b44c6337b202559990478b20dae7eac8451b896ed1328d38"
+    },
+    {
+      "path": "work/silex-poc/package.json",
+      "size": 5201,
+      "sha256": "f35434e0dda33a0ef154a5fd495bab80c0f56eb8134b84f29519dacc323acdc1"
+    },
+    {
+      "path": "work/silex-poc/pnpm-lock.yaml",
+      "size": 573488,
+      "sha256": "fb56e903e48dce4de455c80e4cb4e3d71cfcbb198ed2e62746ab9fdbb6246783"
+    },
+    {
+      "path": "work/silex-poc/pnpm-workspace.yaml",
+      "size": 236,
+      "sha256": "24d7d5e133646985af6e926e5a81c208321bc1d78ba2453761a641606b3a695e"
+    },
+    {
+      "path": "work/silex-poc/README.md",
+      "size": 11361,
+      "sha256": "9303160dcbffd870263eaf3d83f49efd47582e589161a28e37eae88790f6a4f6"
+    },
+    {
+      "path": "work/silex-poc/rust-toolchain.toml",
+      "size": 237,
+      "sha256": "d3a111cfb14a68e1561999863fa41201f174922596536f8626f9e3ef77dc5c44"
+    },
+    {
+      "path": "work/silex-poc/start-local-zh.cmd",
+      "size": 449,
+      "sha256": "4b447e4bd224bfcbb7c237bb106fd06d6659e7a095f094a5a31123b3118a121b"
+    },
+    {
+      "path": "work/silex-poc/tsconfig-server-release.json",
+      "size": 450,
+      "sha256": "4118aaf83619afbb3691de0c6151d0d6477a132ec5d159424c4605afa1641a2d"
+    },
+    {
+      "path": "work/silex-poc/tsconfig.base.json",
+      "size": 371,
+      "sha256": "51e2726ba1c0efe155d61ad0a66d8e5da162d0540c0cf21d7821008d845903bd"
+    },
+    {
+      "path": "work/silex-poc/tsconfig.json",
+      "size": 534,
+      "sha256": "0084d95ec777b8c15270c671f93bc2db86d248dda5970256d4d1f93c89b451d0"
+    },
+    {
+      "path": "work/silex-poc/verify.Dockerfile",
+      "size": 1861,
+      "sha256": "c443a1472531bd238ac643dc1d1c05d84a20c3445eabf7094105199b916aaf54"
+    },
+    {
+      "path": "work/silex-poc/webpack.config.js",
+      "size": 5870,
+      "sha256": "bc78a14cb01d56583a933cb8b93a6b18b0fe4983a910f22c72593e21a6bd20ce"
+    },
+    {
+      "path": "work/silex-poc/表格工具使用与验收.md",
+      "size": 6445,
+      "sha256": "a476cb91c849ca55168be688e22227b170af82c2c60e0a274afc0a60ecfff038"
+    }
+  ]
+}

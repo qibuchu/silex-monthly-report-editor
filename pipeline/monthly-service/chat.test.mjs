@@ -1,0 +1,48 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createCore} from './core.mjs';
+const here=path.dirname(fileURLToPath(import.meta.url));
+test('direct chat editing, active context, unsaved guard, rollback and session expiry',async t=>{
+ const storage=fs.mkdtempSync(path.join(here,'.chat-test-'));
+ const config={dataDir:storage,publicUrl:'http://localhost:4320'};
+ const project={format:'steam-grapesjs-v2',deck:{css:'',pages:[{name:'封面',objects:[{attributes:{'data-object-id':'title','data-name':'标题','data-kind':'text'},style:{left:'20px',top:'20px',width:'300px',height:'100px'},content:'<p>八月月报</p>'}]}]},silexState:{marker:'original editable state',pages:[{frames:[{component:{attributes:{'data-report-page':'1'},components:[{attributes:{'data-object-id':'title'},type:'text',traits:[{name:'custom'}],components:'<p>八月月报</p>'}]}}]}]}};
+ let now=10000;
+ t.mock.method(Date,'now',()=>now);
+ try{
+  const core=createCore(config),id=core.importProject({project,month:'2026-08'}).projectId;
+  const call=(name,args)=>core.call(name,args);
+  assert.equal((await call('get_editing_context')).status,'no_editor');
+  core.updateEditorContext(id,{sessionId:'tab1',pageIndex:0,objectIds:['title','unknown'],focused:true,dirty:true});
+  const context=await call('get_editing_context');
+  assert.equal(context.projectId,id);assert.deepEqual(context.selectedObjectIds,['title']);
+  const patch={projectId:id,baseRevision:1,requirement:'修改标题',changes:[{id:'title',content:'<p>八月运营月报</p>'}]};
+  await assert.rejects(call('apply_object_patch',patch),e=>e.status===409);
+  assert.equal(core.project(id).revision,1);
+  core.updateEditorContext(id,{sessionId:'tab1',pageIndex:0,objectIds:['title'],focused:true,saving:true});
+  await assert.rejects(call('apply_object_patch',patch),e=>e.status===409);
+  core.updateEditorContext(id,{sessionId:'tab1',pageIndex:0,objectIds:['title'],focused:true});
+  assert.equal((await call('apply_object_patch',patch)).revision,2);
+  assert.equal(core.project(id).project.silexState.marker,'original editable state');
+  assert.deepEqual(core.project(id).project.silexState.pages[0].frames[0].component.components[0].traits,[{name:'custom'}]);
+  assert.equal(core.project(id).author,'ai-chat');
+  assert.equal(core.project(id).lastChange.requirement,'修改标题');
+  await assert.rejects(call('apply_object_patch',patch),e=>e.status===409);
+  await assert.rejects(call('apply_object_patch',{...patch,baseRevision:2,changes:[{id:'title',style:{left:'1900px'}}]}),/bounds/);
+  assert.equal(core.project(id).revision,2);
+  const restored=await call('restore_project_version',{projectId:id,baseRevision:2,targetRevision:1});
+  assert.equal(restored.revision,3);assert.deepEqual(core.project(id).project,project);
+  await assert.rejects(call('restore_project_version',{projectId:id,baseRevision:2,targetRevision:1}),e=>e.status===409);
+  const other=core.importProject({project,month:'2026-08'}).projectId;
+  core.updateEditorContext(other,{sessionId:'tab2',pageIndex:0,focused:true});
+  assert.equal((await call('get_editing_context')).status,'ambiguous');
+  assert.equal((await call('get_editing_context',{projectId:id})).projectId,id);
+  core.updateEditorContext(other,{sessionId:'tab2',closed:true});
+  assert.equal((await call('get_editing_context')).projectId,id);
+  now+=21000;
+  assert.equal((await call('get_editing_context')).status,'no_editor');
+  assert.equal((await createCore(config).call('get_editing_context')).status,'no_editor','restart never resurrects tab state');
+ }finally{if(!path.resolve(storage).startsWith(here+path.sep))throw Error('Unsafe cleanup');fs.rmSync(storage,{recursive:true,force:true});}
+});

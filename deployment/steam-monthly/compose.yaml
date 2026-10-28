@@ -1,0 +1,35 @@
+services:
+  app:
+    image: node:24-alpine
+    container_name: steam-monthly-app
+    user: "1000:1000"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 20s
+    command: ["node", "/app/deployment/steam-monthly/start.mjs"]
+    working_dir: /app
+    ports:
+      - "9.135.95.168:14320:14320"
+      - "9.135.95.168:16805:16805"
+    volumes:
+      - ./current:/app:ro
+      - ./state:/state
+      - ./runtime:/runtime:ro
+      - ./secrets/monthly_token:/run/secrets/monthly_token:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 160
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+    healthcheck:
+      test: ["CMD", "node", "/app/deployment/steam-monthly/health.mjs"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
