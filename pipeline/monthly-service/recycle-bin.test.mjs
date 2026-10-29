@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {createCore, tools} from './core.mjs';
+import {createService} from './server.mjs';
 
 const obj = (id, content, kind = 'text') => ({tagName: kind === 'table' ? 'table' : 'div', attributes: {'data-object-id': id, 'data-kind': kind, 'data-name': id, 'data-content-layer': 'manual'}, style: {left: '10px', top: id === 'board' ? '80px' : '10px', width: '400px', height: id === 'board' ? '200px' : '60px'}, content});
 const template = () => ({format: 'steam-grapesjs-v2', deck: {css: '', notes: {template_origin: 'pptx', pptx_imports: [{filename: 't.pptx', pages: []}]}, pages: [{name: '9月榜单', width: 800, height: 450, background: '#fff', objects: [
@@ -66,4 +67,23 @@ test('template edit drafts, stale revisions and the current AI target are protec
     assert.ok(core.project(draft.projectId), 'selected draft untouched');
     await assert.rejects(core.call('delete_project', {projectId: '00000000-0000-4000-8000-000000000000', baseRevision: 1}), e => e.status === 404);
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
+});
+
+test('old preview and editor links explain that a draft can be restored', async () => {
+  const {dir, core, draft} = await setup();
+  const current = core.project(draft.projectId);
+  await core.call('delete_project', {projectId: draft.projectId, baseRevision: current.revision});
+  const {server} = createService({host:'127.0.0.1', publicUrl:'http://127.0.0.1:4320', dataDir:dir, token:'test-token', backupIntervalHours:0, workspaceRoot:path.resolve(import.meta.dirname,'../..')});
+  try {
+    await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    for (const url of [`/preview/${draft.projectId}`, `/editor?project=${draft.projectId}`]) {
+      const response = await fetch(base+url,{headers:{Authorization:'Bearer test-token'}});
+      assert.equal(response.status,410);
+      assert.match(await response.text(),/回收站.*恢复|恢复.*回收站/s);
+    }
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    fs.rmSync(dir,{recursive:true,force:true});
+  }
 });

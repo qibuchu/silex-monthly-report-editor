@@ -18,6 +18,8 @@
 // Monorepo single-package layout: map the ~/ path aliases (mirror of tsconfig "paths")
 // and the grapesjs-* plugin sources so jest resolves them like webpack/tsc do.
 const moduleNameMapper = {
+  // Jest VM modules must load fflate's browser CommonJS build; its browser ESM .js is parsed as CJS.
+  '^fflate$': '<rootDir>/node_modules/fflate/lib/browser.cjs',
   '^(\\.{1,2}/.*)\\.js$': '$1',
   '^~/common$': '<rootDir>/common',
   '^~/common/(.*?)(?:\\.js)?$': '<rootDir>/common/$1',

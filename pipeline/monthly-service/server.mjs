@@ -44,6 +44,10 @@ export function createService(config) {
     });
   };
   const cookieToken = config.token ? createHash('sha256').update(config.token).digest('hex') : null;
+  const recycledNotice = res => {
+    res.writeHead(410, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" });
+    res.end('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>草稿已移入回收站</title><style>body{font-family:system-ui,"Microsoft YaHei",sans-serif;background:#f7f5f1;color:#133e66;max-width:680px;margin:15vh auto;padding:28px}a{color:#1a6daa}</style><h1>这份草稿已移入回收站</h1><p>内容和历史版本仍保留。请到月报工作台的回收站恢复后再预览或编辑。</p><a href="/#recycle">打开回收站 →</a></html>');
+  };
   const body = async req => { let size = 0; const chunks = []; for await (const c of req) { size += c.length; if (size > 180 * 1024 * 1024) throw Object.assign(Error('项目请求超过180MB，请保留页面并检查重复的内嵌字体或素材。'), {status:413}); chunks.push(c); } return chunks.length ? JSON.parse(Buffer.concat(chunks)) : {}; };
   const server = http.createServer(async (req, res) => {
     try {
@@ -127,9 +131,9 @@ export function createService(config) {
         if (action === 'deck.js') { res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' }); return res.end('const DECK = ' + JSON.stringify(value.project.deck) + ';'); }
       }
       const preview = url.pathname.match(/^\/preview\/([a-f0-9-]+)$/);
-      if (preview) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: https:; font-src data:" }); return res.end(core.preview(preview[1], url.searchParams.get('proposal'))); }
+      if (preview) { if(core.db.deletedProjects[preview[1]])return recycledNotice(res);res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: https:; font-src data:" }); return res.end(core.preview(preview[1], url.searchParams.get('proposal'))); }
       if (url.pathname === '/editor') {
-        const id = url.searchParams.get('project'); core.project(id);
+        const id = url.searchParams.get('project'); if(core.db.deletedProjects[id])return recycledNotice(res);core.project(id);
         const target = editorTarget();
         for (const [key, value] of Object.entries({ id, connectorId: 'fs-storage', lang: 'zh', ui: 'native', serviceProject: id, serviceUrl: config.publicUrl })) target.searchParams.set(key, value);
         res.writeHead(302, { Location: target.toString() }); return res.end();

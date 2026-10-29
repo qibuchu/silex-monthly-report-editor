@@ -2,7 +2,7 @@
 
 本机演示优先使用根目录 `启动月报Demo.cmd` 和 [Demo使用说明](DEMO.md)：统一工作台已提供8月演示生成、项目导入、连接检查与生成任务恢复。
 
-当前主交互是[本地AI聊天直接修改](CHAT.md)。现有27个MCP工具，包含上下文、对象与页面修改、历史恢复、[可编辑模板库及Excel/接口实际数据匹配](TEMPLATES.md)。用户直接描述修改需求即可保存到项目并同步网页，提案确认流程为可选。
+当前主交互是[本地AI聊天直接修改](CHAT.md)。MCP 工具包含上下文、对象与页面修改、历史恢复、回收站，以及[可编辑模板库及Excel/接口实际数据匹配](TEMPLATES.md)。用户直接描述修改需求即可保存到项目并同步网页，提案确认流程为可选。具体工具清单以服务的 `tools/list` 为准。
 
 新机器安装与发布、备份恢复和内网部署见 [DEPLOY.md](DEPLOY.md)。`node tools/prepare-demo.cjs`检查本机依赖、构建与生成器一致性；`tools/package-demo.cjs`生成不含凭据和用户项目的完整源码交付目录。
 
@@ -34,7 +34,7 @@ AI 使用步骤：
 6. 用户要求先预览时，才使用propose_object_patch；处理标记需求附requestId。确认后apply_proposal。直接聊天修改不强制经过提案。
 7. export_project 返回 HTML 与可编辑 JSON 下载链接。
 
-其他工具：list_projects、get_preview_link、list_versions、list_ai_requests、get_ai_request、rename_project、reject_proposal、cancel_ai_request、get_editing_context、apply_object_patch、apply_structure_patch、restore_project_version。模板工具：list_templates、get_template、create_template、publish_template。当前共22个工具，没有删除项目工具。
+其他工具包括 list_projects、get_preview_link、list_versions、list_ai_requests、get_ai_request、rename_project、reject_proposal、cancel_ai_request、get_editing_context、apply_object_patch、apply_structure_patch、restore_project_version。模板工具包括 list_templates、get_template、create_template、publish_template。月报可在网页“我的月报”的更多操作中移入回收站，并在“回收站”恢复；对应 MCP 工具为 delete_project、list_deleted_projects、restore_deleted_project。旧预览或编辑链接访问已回收草稿时会显示恢复入口，不直接显示空白页。
 
 list_ai_requests 默认只返回待处理和待确认需求；传 status=all 可获取历史。关联方案应用成功后，需求改为已完成；放弃最后一个待确认方案时，需求重新等待AI处理。取消需求会关闭其待确认方案，保留历史，不修改月报正文。旧版本未关联 requestId 的方案不自动推断对应需求。
 

@@ -1,0 +1,39 @@
+name: Monthly workbench checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: work/silex-poc/pnpm-lock.yaml
+      - name: Install service dependencies
+        run: npm ci
+        working-directory: pipeline/monthly-service
+      - name: Install editor dependencies
+        run: pnpm install --filter @silexlabs/silex --frozen-lockfile
+        working-directory: work/silex-poc
+      - name: Build editor and portable generator
+        run: node tools/prepare-demo.cjs --build
+      - name: Test service
+        run: npm test
+        working-directory: pipeline/monthly-service
+      - name: Lint editor
+        run: pnpm lint
+        working-directory: work/silex-poc
+      - name: Test editor
+        run: pnpm test
+        working-directory: work/silex-poc
+      - name: Test deployment gateway and cleanup
+        run: node --test deployment/steam-monthly/gateway.test.mjs deployment/steam-monthly/prune-releases.test.mjs
