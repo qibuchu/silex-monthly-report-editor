@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { createAssetStore } from './asset-store.mjs';
 import {syncNativePatch, applyStructure} from './project-operations.mjs';
 import {builtinTemplates,profiles,inspectTemplate,validateRules,applyTemplate,newTemplateId} from './templates.mjs';
@@ -77,6 +78,7 @@ tools.push(
   tool('get_template_data_sources','重新匹配已有模板的数据需求，读取已登记来源和JSON样例；不会执行接口',{templateId:idSchema},['templateId'],true),
   tool('configure_template_data_sources','按版本登记模板数据来源及JSON样例，供后续字段适配；不修改PPT或发布规则',{templateId:idSchema,baseRevision:{type:'integer',minimum:0},templateRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1},entries:{type:'array',minItems:1,maxItems:20,items:{type:'object',properties:{requirement:idSchema,name:idSchema,kind:{type:'string',enum:['steamauto','json','skill','api']},reference:{type:'string'},notes:{type:'string'},filename:{type:'string'},sample:{type:['object','array']}},required:['requirement','name','kind'],additionalProperties:false}}},['templateId','baseRevision','templateRevision','projectRevision','entries']),
   tool('create_template','从已保存月报创建独立模板编辑稿，不修改来源项目',{projectId:idSchema,baseRevision:{type:'integer',minimum:1},title:{type:'string',minLength:1,maxLength:120},profile:{type:'string',enum:profiles}},['projectId','baseRevision','title']),
+  tool('fork_builtin_template','从内置模板直接创建可编辑版式和规则；使用内置演示数据仅生成版式样例，正式月报仍须提供目标月数据',{templateId:idSchema,baseRevision:{type:'integer',minimum:1},title:{type:'string',maxLength:120}},['templateId','baseRevision']),
   tool('publish_template','发布模板编辑稿与产出规则为不可变版本，未保存或版本冲突时拒绝',{templateId:idSchema,baseRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1},rules:{type:'object',properties:{profile:{type:'string',enum:profiles},description:{type:'string',maxLength:4000},objects:{type:'array',items:{type:'object',properties:{id:idSchema,mode:{type:'string',enum:['auto','static','blank','chart','bar']},binding:{type:'string'},chart:{type:'object'},bar:{type:'object'},textTemplate:{type:'string'},sentence:{type:'object'}},required:['id','mode'],additionalProperties:false}}},required:['profile','description','objects'],additionalProperties:false}},['templateId','baseRevision','projectRevision','rules'])
 );
 function toolsPatchSchema() {
@@ -404,7 +406,7 @@ export function createCore(config) {
       case 'get_template': {
         const t=builtinTemplates.find(t=>t.id===args.templateId)||db.templates[args.templateId];if(!t)throw new ServiceError('模板不存在',404);
         const generatedRules={data:'数据源：SteamAuto monthly-report schema 2.0。月份必须与report_month一致；缺失留空，不使用当前快照替代历史。',head:'头部榜：head.top20；重点游戏：head.highlights。选取名单来自上游标准数据包，模板不重新筛选或重算业务公式。',market:'大盘：market字段和历史数据窗口；数值直接取数，月报端只格式化和绘图。',releases:'新游金银铜榜：new_releases.gold/silver/bronze，沿用已有生成器的收入排序、D0至D13窗口和分页规则。',research:'专题游戏按selection指定；复杂活动分析与图片留给AI/人工后续补齐。补充写作要求不会自动联网研究。',manual:'人工文案与图片默认留空。固定内容会沿用模板样例，请勿将收入、排名或日期样例误设为固定。',overflow:'按绑定ID或对象ID匹配本期内容；自动对象无匹配时留空并记录独立任务文档。新入选游戏和超长表格保留动态对象及续页。'};
-        if(t.builtin)return {...t,generatedRules,editable:false,message:'先生成草稿，再从已保存项目另存为可编辑模板。'};
+        if(t.builtin)return {...t,generatedRules,editable:false,message:'可直接创建此内置模板的可编辑版本，保存版式并发布后用于生成新月报。'};
         const draft=project(t.projectId);const pages=inspectTemplate(draft.project);
         const old=new Map((t.rules?.objects||[]).map(r=>[r.id,r]));for(const page of pages)for(const object of page.objects){Object.assign(object,old.get(object.id)||{});}
         const recognition=t.origin==='pptx'?{...analyzePptxTemplate(draft.project),projectRevision:draft.revision}:undefined;
@@ -422,6 +424,26 @@ export function createCore(config) {
         db.projects[projectId]={id:projectId,revision:1,month:source.month,kind:'template-draft',title:'模板编辑 · '+title,project:structuredClone(source.project),updatedAt:new Date().toISOString(),author:'template'};
         db.templates[id]={id,title,profile,revision:0,projectId,builtin:false,sourceProjectId:source.id,sourceRevision:source.revision};persist();
         return {templateId:id,projectId,revision:0,editor:links(projectId).editor};
+      }
+      case 'fork_builtin_template': {
+        const source=builtinTemplates.find(t=>t.id===args.templateId);
+        if(!source)throw new ServiceError('请选择内置模板',404);
+        if(args.baseRevision!==source.revision)throw new ServiceError('内置模板版本已变化，请刷新后重试',409);
+        const title=typeof args.title==='string'&&args.title.trim()?args.title.trim():source.title+' · 可编辑版';
+        if(title.length>120)throw new ServiceError('模板名称须在120字以内');
+        const toolkit=path.join(config.toolkitDir||'','run.cjs'),demo=path.join(path.dirname(fileURLToPath(import.meta.url)),'demo','monthly-report-2026-08.json');
+        if(!fs.existsSync(toolkit)||!fs.existsSync(demo))throw new ServiceError('内置模板版式生成器未就绪，请先完成服务构建');
+        const seed=path.join(dir,'tasks',randomUUID()),output=path.join(seed,'output');
+        try {
+          const result=spawnSync(process.execPath,[toolkit,'--month','2026-08','--data',demo,'--profile',source.profile,'--out',output],{encoding:'utf8',timeout:90000,maxBuffer:8*1024*1024,windowsHide:true});
+          if(result.error||result.status!==0)throw new ServiceError('内置模板版式生成失败：'+(result.error?.message||result.stderr||'未知错误').slice(-500));
+          const value=JSON.parse(fs.readFileSync(path.join(output,'draft.json'),'utf8')).project;validate(value);
+          value.deck.notes={...value.deck.notes,templateSeed:{builtinId:source.id,month:'2026-08',purpose:'仅供编辑版式和对象规则；正式生成须使用目标月数据'}};
+          const templateId=newTemplateId(),projectId=randomUUID(),now=new Date().toISOString();
+          db.projects[projectId]={id:projectId,revision:1,month:'imported',kind:'template-draft',title:'模板编辑 · '+title,project:value,updatedAt:now,author:'builtin-template-fork'};
+          db.templates[templateId]={id:templateId,title,profile:source.profile,revision:0,projectId,builtin:false,origin:'builtin',sourceBuiltinId:source.id,sourceBuiltinRevision:source.revision,description:source.description};
+          persist();return {templateId,projectId,revision:0,editor:links(projectId).editor};
+        } finally {if(fs.existsSync(seed))fs.rmSync(seed,{recursive:true,force:true});}
       }
       case 'publish_template': {
         const t=db.templates[args.templateId];if(!t)throw new ServiceError('自定义模板不存在',404);

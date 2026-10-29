@@ -21,6 +21,23 @@ test('custom template can be removed without deleting reports or editable archiv
   const reopened=createCore({dataDir:dir,publicUrl:'http://localhost:4320'});assert.ok(reopened.db.deletedTemplates[created.templateId]);assert.equal((await reopened.call('list_templates')).length,initial-1);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('builtin template creates an isolated editable version without adding a report',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-builtin-fork-')),dataDir=path.join(root,'data'),toolkit=path.join(root,'toolkit');fs.mkdirSync(toolkit);
+ fs.writeFileSync(path.join(toolkit,'run.cjs'),`const fs=require('fs'),path=require('path');const a=process.argv.slice(2),v=n=>a[a.indexOf(n)+1];if(v('--profile')!=='data-supported')process.exit(2);fs.mkdirSync(v('--out'),{recursive:true});fs.writeFileSync(path.join(v('--out'),'draft.json'),JSON.stringify({project:${JSON.stringify(make())}}));`);
+ try{
+  const core=createCore({dataDir,toolkitDir:toolkit,publicUrl:'http://localhost:4320'});
+  await assert.rejects(core.call('fork_builtin_template',{templateId:'steam-data',baseRevision:2}),e=>e.status===409);
+  const result=await core.call('fork_builtin_template',{templateId:'steam-data',baseRevision:1});
+  const detail=await core.call('get_template',{templateId:result.templateId});
+  assert.equal(detail.origin,'builtin');assert.equal(detail.sourceBuiltinId,'steam-data');assert.equal(detail.revision,0);
+  assert.equal(detail.profile,'data-supported');assert.equal(core.project(result.projectId).kind,'template-draft');
+  assert.equal(core.project(result.projectId).project.deck.notes.templateSeed.month,'2026-08');
+  assert.equal((await core.call('list_projects')).filter(p=>p.kind!=='template-draft').length,0);
+  assert.equal((await core.call('get_template',{templateId:'steam-data'})).revision,1);
+  await core.call('publish_template',{templateId:result.templateId,baseRevision:0,projectRevision:1,rules:detail.rules});
+  assert.equal((await core.call('get_template',{templateId:result.templateId})).revision,1);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
 test('PPTX creates an isolated unpublished template with safe policies and archived media',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-pptx-template-'));
  try{
