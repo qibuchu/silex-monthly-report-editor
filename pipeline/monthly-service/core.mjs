@@ -23,6 +23,9 @@ function tool(name, description, properties, required = [], readOnly = false) {
 }
 export const tools = [
   tool('list_projects', '列出月报项目及当前版本', {}, [], true),
+  tool('delete_project', '把月报草稿移入回收站（不物理删除，可恢复）；按版本检查，模板编辑稿、AI正在编辑的草稿和未保存的草稿会被拒绝', { projectId: idSchema, baseRevision: { type: 'integer', minimum: 1 } }, ['projectId', 'baseRevision']),
+  tool('list_deleted_projects', '列出回收站中的月报草稿', {}, [], true),
+  tool('restore_deleted_project', '把回收站中的月报草稿恢复到项目列表', { projectId: idSchema }, ['projectId']),
   tool('generate_monthly_report', '按所选已发布模板创建独立月报，记录模板版本；数据仍来自目标月数据包', { month: idSchema, templateId:idSchema,templateRevision:{type:'integer',minimum:1}, data: { type: 'object' }, full: { type: 'boolean' }, profile: { type:'string', enum:['data-supported','finished-eight','full'] }, selection: { type:'object', properties:{ movement_appid:{type:'integer'}, indie_appids:{type:'array',maxItems:2,items:{type:'integer'}} }, additionalProperties:false } }, ['month']),
   tool('get_task', '读取生成任务状态和结果', { taskId: idSchema }, ['taskId'], true),
   tool('get_project', '读取项目；默认只返回页面和对象摘要，指定 pageIndex 或 objectIds 获取内容', { projectId: idSchema, pageIndex: { type: 'integer', minimum: 0 }, objectIds: { type: 'array', items: idSchema } }, ['projectId'], true),
@@ -101,6 +104,7 @@ export function createCore(config) {
   db.requests ||= {};
   db.templates ||= {};
   db.deletedTemplates ||= {};
+  db.deletedProjects ||= {};
   db.templateSources ||= {};
   db.templateData ||= {};
   db.visualRuleDrafts ||= {};
@@ -427,6 +431,27 @@ export function createCore(config) {
         fs.writeFileSync(path.join(folder,revision+'.json'),JSON.stringify({project:draft.project,rules,title:t.title,...(imported?.approved?{externalDataRevision:imported.revision}:{})}));
         Object.assign(t,{revision,rules,profile:rules.profile,publishedProjectRevision:draft.revision,publishedAt:new Date().toISOString(),externalDataRevision:imported?.approved?imported.revision:undefined,externalDataMonth:imported?.approved?imported.month:undefined});persist();
         return {templateId:t.id,revision,projectRevision:draft.revision};
+      }
+      case 'delete_project': {
+        const current = project(args.projectId);
+        if (current.kind === 'template-draft') throw new ServiceError('模板编辑稿不能移入回收站，请在模板库中管理模板', 400);
+        if (Object.values(db.templates).some(t => t.projectId === current.id) || Object.values(db.deletedTemplates).some(t => t.retainedProjectId === current.id || t.projectId === current.id)) throw new ServiceError('该项目是模板的编辑稿，不能移入回收站', 400);
+        if (Object.values(db.editingTargets).some(t => t.projectId === current.id)) throw new ServiceError('该草稿是当前AI编辑目标，请先在网页切换到其他草稿', 409);
+        assertEditorsSaved(current.id);
+        if (current.revision !== args.baseRevision) throw new ServiceError(`版本已变化（最新为 ${current.revision}），请重新读取后再删除`, 409);
+        db.deletedProjects[current.id] = { ...current, deletedAt: new Date().toISOString(), deletedFromRevision: current.revision };
+        delete db.projects[current.id];
+        persist();
+        return { projectId: current.id, title: current.title, revision: current.revision, deleted: true, restorable: true };
+      }
+      case 'list_deleted_projects': return Object.values(db.deletedProjects).map(({ project: value, ...meta }) => ({ ...meta, pageCount: value?.deck?.pages?.length ?? 0 }));
+      case 'restore_deleted_project': {
+        if (!Object.hasOwn(db.deletedProjects, args.projectId)) throw new ServiceError('回收站中没有该草稿', 404);
+        if (Object.hasOwn(db.projects, args.projectId)) throw new ServiceError('项目列表中已存在同编号的草稿', 409);
+        const { deletedAt, deletedFromRevision, ...restored } = db.deletedProjects[args.projectId];
+        db.projects[args.projectId] = restored; delete db.deletedProjects[args.projectId];
+        persist();
+        return { projectId: restored.id, title: restored.title, revision: restored.revision, restored: true };
       }
       case 'list_projects': return Object.values(db.projects).map(({ project: value, ...meta }) => ({ ...meta, pageCount: value.deck.pages.length }));
       case 'get_editing_target': {
