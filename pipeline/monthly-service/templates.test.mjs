@@ -38,6 +38,24 @@ test('builtin template creates an isolated editable version without adding a rep
   assert.equal((await core.call('get_template',{templateId:result.templateId})).revision,1);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+test('builtin template can be edited in place and keeps version one available',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-builtin-edit-')),dataDir=path.join(root,'data'),toolkit=path.join(root,'toolkit');fs.mkdirSync(toolkit);
+ fs.writeFileSync(path.join(toolkit,'run.cjs'),`const fs=require('fs');const a=process.argv.slice(2),v=n=>a[a.indexOf(n)+1];fs.mkdirSync(v('--out'),{recursive:true});fs.writeFileSync(v('--out')+'/draft.json',JSON.stringify({project:${JSON.stringify(make())}}));`);
+ try{
+  const core=createCore({dataDir,toolkitDir:toolkit,publicUrl:'http://localhost:4320'});
+  const enabled=await core.call('enable_builtin_template_editing',{templateId:'steam-data',baseRevision:1});
+  assert.equal(enabled.templateId,'steam-data');assert.equal((await core.call('list_templates')).length,3);
+  const detail=await core.call('get_template',{templateId:'steam-data'});assert.equal(detail.builtin,true);assert.equal(detail.projectId,enabled.projectId);assert.equal(detail.projectRevision,1);
+  assert.equal((await core.call('enable_builtin_template_editing',{templateId:'steam-data',baseRevision:1})).projectId,enabled.projectId);
+  await assert.rejects(core.call('delete_template',{templateId:'steam-data',baseRevision:1,projectRevision:1}),/内置模板不能删除/);
+  const ai=await core.call('set_visual_rule_selection',{editingTargetId:'builtin-template-test-12345',templateId:'steam-data',pageIndex:0,selectionType:'page',selectionId:'0',dirty:false,sessionId:'test',sequence:1});assert.equal(ai.templateId,'steam-data');
+  const context=await core.call('get_visual_rule_context',{editingTargetId:'builtin-template-test-12345'});assert.equal(context.projectId,enabled.projectId);
+  const published=await core.call('publish_template',{templateId:'steam-data',baseRevision:1,projectRevision:1,rules:detail.rules});assert.equal(published.revision,2);
+  assert.equal((await core.call('list_templates')).length,3);
+  const oldTask=await core.call('generate_monthly_report',{month:'2026-08',data:{report_month:'2026-08'},templateId:'steam-data',templateRevision:1});assert.equal((await wait(core,oldTask.id)).status,'succeeded');
+  const newTask=await core.call('generate_monthly_report',{month:'2026-08',data:{report_month:'2026-08'},templateId:'steam-data',templateRevision:2});assert.equal((await wait(core,newTask.id)).status,'succeeded');
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
 test('PPTX creates an isolated unpublished template with safe policies and archived media',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-pptx-template-'));
  try{

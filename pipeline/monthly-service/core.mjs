@@ -79,6 +79,7 @@ tools.push(
   tool('configure_template_data_sources','按版本登记模板数据来源及JSON样例，供后续字段适配；不修改PPT或发布规则',{templateId:idSchema,baseRevision:{type:'integer',minimum:0},templateRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1},entries:{type:'array',minItems:1,maxItems:20,items:{type:'object',properties:{requirement:idSchema,name:idSchema,kind:{type:'string',enum:['steamauto','json','skill','api']},reference:{type:'string'},notes:{type:'string'},filename:{type:'string'},sample:{type:['object','array']}},required:['requirement','name','kind'],additionalProperties:false}}},['templateId','baseRevision','templateRevision','projectRevision','entries']),
   tool('create_template','从已保存月报创建独立模板编辑稿，不修改来源项目',{projectId:idSchema,baseRevision:{type:'integer',minimum:1},title:{type:'string',minLength:1,maxLength:120},profile:{type:'string',enum:profiles}},['projectId','baseRevision','title']),
   tool('fork_builtin_template','从内置模板直接创建可编辑版式和规则；使用内置演示数据仅生成版式样例，正式月报仍须提供目标月数据',{templateId:idSchema,baseRevision:{type:'integer',minimum:1},title:{type:'string',maxLength:120}},['templateId','baseRevision']),
+  tool('enable_builtin_template_editing','为内置模板本身建立可编辑稿；保留原发布版本，演示数据仅用于版式样例',{templateId:idSchema,baseRevision:{type:'integer',minimum:1}},['templateId','baseRevision']),
   tool('publish_template','发布模板编辑稿与产出规则为不可变版本，未保存或版本冲突时拒绝',{templateId:idSchema,baseRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1},rules:{type:'object',properties:{profile:{type:'string',enum:profiles},description:{type:'string',maxLength:4000},objects:{type:'array',items:{type:'object',properties:{id:idSchema,mode:{type:'string',enum:['auto','static','blank','chart','bar']},binding:{type:'string'},chart:{type:'object'},bar:{type:'object'},textTemplate:{type:'string'},sentence:{type:'object'}},required:['id','mode'],additionalProperties:false}}},required:['profile','description','objects'],additionalProperties:false}},['templateId','baseRevision','projectRevision','rules'])
 );
 function toolsPatchSchema() {
@@ -189,11 +190,11 @@ export function createCore(config) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(args.month || '')) throw new ServiceError('Invalid month');
     if (args.data && args.data.report_month !== args.month) throw new ServiceError('Input month mismatch');
     const requested=args.templateId||(builtinTemplates.find(t=>t.profile===(args.profile||(args.full?'full':config.defaultProfile||'finished-eight')))?.id);
-    const template=builtinTemplates.find(t=>t.id===requested)||db.templates[requested];
+    const template=db.templates[requested]||builtinTemplates.find(t=>t.id===requested);
     if(!template||!template.revision)throw new ServiceError('请选择已发布模板');
     const templateRevision=args.templateRevision||template.revision;
     if(!Number.isInteger(templateRevision)||templateRevision<1||templateRevision>template.revision)throw new ServiceError('模板版本不存在');
-    const snapshot=template.builtin?undefined:JSON.parse(fs.readFileSync(path.join(dir,'history','template-'+template.id,templateRevision+'.json'),'utf8'));
+    const snapshot=template.builtin&&templateRevision===1?undefined:JSON.parse(fs.readFileSync(path.join(dir,'history','template-'+template.id,templateRevision+'.json'),'utf8'));
     if(snapshot?.externalDataRevision){
       if(args.data)throw new ServiceError('此模板使用已确认的外部数据映射，请从“导入数据并匹配”更新本期数据，不能混入Steam数据包');
       const data=JSON.parse(fs.readFileSync(path.join(dir,'history','template-data-'+template.id,snapshot.externalDataRevision+'.json'),'utf8'));
@@ -276,7 +277,7 @@ export function createCore(config) {
       }
       case 'set_visual_rule_selection': {
         if(!/^[a-zA-Z0-9_-]{16,100}$/.test(args.editingTargetId||''))throw new ServiceError('AI连接标识格式不正确');
-        const t=db.templates[args.templateId];if(!t||t.origin!=='pptx')throw new ServiceError('请选择PPT导入模板',404);
+        const t=db.templates[args.templateId];if(!t?.projectId)throw new ServiceError('请选择可编辑模板',404);
         const p=project(t.projectId).project.deck.pages[args.pageIndex];if(!p)throw new ServiceError('页面不存在',404);
         if(args.selectionType==='page'&&String(args.selectionId)!==String(args.pageIndex)||args.selectionType==='object'&&!p.objects.some(o=>o.attributes['data-object-id']===args.selectionId)||args.selectionType==='region'&&!matchTemplateData(project(t.projectId).project,db.templateData[t.id]?.sources||[]).some(v=>v.pageIndex===args.pageIndex&&v.id===args.selectionId))throw new ServiceError('选中的页面或对象不存在',409);
         const prior=db.visualRuleSelections[args.editingTargetId];if(prior?.sessionId===args.sessionId&&args.sequence<prior.sequence)return prior;
@@ -313,11 +314,11 @@ export function createCore(config) {
       case 'apply_visual_template_patch': {
         const selected=db.visualRuleSelections[args.editingTargetId];if(!selected||selected.templateId!==args.templateId)throw new ServiceError('网页AI目标已切换，请重新读取可视化规则上下文',409);
         if(selected.dirty)throw new ServiceError('网页有未保存的规则，请先保存后再由AI修改',409);
-        const t=db.templates[args.templateId];if(!t||t.origin!=='pptx')throw new ServiceError('模板不存在',404);
+        const t=db.templates[args.templateId];if(!t?.projectId)throw new ServiceError('模板不存在',404);
         return call('apply_object_patch',{projectId:t.projectId,baseRevision:args.baseRevision,requirement:args.requirement,changes:args.changes});
       }
       case 'get_visual_rule_canvas': {
-        const t=db.templates[args.templateId];if(!t||t.origin!=='pptx')throw new ServiceError('请选择PPT导入的可编辑模板',404);
+        const t=db.templates[args.templateId];if(!t?.projectId)throw new ServiceError('请选择可编辑模板',404);
         const current=project(t.projectId),pages=current.project.deck.pages,pageIndex=args.pageIndex??0;if(!pages[pageIndex])throw new ServiceError('页面不存在',404);
         const data=db.templateData[t.id],draft=db.visualRuleDrafts[t.id],targets=data?matchTemplateData(current.project,data.sources):[],recognized=analyzePptxTemplate(current.project);
         const ai=aiFor(t.id),suggestions=ai?.projectRevision===current.revision?aiSuggestions(t.id):[],suggested=new Map(suggestions.map(s=>[s.id,s]));
@@ -327,7 +328,7 @@ export function createCore(config) {
         const o=pages[pageIndex].objects;return {templateId:t.id,title:t.title,templateRevision:t.revision,projectId:t.projectId,projectRevision:current.revision,draftRevision:draft?.revision||0,dataRevision:data?.revision||0,dataMonth:data?.month||null,dataNeedsReview:!!data&&data.projectRevision!==current.revision,ai:aiSummary(t.id),pageIndex,pages:pages.map((p,i)=>({index:i,name:p.name,width:p.width||1920,height:p.height||1080})),objects:o.map(v=>({id:v.attributes['data-object-id'],name:v.attributes['data-name']||v.attributes['data-object-id'],kind:v.attributes['data-kind'],text:v.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,90),style:{left:v.style.left,top:v.style.top,width:v.style.width,height:v.style.height}})),recognition:recognized.objects.filter(v=>v.pageIndex===pageIndex).map(v=>({id:v.id,type:v.aiType||recognitionClass(v),source:v.aiType?'ai':'rules',aiConfidence:v.aiConfidence||null,confidence:v.confidence,reason:v.reason,binding:v.binding||v.suggestedBinding||'',sample:v.sample})),pendingReviewCount:pendingVisualReviews(draft?.rules||{},current.project,suggestions).length,targets:targets.filter(v=>v.pageIndex===pageIndex),allTargets:targets.map(v=>({id:v.id,kind:v.kind,pageIndex:v.pageIndex,name:v.name,capacity:v.capacity,columns:v.columns,sourceHint:v.sourceHint,representation:v.representation,suggestion:v.suggestion,rowOffset:v.rowOffset})),sources:data?matchSourceViews(data.sources).map(s=>({id:s.id,name:s.name,tables:s.tables.map(t=>({id:t.id,name:t.name,role:t.role,columns:t.columns,labels:t.columnLabels||t.columns,rows:t.rows.length})),scalars:s.scalars.map(v=>({id:v.id,path:v.path,label:v.label,value:v.value}))})):[],rules:draft?.rules||{...suggestedRules,visual:true,pages:pages.map((p,i)=>({pageIndex:i,purpose:p.name,mode:'always',continuation:''})),regions:targets.filter(v=>v.representation==='positioned-text').map(v=>({id:v.id,mode:'auto'}))},mappings:draft?.mappings||data?.mappings||targets.flatMap(v=>v.suggestion?[v.suggestion]:[]),canvas:`${config.publicUrl}/api/templates/${t.id}/canvas?pageIndex=${pageIndex}`};
       }
       case 'save_visual_rule_draft': {
-        const t=db.templates[args.templateId];if(!t||t.origin!=='pptx')throw new ServiceError('请选择PPT导入的可编辑模板',404);
+        const t=db.templates[args.templateId];if(!t?.projectId)throw new ServiceError('请选择可编辑模板',404);
         const current=project(t.projectId);assertEditorsSaved(t.projectId);const data=db.templateData[t.id],prior=db.visualRuleDrafts[t.id];
         if((prior?.revision||0)!==args.baseRevision||t.revision!==args.templateRevision||current.revision!==args.projectRevision||(data?.revision||0)!==args.dataRevision)throw new ServiceError('模板、数据或画布规则已变化，请重新读取后合并',409);
         const rules=validateVisualRules(validateRules({...args.rules,visual:true,structure:'pptx'},current.project),current.project);
@@ -362,7 +363,7 @@ export function createCore(config) {
         return {templateId:t.id,title:t.title,templateRevision:t.revision,projectRevision:t.projectRevision,revision:data?.revision||0,month:data?.month||null,sources:data?matchSourceViews(data.sources):[],mappings:data?.mappings||[],approved:!!data?.approved,needsReview:!!data&&data.projectRevision!==t.projectRevision,targets:data?matchTemplateData(project(t.projectId).project,data.sources):[]};
       }
       case 'import_template_data': {
-        const t=await call('get_template',{templateId:args.templateId});if(t.builtin)throw new ServiceError('请使用PPT生成的自定义模板');assertEditorsSaved(t.projectId);
+        const t=await call('get_template',{templateId:args.templateId});if(!t.projectId)throw new ServiceError('请先启用模板编辑');assertEditorsSaved(t.projectId);
         const check=()=>{const current=db.templates[t.id];if(args.baseRevision!==(db.templateData[t.id]?.revision||0)||args.templateRevision!==current.revision||args.projectRevision!==project(t.projectId).revision)throw new ServiceError('模板或导入数据已变化，请重读后再导入',409);};check();
         if(args.confirmedWindow!==true)throw new ServiceError('请确认导入数据的统计窗口与目标月份一致');
         const raw=[...(args.sources||[])];if(args.interface){raw.push(await fetchDataInterface(args.interface));check();assertEditorsSaved(t.projectId);}
@@ -382,7 +383,7 @@ export function createCore(config) {
         return describeSources(t,db.templateSources[t.id]);
       }
       case 'configure_template_data_sources': {
-        const t=await call('get_template',{templateId:args.templateId});if(t.builtin)throw new ServiceError('内置模板使用现有SteamAuto数据源，无需登记');
+        const t=await call('get_template',{templateId:args.templateId});if(!t.projectId)throw new ServiceError('请先启用模板编辑');
         const saved=db.templateSources[t.id];assertEditorsSaved(t.projectId);
         if(args.baseRevision!==(saved?.revision||0)||args.templateRevision!==t.revision||args.projectRevision!==t.projectRevision)throw new ServiceError('模板或数据源配置已变化，请重新读取后匹配',409);
         const entries=normalizeSources(args.entries,sourceNeeds(t));
@@ -390,7 +391,7 @@ export function createCore(config) {
         const folder=path.join(dir,'history','template-sources-'+t.id);fs.mkdirSync(folder,{recursive:true});fs.writeFileSync(path.join(folder,next.revision+'.json'),JSON.stringify(next));
         db.templateSources[t.id]=next;persist();return describeSources(t,next);
       }
-      case 'list_templates': return [...builtinTemplates,...Object.values(db.templates)].map(({rules,...t})=>({...t,description:rules?.description||t.description||'',editor:t.projectId?links(t.projectId).editor:null,...(t.projectId?{pageCount:project(t.projectId).project.deck.pages.length,draftProjectRevision:project(t.projectId).revision}:{})}));
+      case 'list_templates': return [...builtinTemplates.map(t=>db.templates[t.id]||t),...Object.values(db.templates).filter(t=>!builtinTemplates.some(b=>b.id===t.id))].map(({rules,...t})=>({...t,description:rules?.description||t.description||'',editor:t.projectId?links(t.projectId).editor:null,...(t.projectId?{pageCount:project(t.projectId).project.deck.pages.length,draftProjectRevision:project(t.projectId).revision}:{})}));
       case 'delete_template': {
         if(builtinTemplates.some(t=>t.id===args.templateId))throw new ServiceError('内置模板不能删除',400);
         const t=db.templates[args.templateId];if(!t)throw new ServiceError('自定义模板不存在或已删除',404);
@@ -404,9 +405,9 @@ export function createCore(config) {
         return {templateId:t.id,deleted:true,existingReports:reports,projectRetained:true};
       }
       case 'get_template': {
-        const t=builtinTemplates.find(t=>t.id===args.templateId)||db.templates[args.templateId];if(!t)throw new ServiceError('模板不存在',404);
+        const t=db.templates[args.templateId]||builtinTemplates.find(t=>t.id===args.templateId);if(!t)throw new ServiceError('模板不存在',404);
         const generatedRules={data:'数据源：SteamAuto monthly-report schema 2.0。月份必须与report_month一致；缺失留空，不使用当前快照替代历史。',head:'头部榜：head.top20；重点游戏：head.highlights。选取名单来自上游标准数据包，模板不重新筛选或重算业务公式。',market:'大盘：market字段和历史数据窗口；数值直接取数，月报端只格式化和绘图。',releases:'新游金银铜榜：new_releases.gold/silver/bronze，沿用已有生成器的收入排序、D0至D13窗口和分页规则。',research:'专题游戏按selection指定；复杂活动分析与图片留给AI/人工后续补齐。补充写作要求不会自动联网研究。',manual:'人工文案与图片默认留空。固定内容会沿用模板样例，请勿将收入、排名或日期样例误设为固定。',overflow:'按绑定ID或对象ID匹配本期内容；自动对象无匹配时留空并记录独立任务文档。新入选游戏和超长表格保留动态对象及续页。'};
-        if(t.builtin)return {...t,generatedRules,editable:false,message:'可直接创建此内置模板的可编辑版本，保存版式并发布后用于生成新月报。'};
+        if(!t.projectId)return {...t,generatedRules,editable:false,message:'启用编辑后，可直接修改此内置模板并发布新版本。'};
         const draft=project(t.projectId);const pages=inspectTemplate(draft.project);
         const old=new Map((t.rules?.objects||[]).map(r=>[r.id,r]));for(const page of pages)for(const object of page.objects){Object.assign(object,old.get(object.id)||{});}
         const recognition=t.origin==='pptx'?{...analyzePptxTemplate(draft.project),projectRevision:draft.revision}:undefined;
@@ -424,6 +425,26 @@ export function createCore(config) {
         db.projects[projectId]={id:projectId,revision:1,month:source.month,kind:'template-draft',title:'模板编辑 · '+title,project:structuredClone(source.project),updatedAt:new Date().toISOString(),author:'template'};
         db.templates[id]={id,title,profile,revision:0,projectId,builtin:false,sourceProjectId:source.id,sourceRevision:source.revision};persist();
         return {templateId:id,projectId,revision:0,editor:links(projectId).editor};
+      }
+      case 'enable_builtin_template_editing': {
+        const source=builtinTemplates.find(t=>t.id===args.templateId);
+        if(!source)throw new ServiceError('请选择内置模板',404);
+        const existing=db.templates[source.id];
+        if(existing?.projectId){if(args.baseRevision!==existing.revision)throw new ServiceError('模板版本已变化，请刷新后重试',409);return {templateId:source.id,projectId:existing.projectId,revision:existing.revision,editor:links(existing.projectId).editor};}
+        if(args.baseRevision!==source.revision)throw new ServiceError('内置模板版本已变化，请刷新后重试',409);
+        const toolkit=path.join(config.toolkitDir||'','run.cjs'),demo=path.join(path.dirname(fileURLToPath(import.meta.url)),'demo','monthly-report-2026-08.json');
+        if(!fs.existsSync(toolkit)||!fs.existsSync(demo))throw new ServiceError('内置模板版式生成器未就绪，请先完成服务构建');
+        const seed=path.join(dir,'tasks',randomUUID()),output=path.join(seed,'output');
+        try {
+          const result=spawnSync(process.execPath,[toolkit,'--month','2026-08','--data',demo,'--profile',source.profile,'--out',output],{encoding:'utf8',timeout:90000,maxBuffer:8*1024*1024,windowsHide:true});
+          if(result.error||result.status!==0)throw new ServiceError('内置模板版式生成失败：'+(result.error?.message||result.stderr||'未知错误').slice(-500));
+          const value=JSON.parse(fs.readFileSync(path.join(output,'draft.json'),'utf8')).project;validate(value);
+          value.deck.notes={...value.deck.notes,templateSeed:{builtinId:source.id,month:'2026-08',purpose:'仅供编辑版式和对象规则；正式生成须使用目标月数据'}};
+          const projectId=randomUUID(),now=new Date().toISOString();
+          db.projects[projectId]={id:projectId,revision:1,month:'imported',kind:'template-draft',title:'模板编辑 · '+source.title,project:value,updatedAt:now,author:'builtin-template-edit'};
+          db.templates[source.id]={...source,projectId,origin:'builtin',sourceBuiltinRevision:1,rules:{profile:source.profile,description:source.description,objects:[]}};
+          persist();return {templateId:source.id,projectId,revision:source.revision,editor:links(projectId).editor};
+        } finally {if(fs.existsSync(seed))fs.rmSync(seed,{recursive:true,force:true});}
       }
       case 'fork_builtin_template': {
         const source=builtinTemplates.find(t=>t.id===args.templateId);
