@@ -69,6 +69,26 @@ test('template edit drafts, stale revisions and the current AI target are protec
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 });
 
+test('report stage records human progress without changing editable content', async () => {
+  const {dir, core, created, draft} = await setup();
+  try {
+    const before=core.project(draft.projectId),content=JSON.stringify(before.project);
+    assert.equal(before.stage,'draft');
+    assert.equal(before.dataOrigin.kind,'template-data');
+    assert.equal(before.template.revision,0);
+    const changed=await core.call('set_project_stage',{projectId:draft.projectId,baseRevision:before.revision,stage:'review'});
+    assert.equal(changed.revision,before.revision+1);
+    assert.equal(core.project(draft.projectId).stage,'review');
+    assert.equal(JSON.stringify(core.project(draft.projectId).project),content);
+    await assert.rejects(core.call('set_project_stage',{projectId:draft.projectId,baseRevision:before.revision,stage:'final'}),e=>e.status===409);
+    const final=await core.call('set_project_stage',{projectId:draft.projectId,baseRevision:changed.revision,stage:'final'});
+    assert.equal(core.project(draft.projectId).stage,'final');
+    core.save(draft.projectId,final.revision,core.project(draft.projectId).project,'silex-operator');
+    assert.equal(core.project(draft.projectId).stage,'review','any later edit must reopen review');
+    await assert.rejects(core.call('set_project_stage',{projectId:created.projectId,baseRevision:1,stage:'final'}),/模板编辑稿/);
+  } finally { fs.rmSync(dir,{recursive:true,force:true}); }
+});
+
 test('old preview and editor links explain that a draft can be restored', async () => {
   const {dir, core, draft} = await setup();
   const current = core.project(draft.projectId);

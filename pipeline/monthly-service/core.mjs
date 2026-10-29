@@ -39,6 +39,7 @@ export const tools = [
   tool('reject_proposal', '放弃尚未应用的方案，保留历史记录；关联需求重新等待处理', { proposalId: idSchema }, ['proposalId']),
   tool('cancel_ai_request', '取消未完成的标记需求，关联待确认方案一并关闭，保留历史', { requestId: idSchema }, ['requestId']),
   tool('rename_project', '重命名月报项目，按版本检查并保留编辑内容', { projectId: idSchema, baseRevision: { type: 'integer', minimum: 1 }, title: { type: 'string', minLength: 1, maxLength: 120 } }, ['projectId', 'baseRevision', 'title']),
+  tool('set_project_stage', '标记月报的工作状态；终稿标记仅表示人工确认，不代替数据和视觉核验', { projectId:idSchema,baseRevision:{type:'integer',minimum:1},stage:{type:'string',enum:['draft','review','final']} }, ['projectId','baseRevision','stage']),
   tool('get_editing_target', '读取这台电脑明确选择的AI编辑草稿；选择标识不是访问凭据', {editingTargetId:idSchema}, ['editingTargetId'], true),
   tool('clear_editing_target', '取消本电脑AI草稿选择；不删除月报，后续AI必须重新选择目标', {editingTargetId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['editingTargetId','baseRevision']),
   tool('set_editing_target', '用户明确选择草稿后设置本电脑AI目标，保留选择版本检查；不修改月报', {editingTargetId:idSchema,projectId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['editingTargetId','projectId','baseRevision']),
@@ -133,7 +134,7 @@ export function createCore(config) {
     const filled=rules?.visual?fillVisualTemplate(value,sources,mappings,month,renderImportedChart,rules):fillTemplateData(value,sources,mappings,month,renderImportedChart),id=randomUUID();validate(filled.project);
     const earlier=Object.values(db.projects).filter(p=>p.month===month&&p.template?.id===template.id&&p.template?.revision===template.revision&&p.kind!=='template-draft').sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];
     if(earlier){const imgSrc=html=>{const src=(String(html||'').match(/<img\b[^>]*\bsrc="([^"]*)"/i)||[])[1]||'';const asset=src.match(/\/assets\/([^/?#"]+)/);return asset?'asset:'+asset[1]:src;};const original=new Map(value.deck.pages.flatMap(p=>p.objects).map(o=>[o.attributes?.['data-object-id'],imgSrc(o.content)]));const saved=new Map(earlier.project.deck.pages.flatMap(p=>p.objects).filter(o=>o.attributes?.['data-refresh-policy']==='preserve'&&/<img\b/i.test(o.content)&&!o.attributes?.['data-source-field']&&imgSrc(o.content)&&imgSrc(o.content)!==original.get(o.attributes?.['data-object-id'])).map(o=>[o.attributes['data-object-id'],o]));for(const page of filled.project.deck.pages)for(const object of page.objects){const prior=saved.get(object.attributes?.['data-object-id']);if(prior&&/<div\b[^>]*data-image-slot=|<p><\/p>/i.test(object.content)){object.content=prior.content;object.attributes={...object.attributes,'data-kind':'image','data-refresh-policy':'preserve'};}}}
-    db.projects[id]={id,revision:1,month,title:`${template.title} · ${month} 数据草稿`,template:{id:template.id,title:template.title,revision:template.revision},project:filled.project,updatedAt:new Date().toISOString(),author:'generator'};return {projectId:id,...links(id),filled:filled.filled,filledCells:filled.filledCells,issues:filled.issues};
+    db.projects[id]={id,revision:1,month,title:`${template.title} · ${month} 数据草稿`,stage:'draft',dataOrigin:{kind:'template-data',month,templateDataRevision:template.externalDataRevision||null},template:{id:template.id,title:template.title,revision:template.revision},project:filled.project,updatedAt:new Date().toISOString(),author:'generator'};return {projectId:id,...links(id),filled:filled.filled,filledCells:filled.filledCells,issues:filled.issues};
   };
   function save(id, baseRevision, value, author = 'operator', lastChange) {
     const current = project(id);
@@ -146,7 +147,7 @@ export function createCore(config) {
     }
     const history = path.join(dir, 'history', id); fs.mkdirSync(history, { recursive: true });
     fs.writeFileSync(path.join(history, `${current.revision}.json`), JSON.stringify(current));
-    db.projects[id] = { ...current, revision: current.revision + 1, project: value, author, lastChange, updatedAt: new Date().toISOString() };
+    db.projects[id] = { ...current, revision: current.revision + 1, project: value, author, lastChange, stage:current.stage==='final'?'review':current.stage, updatedAt: new Date().toISOString() };
     persist(); return db.projects[id];
   }
   function patch(current, changes) {
@@ -193,7 +194,7 @@ export function createCore(config) {
       if(args.data)throw new ServiceError('此模板使用已确认的外部数据映射，请从“导入数据并匹配”更新本期数据，不能混入Steam数据包');
       const data=JSON.parse(fs.readFileSync(path.join(dir,'history','template-data-'+template.id,snapshot.externalDataRevision+'.json'),'utf8'));
       if(data.month!==args.month)throw new ServiceError('已导入数据月份为'+data.month+'，请先导入目标月数据并确认映射后发布');
-      const result=sourceDraft({...template,revision:templateRevision},snapshot.project,data.sources,data.mappings,args.month,snapshot.rules),id=randomUUID();db.tasks[id]={id,status:'succeeded',month:args.month,template:{id:template.id,title:template.title,revision:templateRevision},projectId:result.projectId,links:links(result.projectId),startedAt:new Date().toISOString(),finishedAt:new Date().toISOString()};persist();return db.tasks[id];
+      const result=sourceDraft({...template,revision:templateRevision,externalDataRevision:snapshot.externalDataRevision},snapshot.project,data.sources,data.mappings,args.month,snapshot.rules),id=randomUUID();db.tasks[id]={id,status:'succeeded',month:args.month,template:{id:template.id,title:template.title,revision:templateRevision},projectId:result.projectId,links:links(result.projectId),startedAt:new Date().toISOString(),finishedAt:new Date().toISOString()};persist();return db.tasks[id];
     }
     const templateMeta={id:template.id,title:template.title,revision:templateRevision};
     const selectedProfile=snapshot?.rules.structure==='pptx'?'full':snapshot?.rules.profile||template.profile;
@@ -232,7 +233,7 @@ export function createCore(config) {
         fs.writeFileSync(path.join(taskDir,'output','draft.json'),JSON.stringify(generatedEnvelope));
         fs.writeFileSync(path.join(taskDir,'output','draft.html'),render(projectValue));
         const projectId = randomUUID();
-        db.projects[projectId] = { id: projectId, revision: 1, month: args.month, title: `Steam ${args.month} 月报 · ${template.title}`,template:templateMeta, project: projectValue, updatedAt: new Date().toISOString(), author: 'generator' };
+        db.projects[projectId] = { id: projectId, revision: 1, month: args.month, title: `Steam ${args.month} 月报 · ${template.title}`,stage:'draft',dataOrigin:{kind:args.data?'uploaded-package':'server-generation',month:args.month},template:templateMeta, project: projectValue, updatedAt: new Date().toISOString(), author: 'generator' };
         Object.assign(db.tasks[id], { status: 'succeeded', projectId, links: links(projectId), finishedAt: new Date().toISOString() });
       } catch (error) { Object.assign(db.tasks[id], { status: 'failed', error: error.message }); }
       persist();
@@ -385,7 +386,7 @@ export function createCore(config) {
         const folder=path.join(dir,'history','template-sources-'+t.id);fs.mkdirSync(folder,{recursive:true});fs.writeFileSync(path.join(folder,next.revision+'.json'),JSON.stringify(next));
         db.templateSources[t.id]=next;persist();return describeSources(t,next);
       }
-      case 'list_templates': return [...builtinTemplates,...Object.values(db.templates)].map(({rules,...t})=>({...t,description:rules?.description||t.description||'',editor:t.projectId?links(t.projectId).editor:null,...(t.projectId?{pageCount:project(t.projectId).project.deck.pages.length}:{})}));
+      case 'list_templates': return [...builtinTemplates,...Object.values(db.templates)].map(({rules,...t})=>({...t,description:rules?.description||t.description||'',editor:t.projectId?links(t.projectId).editor:null,...(t.projectId?{pageCount:project(t.projectId).project.deck.pages.length,draftProjectRevision:project(t.projectId).revision}:{})}));
       case 'delete_template': {
         if(builtinTemplates.some(t=>t.id===args.templateId))throw new ServiceError('内置模板不能删除',400);
         const t=db.templates[args.templateId];if(!t)throw new ServiceError('自定义模板不存在或已删除',404);
@@ -561,6 +562,13 @@ export function createCore(config) {
         const next = save(current.id, args.baseRevision, current.project, 'operator-rename');
         next.title = args.title.trim(); persist();
         return { projectId: current.id, revision: next.revision, title: next.title };
+      }
+      case 'set_project_stage': {
+        if (!['draft','review','final'].includes(args.stage)) throw new ServiceError('未知月报状态');
+        const current=project(args.projectId);if(current.kind==='template-draft')throw new ServiceError('模板编辑稿不能标记为月报终稿');
+        assertEditorsSaved(current.id);
+        const next=save(current.id,args.baseRevision,current.project,'operator-stage');next.stage=args.stage;persist();
+        return {projectId:next.id,revision:next.revision,stage:next.stage};
       }
       case 'get_preview_link': project(args.projectId); return links(args.projectId);
       case 'list_versions': { const current = project(args.projectId); const history = path.join(dir, 'history', current.id); return { currentRevision: current.revision, revisions: fs.existsSync(history) ? fs.readdirSync(history).map(f => Number(f.replace('.json', ''))).sort((a,b) => b-a) : [] }; }
