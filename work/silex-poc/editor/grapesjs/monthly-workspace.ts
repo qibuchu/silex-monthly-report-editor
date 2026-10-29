@@ -349,8 +349,13 @@ function installImageSlotUpload(editor: Editor) {
     const component = id && page ? findByStableId(editor, id) : undefined
     if (!component) return
     editor.select(component)
-    const picker = doc.createElement('input')
-    picker.type = 'file'; picker.accept = 'image/*'; picker.style.display = 'none'; doc.body.append(picker)
+    // The chooser must be opened from an input in the top-level document: an input created inside the canvas iframe
+    // never opens the file dialog in the editor, so clicking the slot appeared to do nothing.
+    const host = window.document
+    host.querySelectorAll('input[data-monthly-slot-picker]').forEach(stale => stale.remove())
+    const picker = host.createElement('input')
+    picker.setAttribute('data-monthly-slot-picker', 'true')
+    picker.type = 'file'; picker.accept = 'image/*'; picker.style.display = 'none'; host.body.append(picker)
     picker.addEventListener('change', async () => {
       const file = picker.files?.[0]
       if (!file) { picker.remove(); return }
