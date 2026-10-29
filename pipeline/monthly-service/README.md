@@ -34,7 +34,7 @@ AI 使用步骤：
 6. 用户要求先预览时，才使用propose_object_patch；处理标记需求附requestId。确认后apply_proposal。直接聊天修改不强制经过提案。
 7. export_project 返回 HTML 与可编辑 JSON 下载链接。
 
-其他工具包括 list_projects、get_preview_link、list_versions、list_ai_requests、get_ai_request、rename_project、reject_proposal、cancel_ai_request、get_editing_context、apply_object_patch、apply_structure_patch、restore_project_version。模板工具包括 list_templates、get_template、create_template、publish_template。月报可在网页“我的月报”的更多操作中移入回收站，并在“回收站”恢复；对应 MCP 工具为 delete_project、list_deleted_projects、restore_deleted_project。旧预览或编辑链接访问已回收草稿时会显示恢复入口，不直接显示空白页。
+其他工具包括 list_projects、get_preview_link、list_versions、list_ai_requests、get_ai_request、rename_project、reject_proposal、cancel_ai_request、get_editing_context、apply_object_patch、apply_structure_patch、restore_project_version。模板工具包括 list_templates、get_template、create_template、publish_template。月报可在网页“我的月报”的更多操作中移入回收站，并在“回收站”恢复；对应 MCP 工具为 delete_project、list_deleted_projects、restore_deleted_project。回收站的“清空”需输入“永久清空”并核对完整项目清单；服务先创建完整备份，再删除回收记录及独有历史、图片和生成任务文件。仍被其他项目或历史版本引用的图片会保留；备份独立保存，不随清空操作删除。旧预览或编辑链接访问已回收草稿时会显示恢复入口，不直接显示空白页。
 
 list_ai_requests 默认只返回待处理和待确认需求；传 status=all 可获取历史。关联方案应用成功后，需求改为已完成；放弃最后一个待确认方案时，需求重新等待AI处理。取消需求会关闭其待确认方案，保留历史，不修改月报正文。旧版本未关联 requestId 的方案不自动推断对应需求。
 

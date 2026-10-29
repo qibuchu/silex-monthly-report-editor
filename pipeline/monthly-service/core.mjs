@@ -13,6 +13,7 @@ import {jsonSource,validateDataSources,matchTemplateData,fillTemplateData,normal
 import {renderImportedChart} from './template-chart-render.mjs';
 import {fetchDataInterface} from './data-interface.mjs';
 import {matchSourceViews} from './minigame-data-fields.mjs';
+import {backupStore} from './maintenance.mjs';
 import {validateVisualRules,fillVisualTemplate,recognitionClass,pendingVisualReviews} from './visual-template-rules.mjs';
 const require = createRequire(import.meta.url);
 
@@ -26,6 +27,7 @@ export const tools = [
   tool('delete_project', '把月报草稿移入回收站（不物理删除，可恢复）；按版本检查，模板编辑稿、AI正在编辑的草稿和未保存的草稿会被拒绝', { projectId: idSchema, baseRevision: { type: 'integer', minimum: 1 } }, ['projectId', 'baseRevision']),
   tool('list_deleted_projects', '列出回收站中的月报草稿', {}, [], true),
   tool('restore_deleted_project', '把回收站中的月报草稿恢复到项目列表', { projectId: idSchema }, ['projectId']),
+  tool('empty_recycle_bin', '永久清空当前回收站；要求完整项目ID清单和明确确认，先创建完整备份，删除独有的历史与素材', { expectedProjectIds:{type:'array',items:idSchema},confirmation:{type:'string',const:'永久清空'} }, ['expectedProjectIds','confirmation']),
   tool('generate_monthly_report', '按所选已发布模板创建独立月报，记录模板版本；数据仍来自目标月数据包', { month: idSchema, templateId:idSchema,templateRevision:{type:'integer',minimum:1}, data: { type: 'object' }, full: { type: 'boolean' }, profile: { type:'string', enum:['data-supported','finished-eight','full'] }, selection: { type:'object', properties:{ movement_appid:{type:'integer'}, indie_appids:{type:'array',maxItems:2,items:{type:'integer'}} }, additionalProperties:false } }, ['month']),
   tool('get_task', '读取生成任务状态和结果', { taskId: idSchema }, ['taskId'], true),
   tool('get_project', '读取项目；默认只返回页面和对象摘要，指定 pageIndex 或 objectIds 获取内容', { projectId: idSchema, pageIndex: { type: 'integer', minimum: 0 }, objectIds: { type: 'array', items: idSchema } }, ['projectId'], true),
@@ -454,6 +456,32 @@ export function createCore(config) {
         persist();
         return { projectId: restored.id, title: restored.title, revision: restored.revision, restored: true };
       }
+      case 'empty_recycle_bin': {
+        const ids=Object.keys(db.deletedProjects).sort();
+        if(args.confirmation!=='永久清空')throw new ServiceError('请明确确认永久清空回收站');
+        if(!Array.isArray(args.expectedProjectIds)||args.expectedProjectIds.length!==ids.length||JSON.stringify([...args.expectedProjectIds].sort())!==JSON.stringify(ids))throw new ServiceError('回收站内容已变化，请刷新清单后重新确认',409);
+        if(!ids.length)return {deleted:0,backupDirectory:null,removedFiles:0,retainedAssets:0};
+        if(ids.some(id=>!/^[-a-f\d]{36}$/i.test(id)))throw new ServiceError('回收站项目编号异常，拒绝清空');
+        const purged=new Set(ids);
+        const taskIds=Object.entries(db.tasks).filter(([,task])=>purged.has(task.projectId)).map(([id])=>id);
+        const retainedDb={...db,deletedProjects:{}};
+        const assetRefs=new Set([...JSON.stringify(retainedDb).matchAll(/\/api\/projects\/([a-f\d-]{36})\/assets\//gi)].map(x=>x[1]));
+        const scan=(root)=>{if(!fs.existsSync(root))return;for(const entry of fs.readdirSync(root,{withFileTypes:true})){const file=path.join(root,entry.name);if(entry.isSymbolicLink())continue;if(entry.isDirectory()){scan(file);continue;}if(!entry.isFile())continue;for(const match of fs.readFileSync(file,'utf8').matchAll(/\/api\/projects\/([a-f\d-]{36})\/assets\//gi))assetRefs.add(match[1]);}};
+        const historyRoot=path.join(dir,'history');if(fs.existsSync(historyRoot))for(const entry of fs.readdirSync(historyRoot,{withFileTypes:true})){if(entry.isDirectory()&&!purged.has(entry.name))scan(path.join(historyRoot,entry.name));}
+        scan(path.join(dir,'conflicts'));
+        const backup=backupStore(dir,config.backupDir||path.resolve(dir,'../backups'));
+        for(const id of ids)delete db.deletedProjects[id];
+        for(const id of taskIds)delete db.tasks[id];
+        for(const [id,request] of Object.entries(db.requests))if(purged.has(request.projectId))delete db.requests[id];
+        for(const [id,proposal] of Object.entries(db.proposals))if(purged.has(proposal.projectId))delete db.proposals[id];
+        for(const [id,target] of Object.entries(db.editingTargets))if(purged.has(target.projectId))delete db.editingTargets[id];
+        persist();
+        let removedFiles=0,retainedAssets=0;const cleanupErrors=[];
+        const removeDirectory=(root,id)=>{const target=path.resolve(root,id);if(!target.startsWith(path.resolve(root)+path.sep)||!fs.existsSync(target))return;try{if(fs.lstatSync(target).isSymbolicLink())throw Error('符号链接目录不允许自动删除');removedFiles+=fs.readdirSync(target).length;fs.rmSync(target,{recursive:true,force:true});}catch(error){cleanupErrors.push(`${id}: ${error.message}`);}};
+        for(const id of ids){removeDirectory(historyRoot,id);if(assetRefs.has(id))retainedAssets++;else removeDirectory(path.join(dir,'assets'),id);}
+        for(const id of taskIds)if(/^[-a-f\d]{36}$/i.test(id))removeDirectory(path.join(dir,'tasks'),id);
+        return {deleted:ids.length,backupDirectory:backup.directory,removedFiles,retainedAssets,cleanupErrors};
+      }
       case 'list_projects': return Object.values(db.projects).map(({ project: value, ...meta }) => ({ ...meta, pageCount: value.deck.pages.length }));
       case 'get_editing_target': {
         if(!/^[a-zA-Z0-9_-]{16,100}$/.test(args.editingTargetId||''))throw new ServiceError('AI连接标识格式不正确');
@@ -578,7 +606,7 @@ export function createCore(config) {
       default: throw new ServiceError('Unknown tool', 404);
     }
   }
-  return { call, project, save, db, putAsset(id,input) { project(id); return assets.put(id,input.data); }, getAsset(id,file) { project(id); return assets.get(id,file); }, archive(id) {
+  return { call, project, save, db, putAsset(id,input) { project(id); return assets.put(id,input.data); }, getAsset(id,file) { return assets.get(id,file); }, archive(id) {
     const result=assets.pack(project(id));
     return { ...result.value, assets:result.assets };
   }, updateEditorContext(id, input) {

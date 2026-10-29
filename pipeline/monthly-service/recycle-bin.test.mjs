@@ -12,13 +12,14 @@ const template = () => ({format: 'steam-grapesjs-v2', deck: {css: '', notes: {te
 
 async function setup() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'monthly-bin-'));
-  const core = createCore({dataDir: dir, publicUrl: 'http://127.0.0.1:4320'});
+  const backupDir=dir+'-backups';
+  const core = createCore({dataDir: dir, backupDir, publicUrl: 'http://127.0.0.1:4320'});
   const created = core.importPptxTemplate({title: '回收站验证', project: template()});
   const source = {name: '本月', reportMonth: '2026-09', tables: [{name: '榜单', columns: ['游戏', '厂商'], rows: [['新1', '新厂1']]}], scalars: []};
   const imported = await core.call('import_template_data', {templateId: created.templateId, baseRevision: 0, templateRevision: 0, projectRevision: 1, month: '2026-09', confirmedWindow: true, sources: [source]});
   const mapping = {id: 'board', kind: 'table', sourceId: imported.sources[0].tables[0].id, columnMap: [0, 1]};
   const draft = await core.call('generate_template_data_preview', {templateId: created.templateId, baseRevision: imported.revision, templateRevision: 0, projectRevision: 1, mappings: [mapping]});
-  return {dir, core, created, draft};
+  return {dir, backupDir, core, created, draft};
 }
 
 test('recycle-bin tools are registered with accurate hints', () => {
@@ -106,4 +107,41 @@ test('old preview and editor links explain that a draft can be restored', async 
     await new Promise(resolve => server.close(resolve));
     fs.rmSync(dir,{recursive:true,force:true});
   }
+});
+
+test('empty bin requires exact snapshot and confirmation, backs up before deleting project files', async () => {
+  const {dir,backupDir,core,draft}=await setup();
+  try {
+    const id=draft.projectId,initial=core.project(id);
+    core.save(id,initial.revision,initial.project,'operator');
+    const image=core.putAsset(id,{data:'data:image/png;base64,iVBORw0KGgo='});
+    assert.ok(image.src.includes(id));
+    await core.call('delete_project',{projectId:id,baseRevision:2});
+    const args={expectedProjectIds:[id],confirmation:'永久清空'};
+    await assert.rejects(core.call('empty_recycle_bin',{...args,expectedProjectIds:[]}),e=>e.status===409);
+    await assert.rejects(core.call('empty_recycle_bin',{...args,confirmation:'清空'}),/确认/);
+    assert.equal((await core.call('list_deleted_projects',{})).length,1);
+    const result=await core.call('empty_recycle_bin',args);
+    assert.equal(result.deleted,1);
+    assert.equal(result.cleanupErrors.length,0);
+    assert.ok(fs.existsSync(path.join(result.backupDirectory,'store.json')));
+    assert.equal(fs.existsSync(path.join(dir,'history',id)),false);
+    assert.equal(fs.existsSync(path.join(dir,'assets',id)),false);
+    assert.equal((await core.call('list_deleted_projects',{})).length,0);
+    await assert.rejects(core.call('restore_deleted_project',{projectId:id}),e=>e.status===404);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});fs.rmSync(backupDir,{recursive:true,force:true});}
+});
+
+test('empty bin retains an image still referenced by an active report', async () => {
+  const {dir,backupDir,core,draft}=await setup();
+  try {
+    const id=draft.projectId,image=core.putAsset(id,{data:'data:image/png;base64,iVBORw0KGgo='});
+    const other=template();other.deck.pages[0].objects[0].content=`<img src="${image.src}">`;
+    core.importProject({project:other});
+    await core.call('delete_project',{projectId:id,baseRevision:core.project(id).revision});
+    const result=await core.call('empty_recycle_bin',{expectedProjectIds:[id],confirmation:'永久清空'});
+    assert.equal(result.retainedAssets,1);
+    assert.ok(fs.existsSync(path.join(dir,'assets',id)));
+    assert.ok(core.getAsset(id,image.src.split('/').pop()).bytes.length>0);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});fs.rmSync(backupDir,{recursive:true,force:true});}
 });
