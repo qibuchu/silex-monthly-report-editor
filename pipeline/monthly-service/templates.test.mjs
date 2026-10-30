@@ -56,6 +56,26 @@ test('builtin template can be edited in place and keeps version one available',a
   const newTask=await core.call('generate_monthly_report',{month:'2026-08',data:{report_month:'2026-08'},templateId:'steam-data',templateRevision:2});assert.equal((await wait(core,newTask.id)).status,'succeeded');
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+test('data source library versions definitions and templates bind a selected source',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-source-library-'));
+ try{
+  const core=createCore({dataDir:dir,publicUrl:'http://localhost:4320'});
+  assert.deepEqual((await core.call('list_data_sources')).map(s=>s.id),['steamauto','minigame-monthly']);
+  const source=await core.call('save_data_source',{baseRevision:0,name:'业务接口',kind:'api',reference:'https://example.com/monthly?month={month}',description:'目标月接口'});
+  const projectId=core.importProject({project:make(),month:'2026-08'}).projectId;
+  const template=await core.call('create_template',{projectId,baseRevision:1,title:'业务模板',dataSourceId:source.id});
+  assert.equal((await core.call('get_template',{templateId:template.templateId})).dataSourceId,source.id);
+  await assert.rejects(core.call('delete_data_source',{id:source.id,baseRevision:1}),e=>e.status===409);
+  await assert.rejects(core.call('save_data_source',{id:source.id,baseRevision:0,name:'旧版',kind:'api',reference:'https://example.com/?month={month}'}),e=>e.status===409);
+  const changed=await core.call('save_data_source',{id:source.id,baseRevision:1,name:'业务接口新版',kind:'api',reference:'https://example.com/v2?month={month}'});assert.equal(changed.revision,2);
+  const pinned=await core.call('get_template_data_matches',{templateId:template.templateId});assert.match(pinned.dataSource.reference,/\/monthly\?/);
+  await core.call('bind_template_data_source',{templateId:template.templateId,dataSourceId:source.id,baseRevision:0,projectRevision:1});
+  const latest=await core.call('get_template_data_matches',{templateId:template.templateId});assert.match(latest.dataSource.reference,/\/v2\?/);
+  const detail=await core.call('get_template',{templateId:template.templateId});await core.call('publish_template',{templateId:template.templateId,baseRevision:0,projectRevision:1,rules:detail.rules});
+  await assert.rejects(core.call('generate_monthly_report',{month:'2026-08',templateId:template.templateId,data:{report_month:'2026-08'}}),/导入目标月数据/);
+  const reopened=createCore({dataDir:dir,publicUrl:'http://localhost:4320'});assert.equal((await reopened.call('list_data_sources')).find(s=>s.id===source.id).revision,2);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('PPTX creates an isolated unpublished template with safe policies and archived media',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-pptx-template-'));
  try{

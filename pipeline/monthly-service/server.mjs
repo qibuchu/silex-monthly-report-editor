@@ -52,7 +52,7 @@ export function createService(config) {
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, config.publicUrl);
-      if(req.method==='GET'&&['/ui/dashboard.css','/ui/dashboard.js','/ui/template-data.js','/ui/pptx-reader.js','/ui/monthly-data-reader.js','/ui/visual-rules.css','/ui/visual-rules.js'].includes(url.pathname)){
+      if(req.method==='GET'&&['/ui/dashboard.css','/ui/dashboard.js','/ui/template-data.js','/ui/source-library.js','/ui/pptx-reader.js','/ui/monthly-data-reader.js','/ui/visual-rules.css','/ui/visual-rules.js'].includes(url.pathname)){
         res.writeHead(200,{'Content-Type':url.pathname.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
         return res.end(fs.readFileSync(path.join(here,'ui',path.basename(url.pathname))));
       }

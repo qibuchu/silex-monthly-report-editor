@@ -77,7 +77,11 @@ tools.push(
   tool('apply_visual_template_patch','本地AI按选中模板修改画布文字或样式，保留对象版本检查；规则与版式分别保存',{editingTargetId:idSchema,templateId:idSchema,baseRevision:{type:'integer',minimum:1},requirement:{type:'string',minLength:1},changes:toolsPatchSchema()},['editingTargetId','templateId','baseRevision','requirement','changes']),
   tool('get_template_data_sources','重新匹配已有模板的数据需求，读取已登记来源和JSON样例；不会执行接口',{templateId:idSchema},['templateId'],true),
   tool('configure_template_data_sources','按版本登记模板数据来源及JSON样例，供后续字段适配；不修改PPT或发布规则',{templateId:idSchema,baseRevision:{type:'integer',minimum:0},templateRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1},entries:{type:'array',minItems:1,maxItems:20,items:{type:'object',properties:{requirement:idSchema,name:idSchema,kind:{type:'string',enum:['steamauto','json','skill','api']},reference:{type:'string'},notes:{type:'string'},filename:{type:'string'},sample:{type:['object','array']}},required:['requirement','name','kind'],additionalProperties:false}}},['templateId','baseRevision','templateRevision','projectRevision','entries']),
-  tool('create_template','从已保存月报创建独立模板编辑稿，不修改来源项目',{projectId:idSchema,baseRevision:{type:'integer',minimum:1},title:{type:'string',minLength:1,maxLength:120},profile:{type:'string',enum:profiles}},['projectId','baseRevision','title']),
+  tool('list_data_sources','列出可复用的数据源定义、版本及模板引用；不包含凭据或实际月度数据',{},[],true),
+  tool('save_data_source','新增或修改可复用数据源定义，按版本检查；接口地址用 {month} 标记目标月，不保存鉴权信息',{id:idSchema,baseRevision:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:120},kind:{type:'string',enum:['api','upload','skill']},reference:{type:'string',maxLength:2000},description:{type:'string',maxLength:4000},sample:{type:['object','array']}},['baseRevision','name','kind']),
+  tool('delete_data_source','删除未被模板引用的自定义数据源',{id:idSchema,baseRevision:{type:'integer',minimum:1}},['id','baseRevision']),
+  tool('bind_template_data_source','把模板编辑稿绑定到数据源库中的来源；不自动导入历史数据',{templateId:idSchema,dataSourceId:idSchema,baseRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1}},['templateId','dataSourceId','baseRevision','projectRevision']),
+  tool('create_template','从已保存月报创建独立模板编辑稿，不修改来源项目',{projectId:idSchema,baseRevision:{type:'integer',minimum:1},title:{type:'string',minLength:1,maxLength:120},profile:{type:'string',enum:profiles},dataSourceId:idSchema},['projectId','baseRevision','title']),
   tool('fork_builtin_template','从内置模板直接创建可编辑版式和规则；使用内置演示数据仅生成版式样例，正式月报仍须提供目标月数据',{templateId:idSchema,baseRevision:{type:'integer',minimum:1},title:{type:'string',maxLength:120}},['templateId','baseRevision']),
   tool('enable_builtin_template_editing','为内置模板本身建立可编辑稿；保留原发布版本，演示数据仅用于版式样例',{templateId:idSchema,baseRevision:{type:'integer',minimum:1}},['templateId','baseRevision']),
   tool('publish_template','发布模板编辑稿与产出规则为不可变版本，未保存或版本冲突时拒绝',{templateId:idSchema,baseRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1},rules:{type:'object',properties:{profile:{type:'string',enum:profiles},description:{type:'string',maxLength:4000},objects:{type:'array',items:{type:'object',properties:{id:idSchema,mode:{type:'string',enum:['auto','static','blank','chart','bar']},binding:{type:'string'},chart:{type:'object'},bar:{type:'object'},textTemplate:{type:'string'},sentence:{type:'object'}},required:['id','mode'],additionalProperties:false}}},required:['profile','description','objects'],additionalProperties:false}},['templateId','baseRevision','projectRevision','rules'])
@@ -112,6 +116,7 @@ export function createCore(config) {
   db.deletedTemplates ||= {};
   db.deletedProjects ||= {};
   db.templateSources ||= {};
+  db.dataSources ||= {};
   db.templateData ||= {};
   db.visualRuleDrafts ||= {};
   db.visualRuleSelections ||= {};
@@ -121,6 +126,9 @@ export function createCore(config) {
   for (const task of Object.values(db.tasks)) if (task.status === 'running') { task.status = 'failed'; task.error = 'Service restarted; task interrupted'; }
   persist();
   const project = id => { if (!Object.hasOwn(db.projects, id)) throw new ServiceError('Project not found', 404); return db.projects[id]; };
+  const builtinDataSources=[{id:'steamauto',name:'SteamAuto 月报数据',kind:'skill',reference:'monthly-report schema 2.0；由本地 Skill 获取目标月份标准数据包',description:'使用目标月 JSON 数据包。历史统计窗口须与目标月一致。',revision:1,builtin:true},{id:'minigame-monthly',name:'小游戏月报接口',kind:'api',reference:'http://9.135.95.168:5390/minigame-db/api/report/monthly/export?month={month}&format=json',description:'按目标月份返回小游戏月报 JSON；接口鉴权仅在实际导入时临时提供。',revision:1,builtin:true}];
+  const dataSource=id=>db.dataSources[id]||builtinDataSources.find(s=>s.id===id);
+  const sourceVersion=(id,revision)=>{const latest=dataSource(id);if(!latest)return null;if(!revision||latest.revision===revision)return latest;if(revision===1){const builtin=builtinDataSources.find(s=>s.id===id);if(builtin)return builtin;}const file=path.join(dir,'history','data-source-'+id,revision+'.json');return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):null;};
   // Browser presence is transient. Never restore stale tab selections after restart.
   const sessions = new Map();
   const liveSessions = () => {
@@ -201,6 +209,7 @@ export function createCore(config) {
       if(data.month!==args.month)throw new ServiceError('已导入数据月份为'+data.month+'，请先导入目标月数据并确认映射后发布');
       const result=sourceDraft({...template,revision:templateRevision,externalDataRevision:snapshot.externalDataRevision},snapshot.project,data.sources,data.mappings,args.month,snapshot.rules),id=randomUUID();db.tasks[id]={id,status:'succeeded',month:args.month,template:{id:template.id,title:template.title,revision:templateRevision},projectId:result.projectId,links:links(result.projectId),startedAt:new Date().toISOString(),finishedAt:new Date().toISOString()};persist();return db.tasks[id];
     }
+    if((snapshot?.dataSourceId||'steamauto')!=='steamauto')throw new ServiceError('此模板须先导入目标月数据并核对字段映射，再发布含数据映射的新版本');
     const templateMeta={id:template.id,title:template.title,revision:templateRevision};
     const selectedProfile=snapshot?.rules.structure==='pptx'?'full':snapshot?.rules.profile||template.profile;
     if(args.templateId&&args.profile&&args.profile!==selectedProfile)throw new ServiceError('页面结构与模板不一致，请在模板规则中设置');
@@ -355,12 +364,12 @@ export function createCore(config) {
         const folder=path.join(dir,'history','template-'+t.id);fs.mkdirSync(folder,{recursive:true});
         const dataNext={...data,revision:dataVersion,mappings:draft.mappings,approved:true,updatedAt:new Date().toISOString()};
         fs.writeFileSync(path.join(dir,'history','template-data-'+t.id,dataVersion+'.json'),JSON.stringify(dataNext));
-        fs.writeFileSync(path.join(folder,templateVersion+'.json'),JSON.stringify({project:current.project,rules,title:t.title,externalDataRevision:dataVersion}));
-        db.templateData[t.id]=dataNext;Object.assign(t,{revision:templateVersion,rules,profile:rules.profile,publishedProjectRevision:current.revision,publishedAt:new Date().toISOString(),externalDataRevision:dataVersion,externalDataMonth:data.month});persist();return {templateId:t.id,revision:templateVersion,projectRevision:current.revision,dataRevision:dataVersion};
+        fs.writeFileSync(path.join(folder,templateVersion+'.json'),JSON.stringify({project:current.project,rules,title:t.title,externalDataRevision:dataVersion,dataSourceId:t.dataSourceId||'steamauto',dataSourceRevision:t.dataSourceRevision||1}));
+        db.templateData[t.id]=dataNext;Object.assign(t,{revision:templateVersion,rules,profile:rules.profile,publishedProjectRevision:current.revision,publishedAt:new Date().toISOString(),externalDataRevision:dataVersion,externalDataMonth:data.month,dataSourceDraftChanged:false});persist();return {templateId:t.id,revision:templateVersion,projectRevision:current.revision,dataRevision:dataVersion};
       }
       case 'get_template_data_matches': {
         const t=await call('get_template',{templateId:args.templateId}),data=db.templateData[t.id];
-        return {templateId:t.id,title:t.title,templateRevision:t.revision,projectRevision:t.projectRevision,revision:data?.revision||0,month:data?.month||null,sources:data?matchSourceViews(data.sources):[],mappings:data?.mappings||[],approved:!!data?.approved,needsReview:!!data&&data.projectRevision!==t.projectRevision,targets:data?matchTemplateData(project(t.projectId).project,data.sources):[]};
+        const source=sourceVersion(t.dataSourceId||'steamauto',t.dataSourceRevision||1);return {templateId:t.id,title:t.title,templateRevision:t.revision,projectRevision:t.projectRevision,revision:data?.revision||0,month:data?.month||null,dataSource:source?{id:source.id,name:source.name,kind:source.kind,reference:source.reference,revision:source.revision}:null,sources:data?matchSourceViews(data.sources):[],mappings:data?.mappings||[],approved:!!data?.approved,needsReview:!!data&&data.projectRevision!==t.projectRevision,targets:data?matchTemplateData(project(t.projectId).project,data.sources):[]};
       }
       case 'import_template_data': {
         const t=await call('get_template',{templateId:args.templateId});if(!t.projectId)throw new ServiceError('请先启用模板编辑');assertEditorsSaved(t.projectId);
@@ -391,7 +400,43 @@ export function createCore(config) {
         const folder=path.join(dir,'history','template-sources-'+t.id);fs.mkdirSync(folder,{recursive:true});fs.writeFileSync(path.join(folder,next.revision+'.json'),JSON.stringify(next));
         db.templateSources[t.id]=next;persist();return describeSources(t,next);
       }
-      case 'list_templates': return [...builtinTemplates.map(t=>db.templates[t.id]||t),...Object.values(db.templates).filter(t=>!builtinTemplates.some(b=>b.id===t.id))].map(({rules,...t})=>({...t,description:rules?.description||t.description||'',editor:t.projectId?links(t.projectId).editor:null,...(t.projectId?{pageCount:project(t.projectId).project.deck.pages.length,draftProjectRevision:project(t.projectId).revision}:{})}));
+      case 'list_data_sources': {
+        const all=[...builtinDataSources.map(s=>db.dataSources[s.id]||s),...Object.values(db.dataSources).filter(s=>!builtinDataSources.some(b=>b.id===s.id))];
+        return all.map(({sample,...s})=>({...s,hasSample:!!sample,usedBy:Object.values(db.templates).filter(t=>(t.dataSourceId||'steamauto')===s.id).length}));
+      }
+      case 'save_data_source': {
+        const prior=args.id?dataSource(args.id):null;
+        if(args.id&&!prior)throw new ServiceError('数据源不存在',404);
+        if((prior?.revision||0)!==args.baseRevision)throw new ServiceError('数据源版本已变化，请刷新后重试',409);
+        const name=String(args.name||'').trim(),reference=String(args.reference||'').trim(),description=String(args.description||'').trim();
+        if(!name||name.length>120||description.length>4000||reference.length>2000)throw new ServiceError('数据源名称或说明长度不正确');
+        if(!['api','upload','skill'].includes(args.kind))throw new ServiceError('数据源类型不支持');
+        if(args.kind==='api'){
+          let url;try{url=new URL(reference.replace('{month}','2026-08'));}catch{throw new ServiceError('请填写有效接口地址');}
+          if(!['http:','https:'].includes(url.protocol)||!reference.includes('{month}')||url.username||url.password||[...url.searchParams.keys()].some(k=>/token|key|secret|password|credential|auth/i.test(k)))throw new ServiceError('接口地址须包含 {month} 且不得包含凭据；鉴权请在导入时临时填写');
+        }else if(args.kind==='skill'&&!reference)throw new ServiceError('请填写 Skill 或获取方法说明');
+        const sample=args.sample===undefined?prior?.sample:args.sample;
+        if(args.kind==='upload'&&!sample)throw new ServiceError('上传文件类型须先提供字段样例');
+        if(sample!==undefined&&(!sample||typeof sample!=='object'||Buffer.byteLength(JSON.stringify(sample))>2*1024*1024))throw new ServiceError('样例须为2MB以内的JSON对象或数组');
+        const id=prior?.id||randomUUID(),next={id,name,kind:args.kind,reference,description,revision:(prior?.revision||0)+1,builtin:!!prior?.builtin,...(sample?{sample:structuredClone(sample)}:{}),updatedAt:new Date().toISOString()};
+        const folder=path.join(dir,'history','data-source-'+id);fs.mkdirSync(folder,{recursive:true});fs.writeFileSync(path.join(folder,next.revision+'.json'),JSON.stringify(next));
+        db.dataSources[id]=next;persist();return {id,revision:next.revision};
+      }
+      case 'delete_data_source': {
+        const prior=db.dataSources[args.id];if(builtinDataSources.some(s=>s.id===args.id))throw new ServiceError('内置数据源不能删除');
+        if(!prior)throw new ServiceError('数据源不存在',404);
+        if(prior.revision!==args.baseRevision)throw new ServiceError('数据源版本已变化，请刷新后重试',409);
+        if(Object.values(db.templates).some(t=>t.dataSourceId===args.id))throw new ServiceError('已有模板使用此数据源，请先为模板切换来源',409);
+        delete db.dataSources[args.id];persist();return {id:args.id,deleted:true};
+      }
+      case 'bind_template_data_source': {
+        const t=db.templates[args.templateId];if(!t?.projectId)throw new ServiceError('请先建立可编辑模板',404);
+        const source=dataSource(args.dataSourceId);if(!source)throw new ServiceError('数据源不存在',404);
+        assertEditorsSaved(t.projectId);if(t.revision!==args.baseRevision||project(t.projectId).revision!==args.projectRevision)throw new ServiceError('模板或编辑稿已变化，请刷新后重试',409);
+        if(t.dataSourceId!==source.id||t.dataSourceRevision!==source.revision){delete db.templateData[t.id];delete db.visualRuleDrafts[t.id];t.dataSourceDraftChanged=true;}
+        t.dataSourceId=source.id;t.dataSourceRevision=source.revision;persist();return {templateId:t.id,dataSourceId:source.id,dataSourceRevision:source.revision};
+      }
+      case 'list_templates': return [...builtinTemplates.map(t=>db.templates[t.id]||t),...Object.values(db.templates).filter(t=>!builtinTemplates.some(b=>b.id===t.id))].map(({rules,...t})=>({...t,dataSourceId:t.dataSourceId||'steamauto',description:rules?.description||t.description||'',editor:t.projectId?links(t.projectId).editor:null,...(t.projectId?{pageCount:project(t.projectId).project.deck.pages.length,draftProjectRevision:project(t.projectId).revision}:{})}));
       case 'delete_template': {
         if(builtinTemplates.some(t=>t.id===args.templateId))throw new ServiceError('内置模板不能删除',400);
         const t=db.templates[args.templateId];if(!t)throw new ServiceError('自定义模板不存在或已删除',404);
@@ -407,12 +452,12 @@ export function createCore(config) {
       case 'get_template': {
         const t=db.templates[args.templateId]||builtinTemplates.find(t=>t.id===args.templateId);if(!t)throw new ServiceError('模板不存在',404);
         const generatedRules={data:'数据源：SteamAuto monthly-report schema 2.0。月份必须与report_month一致；缺失留空，不使用当前快照替代历史。',head:'头部榜：head.top20；重点游戏：head.highlights。选取名单来自上游标准数据包，模板不重新筛选或重算业务公式。',market:'大盘：market字段和历史数据窗口；数值直接取数，月报端只格式化和绘图。',releases:'新游金银铜榜：new_releases.gold/silver/bronze，沿用已有生成器的收入排序、D0至D13窗口和分页规则。',research:'专题游戏按selection指定；复杂活动分析与图片留给AI/人工后续补齐。补充写作要求不会自动联网研究。',manual:'人工文案与图片默认留空。固定内容会沿用模板样例，请勿将收入、排名或日期样例误设为固定。',overflow:'按绑定ID或对象ID匹配本期内容；自动对象无匹配时留空并记录独立任务文档。新入选游戏和超长表格保留动态对象及续页。'};
-        if(!t.projectId)return {...t,generatedRules,editable:false,message:'启用编辑后，可直接修改此内置模板并发布新版本。'};
+        if(!t.projectId)return {...t,dataSourceId:t.dataSourceId||'steamauto',generatedRules,editable:false,message:'启用编辑后，可直接修改此内置模板并发布新版本。'};
         const draft=project(t.projectId);const pages=inspectTemplate(draft.project);
         const old=new Map((t.rules?.objects||[]).map(r=>[r.id,r]));for(const page of pages)for(const object of page.objects){Object.assign(object,old.get(object.id)||{});}
         const recognition=t.origin==='pptx'?{...analyzePptxTemplate(draft.project),projectRevision:draft.revision}:undefined;
         if(recognition)for(const page of pages)for(const object of page.objects)object.recognition=recognition.objects.find(row=>row.id===object.id);
-        const result={...t,generatedRules,pages,bindingLabels,...(recognition?{recognition}:{}),projectRevision:draft.revision,editor:links(draft.id).editor,preview:links(draft.id).preview,rules:{profile:t.rules?.profile||t.profile,...(t.rules?.structure?{structure:t.rules.structure}:{}),description:t.rules?.description||'',objects:pages.flatMap(p=>p.objects).map(({id,mode})=>({id,mode,...(old.get(id)?.binding?{binding:old.get(id).binding}:{}),...(old.get(id)?.chart?{chart:old.get(id).chart}:{}),...(old.get(id)?.bar?{bar:old.get(id).bar}:{}),...(old.get(id)?.textTemplate?{textTemplate:old.get(id).textTemplate}:{}),...(old.get(id)?.sentence?{sentence:old.get(id).sentence}:{})}))}};
+        const result={...t,dataSourceId:t.dataSourceId||'steamauto',generatedRules,pages,bindingLabels,...(recognition?{recognition}:{}),projectRevision:draft.revision,editor:links(draft.id).editor,preview:links(draft.id).preview,rules:{profile:t.rules?.profile||t.profile,...(t.rules?.structure?{structure:t.rules.structure}:{}),description:t.rules?.description||'',objects:pages.flatMap(p=>p.objects).map(({id,mode})=>({id,mode,...(old.get(id)?.binding?{binding:old.get(id).binding}:{}),...(old.get(id)?.chart?{chart:old.get(id).chart}:{}),...(old.get(id)?.bar?{bar:old.get(id).bar}:{}),...(old.get(id)?.textTemplate?{textTemplate:old.get(id).textTemplate}:{}),...(old.get(id)?.sentence?{sentence:old.get(id).sentence}:{})}))}};
         if(db.templateData[t.id])Object.assign(generatedRules,{data:'使用实际上传文件或接口返回的数据，来源月份必须与目标月一致；已确认的外部映射随模板版本发布。',head:'表格根据确认的来源表及逐列映射填入；不自动套用Steam榜单筛选规则。',market:'指标按来源名称匹配文字对象，图表按来源列匹配分类和系列；不重算业务公式或单位。',releases:'数据行保持来源顺序；超过原表容量时列出缺失/容量问题，不强行撑高表格。',overflow:'外部映射在“导入数据并匹配”核对；下方旧Steam对象绑定不控制外部数据。未匹配的数据位置留空，版式变化后需重新匹配。'});
         const sourceMatch=describeSources(result,db.templateSources[t.id]);result.dataSourceMatch={...sourceMatch,entries:sourceMatch.entries.map(({sample,...e})=>e)};const data=db.templateData[t.id];result.importedData=data?{revision:data.revision,month:data.month,approved:data.approved,needsReview:data.projectRevision!==draft.revision}:null;return result;
       }
@@ -423,7 +468,8 @@ export function createCore(config) {
         const profile=args.profile||source.project.deck.notes?.template?.rules?.profile||'finished-eight';if(!profiles.includes(profile))throw new ServiceError('未知页面结构');
         const id=newTemplateId(),projectId=randomUUID(),title=args.title.trim();
         db.projects[projectId]={id:projectId,revision:1,month:source.month,kind:'template-draft',title:'模板编辑 · '+title,project:structuredClone(source.project),updatedAt:new Date().toISOString(),author:'template'};
-        db.templates[id]={id,title,profile,revision:0,projectId,builtin:false,sourceProjectId:source.id,sourceRevision:source.revision};persist();
+        const dataSourceId=args.dataSourceId||db.templates[source.template?.id]?.dataSourceId||'steamauto';if(!dataSource(dataSourceId))throw new ServiceError('数据源不存在',404);
+        db.templates[id]={id,title,profile,revision:0,projectId,builtin:false,sourceProjectId:source.id,sourceRevision:source.revision,dataSourceId,dataSourceRevision:dataSource(dataSourceId).revision};persist();
         return {templateId:id,projectId,revision:0,editor:links(projectId).editor};
       }
       case 'enable_builtin_template_editing': {
@@ -442,7 +488,7 @@ export function createCore(config) {
           value.deck.notes={...value.deck.notes,templateSeed:{builtinId:source.id,month:'2026-08',purpose:'仅供编辑版式和对象规则；正式生成须使用目标月数据'}};
           const projectId=randomUUID(),now=new Date().toISOString();
           db.projects[projectId]={id:projectId,revision:1,month:'imported',kind:'template-draft',title:'模板编辑 · '+source.title,project:value,updatedAt:now,author:'builtin-template-edit'};
-          db.templates[source.id]={...source,projectId,origin:'builtin',sourceBuiltinRevision:1,rules:{profile:source.profile,description:source.description,objects:[]}};
+          db.templates[source.id]={...source,projectId,origin:'builtin',sourceBuiltinRevision:1,dataSourceId:'steamauto',dataSourceRevision:dataSource('steamauto').revision,rules:{profile:source.profile,description:source.description,objects:[]}};
           persist();return {templateId:source.id,projectId,revision:source.revision,editor:links(projectId).editor};
         } finally {if(fs.existsSync(seed))fs.rmSync(seed,{recursive:true,force:true});}
       }
@@ -474,8 +520,8 @@ export function createCore(config) {
         if(t.origin==='pptx'&&rules.recognitionReviewed!==true)throw new ServiceError('请先核对PPT页面识别、数据绑定及待确认项，再勾选识别确认后发布');
         const revision=t.revision+1,folder=path.join(dir,'history','template-'+t.id);fs.mkdirSync(folder,{recursive:true});
         const imported=db.templateData[t.id];if(imported?.approved&&imported.projectRevision!==draft.revision)throw new ServiceError('版式已变化，请重新匹配导入数据后再发布',409);
-        fs.writeFileSync(path.join(folder,revision+'.json'),JSON.stringify({project:draft.project,rules,title:t.title,...(imported?.approved?{externalDataRevision:imported.revision}:{})}));
-        Object.assign(t,{revision,rules,profile:rules.profile,publishedProjectRevision:draft.revision,publishedAt:new Date().toISOString(),externalDataRevision:imported?.approved?imported.revision:undefined,externalDataMonth:imported?.approved?imported.month:undefined});persist();
+        fs.writeFileSync(path.join(folder,revision+'.json'),JSON.stringify({project:draft.project,rules,title:t.title,dataSourceId:t.dataSourceId||'steamauto',dataSourceRevision:t.dataSourceRevision||1,...(imported?.approved?{externalDataRevision:imported.revision}:{})}));
+        Object.assign(t,{revision,rules,profile:rules.profile,publishedProjectRevision:draft.revision,publishedAt:new Date().toISOString(),externalDataRevision:imported?.approved?imported.revision:undefined,externalDataMonth:imported?.approved?imported.month:undefined,dataSourceDraftChanged:false});persist();
         return {templateId:t.id,revision,projectRevision:draft.revision};
       }
       case 'delete_project': {
@@ -675,9 +721,11 @@ export function createCore(config) {
     for(const data of new Set(serialized.match(/data:image\/[a-z+]+;base64,[A-Za-z\d+/=]+/g)||[]))serialized=serialized.split(data).join(assets.put(projectId,data).src);
     const value=JSON.parse(serialized);
     const recognition=analyzePptxTemplate(value);
+    const dataSourceId=input.dataSourceId||(recognition.dataSource?.domain==='微信小游戏'?'minigame-monthly':'steamauto');
+    if(!dataSource(dataSourceId))throw new ServiceError('请选择已登记的数据源，或先在数据源库中添加',400);
     const rules={profile:'full',structure:'pptx',description:'按上传PPT的页面和对象生成；已按标题、表头和图表系列匹配常见数据字段。未知区域留空，公式与筛选沿用上游数据规则；发布前需核对识别结果。',objects:recognition.objects.map(({id,mode,binding})=>({id,mode,...(binding?{binding}:{})}))};
     db.projects[projectId]={id:projectId,revision:1,month:'imported',kind:'template-draft',title:'模板编辑 · '+title,project:value,updatedAt:new Date().toISOString(),author:'pptx-template-import'};
-    db.templates[id]={id,title,profile:'full',revision:0,projectId,builtin:false,origin:'pptx',rules};
+    db.templates[id]={id,title,profile:'full',revision:0,projectId,builtin:false,origin:'pptx',rules,dataSourceId,dataSourceRevision:dataSource(dataSourceId).revision};
     db.templateAi[id]={revision:1,projectRevision:1,mode:aiMode,tasks:createTemplateAiTasks(id,value,aiMode)};persist();
     return {templateId:id,projectId,revision:0,editor:links(projectId).editor,preview:links(projectId).preview,pages:value.deck.pages.length,recognition,ai:aiSummary(id)};
   }, importProject(input) {

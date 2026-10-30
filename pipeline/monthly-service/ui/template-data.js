@@ -4,7 +4,7 @@ function loadMonthlyData(){if(window.MonthlyData)return Promise.resolve(window.M
 async function openTemplateSources(templateId){
  const data=await call('get_template_data_matches',{templateId});templateDataState=data;
  $('templateSourcesTitle').textContent=data.title+' · 模板 v'+data.templateRevision;
- $('templateDataMonth').value=data.month||$('month').value||'';$('templateDataFiles').value='';$('templateDataUrl').value=data.sources.find(s=>s.origin?.startsWith('api:'))?.origin.slice(4)||'';$('templateDataHeaders').value='';$('templateDataWindow').checked=false;
+ $('templateDataMonth').value=data.month||$('month').value||'';$('templateDataFiles').value='';$('templateDataUrl').value=data.dataSource?.kind==='api'?data.dataSource.reference.replaceAll('{month}',$('templateDataMonth').value):data.sources.find(s=>s.origin?.startsWith('api:'))?.origin.slice(4)||'';$('templateDataHeaders').value='';$('templateDataWindow').checked=false;
  $('templateDataResult').hidden=true;fieldError('templateSourcesError','');renderTemplateData();openDialog('templateSourcesDialog');
 }
 function sourceTables(){return templateDataState.sources.flatMap(s=>s.tables.map(t=>({...t,source:s.name})));}
@@ -17,7 +17,7 @@ function renderColumnMapping(target,sourceId,selected){
 }
 function renderTemplateData(){
  const d=templateDataState;
- $('templateSourcesStatus').textContent=d.needsReview?'模板版式已变，请重新导入数据并匹配。':d.revision?'已导入 '+d.sources.length+' 份真实数据，下一步核对填充位置。':'第二步：上传目标月数据文件，或提供可读取的JSON接口。';
+ $('templateSourcesStatus').textContent=(d.dataSource?'已绑定 '+d.dataSource.name+' v'+d.dataSource.revision+'。':'')+(d.needsReview?'模板版式已变，请重新导入数据并匹配。':d.revision?'已导入 '+d.sources.length+' 份真实数据，下一步核对填充位置。':'请上传目标月数据文件，或读取已绑定的JSON接口。');
  $('templateDataSummary').innerHTML=d.sources.map(s=>'<div class="rule-note"><strong>'+esc(s.name)+'</strong><p>'+s.tables.map(t=>esc(t.name)+'：'+t.rows.length+'行 / '+t.columns.length+'列（表头第'+(t.headerRow||1)+'行）').join('；')+' · '+s.scalars.length+'个指标</p>'+(s.warnings||[]).map(w=>'<p class="muted">'+esc(w)+'</p>').join('')+(s.referenceSheets||[]).map(r=>'<details><summary>'+esc(r.name)+'（参考材料，不参与字段匹配）</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(r.rows.map(row=>row.join('　')).join('\n'))+'</pre></details>').join('')+'</div>').join('');
  $('templateDataMatchSection').hidden=!d.revision;
  $('templateDataMatchCount').textContent=d.targets.filter(t=>t.suggestion).length+' 个对象有字段匹配建议，'+d.targets.filter(t=>!t.suggestion).length+' 个待手动匹配或留空。';
@@ -28,6 +28,7 @@ function renderTemplateData(){
  $('templateDataPreview').disabled=!d.targets.length||d.needsReview;
 }
 $('templateSourcesRows').onchange=event=>{if(!event.target.matches('[data-data-source]'))return;const row=event.target.closest('[data-data-target]'),t=templateDataState.targets[Number(row.dataset.dataTarget)],id=event.target.value;row.querySelector('[data-data-enabled]').checked=!!id;row.querySelector('[data-data-columns]').innerHTML=renderColumnMapping(t,id);};
+$('templateDataMonth').onchange=()=>{if(templateDataState?.dataSource?.kind==='api')$('templateDataUrl').value=templateDataState.dataSource.reference.replaceAll('{month}',$('templateDataMonth').value);};
 $('templateSourcesForm').onsubmit=async event=>{
  event.preventDefault();const button=$('importTemplateData');button.disabled=true;fieldError('templateSourcesError','');
  try{const d=templateDataState,month=$('templateDataMonth').value;if(!$('templateDataWindow').checked)throw Error('请确认数据统计窗口与所选月份一致');
