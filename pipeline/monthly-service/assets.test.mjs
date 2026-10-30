@@ -15,6 +15,7 @@ test('deduplicated media survives offline HTML and editable archive import',()=>
   const one=core.putAsset(id,{data}),two=core.putAsset(id,{data});
   assert.equal(one.src,two.src);assert.equal(fs.readdirSync(path.join(dir,'assets',id)).length,1);
   const changed=structuredClone(project);changed.deck.pages[0].objects[0].content=`<img src="${one.src}">`;changed.silexState={assets:[{src:one.src}]};core.save(id,1,changed);
+  assert.ok(core.silex(id).editorData.assets[0].src.startsWith('data:image/png;base64,'));
   const archive=core.archive(id);assert.equal(Object.keys(archive.assets).length,1);
   assert.ok(archive.project.silexState.assets[0].src.startsWith('monthly-asset:'));
   const restored=core.importProject(archive).projectId;

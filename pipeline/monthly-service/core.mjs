@@ -747,9 +747,11 @@ export function createCore(config) {
   }, silex(id) {
     const current = project(id);
     const { silexState, ...canonical } = current.project;
-    let editorData = silexState;
+    let editorData = silexState ? assets.pack(silexState,true).value : null;
     if (!editorData) {
-      const result = require(path.join(config.toolkitDir, 'lib/silex-adapter.cjs')).createSilexProject(current.project);
+      // The editor can run on localhost while the service is remote. Inline its
+      // images so browser third-party cookie rules cannot hide PPT pictures.
+      const result = require(path.join(config.toolkitDir, 'lib/silex-adapter.cjs')).createSilexProject(assets.pack(current.project,true).value);
       editorData = { ...result.website, pages: result.pages };
     }
     // The editor state is already sent as editorData. Do not duplicate every

@@ -27,3 +27,13 @@ it('turns PPT into editable canonical pages without a running editor, preserving
   await expect(readPptxTemplate({ ...file, name: '旧月报.ppt' } as File)).rejects.toThrow('.pptx')
 })
 
+it('keeps a cropped PPT picture wrapper classified as an image', async () => {
+  const slide = '<p:sld xmlns:p="p" xmlns:a="a" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree><p:pic><p:nvPicPr><p:cNvPr id="8" name="封面右图"/></p:nvPicPr><p:blipFill><a:blip r:embed="img1"/><a:srcRect l="58000"/></p:blipFill><p:spPr><a:xfrm><a:off x="6096000" y="0"/><a:ext cx="6096000" cy="6858000"/></a:xfrm></p:spPr></p:pic></p:spTree></p:cSld></p:sld>'
+  const files = { ...xml, 'ppt/slides/slide1.xml': slide, 'ppt/slides/_rels/slide1.xml.rels': '<Relationships><Relationship Id="img1" Target="../media/cover.png"/></Relationships>', 'ppt/media/cover.png': Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==', 'base64')) }
+  const bytes = zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, typeof v === 'string' ? new Uint8Array(strToU8(v)) : v])))
+  const file = { name: '封面.pptx', size: bytes.length, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) } as File
+  const object = (await readPptxTemplate(file)).deck.pages[0].objects[0]
+  expect(object.attributes['data-kind']).toBe('image')
+  expect(object.content).toContain('<img')
+})
+
