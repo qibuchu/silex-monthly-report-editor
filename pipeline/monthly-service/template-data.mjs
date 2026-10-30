@@ -20,7 +20,7 @@ export function matrixTable(name,matrix,headerRow){
 export function jsonSource(name,data){
  const tables=[],scalars=[],referenceSheets=[];let visited=0;
  if(data?.success===false)fail('数据接口返回业务失败，未导入数据');
- const months=[data?.report_month,data?.month].filter(v=>typeof v==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(v));if(new Set(months).size>1)fail('接口月份字段互相冲突');const reportMonth=months[0]||null;
+ const months=[data?.report_month,data?.month,data?.meta?.month].filter(v=>typeof v==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(v));if(new Set(months).size>1)fail('接口月份字段互相冲突');const reportMonth=months[0]||null;
  if(reportMonth&&data?.range&&[data.range.start,data.range.end].some(v=>typeof v==='string'&&!v.startsWith(reportMonth+'-')))fail('接口统计范围与月份不一致');
  function walk(v,p,depth){if(++visited>20000||depth>10)fail('JSON结构过大或嵌套过深');
   if(Array.isArray(v)){

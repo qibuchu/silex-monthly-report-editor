@@ -1,5 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';import http from 'node:http';import os from 'node:os';
 import {fetchDataInterface} from './data-interface.mjs';import {jsonSource,validateDataSources} from './template-data.mjs';
+test('mobile monthly meta month is checked against the selected report month',()=>{
+ const source=jsonSource('移动游戏',{data:[{game_id:'g1',game_name:'游戏',revenue:'100549991',revenue_growth_pct:'5.84'}],meta:{month:'2026-09',snapshot:{version:2}}});
+ assert.equal(source.reportMonth,'2026-09');assert.equal(source.tables.find(t=>t.name==='data').rows[0][2],'100549991');
+ assert.throws(()=>validateDataSources([source],'2026-08'),/月份与目标月份不一致/);
+});
 test('GET JSON interface returns actual values, uses transient headers, stops on expired credentials and rejects redirects',async t=>{
  const host=Object.values(os.networkInterfaces()).flat().find(x=>x.family==='IPv4'&&!x.internal)?.address;if(!host){t.skip('No intranet interface available');return;}
  const server=http.createServer((req,res)=>{if(req.url==='/expired'){res.writeHead(401);res.end();return;}if(req.url==='/redirect'){res.writeHead(302,{Location:'/data'});res.end();return;}assert.equal(req.headers['x-qa-auth'],'temporary-test-header');res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({report_month:'2026-08',上新总量:321,rows:[{游戏名:'接口验收',收入:123}]}));});
