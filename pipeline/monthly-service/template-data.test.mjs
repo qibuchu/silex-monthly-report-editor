@@ -1,9 +1,23 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import http from 'node:http';
 import {createCore} from './core.mjs';import {jsonSource,validateDataSources,matchTemplateData,fillTemplateData} from './template-data.mjs';import {renderImportedChart} from './template-chart-render.mjs';import {fetchDataInterface} from './data-interface.mjs';
 const tr=values=>'<tr>'+values.map(v=>'<td style="border:1px solid #ddd"><p style="color:#123456">'+v+'</p></td>').join('')+'</tr>';
 const obj=(id,content,kind='text',extra={})=>({tagName:kind==='table'?'table':'div',attributes:{'data-object-id':id,'data-kind':kind,...extra},style:{left:'10px',top:'100px',width:'600px',height:'300px'},content});
 const project=()=>({format:'steam-grapesjs-v2',deck:{css:'p{margin:0}',notes:{template_origin:'pptx',pptx_imports:[{filename:'模板.pptx'}]},pages:[{name:'榜单',width:1920,height:1080,objects:[obj('table',tr(['排名','游戏名','收入'])+tr(['9','旧名','0'])+tr(['10','旧名2','0']),'table'),obj('kpi','<p>上新总量 <span>9</span><b>99</b></p>'),obj('unknown','<p>DAU 123</p>'),obj('chart','<svg/>','chart',{'data-pptx-chart':JSON.stringify({title:'营收趋势',categories:['旧月'],series:[{name:'总收入',values:[999],color:'#002b5c'}],type:'line',stacked:false,legend:true})})]}]}});
 const raw=()=>[{name:'8月数据',json:{report_month:'2026-08',上新总量:500,榜单:[{收入:'100万',游戏名:'新游戏A',排名:1},{收入:'50万',游戏名:'新游戏B',排名:2}],营收趋势:[{月份:'7月',总收入:100},{月份:'8月',总收入:150}]}}];
+test('stored API header is encrypted, redacted and used only for the bound URL',async t=>{
+ const host=Object.values(os.networkInterfaces()).flat().find(x=>x.family==='IPv4'&&!x.internal)?.address;if(!host){t.skip('No intranet interface');return;}
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-secret-'));let seen='';
+ const server=http.createServer((req,res)=>{seen=req.headers['x-api-key']||'';res.writeHead(seen==='private-test-key'?200:401,{'Content-Type':'application/json'});res.end(JSON.stringify({data:[{game_id:'g1',game_name:'测试游戏'}],meta:{month:'2026-08'}}));});
+ await new Promise(resolve=>server.listen(0,host,resolve));
+ try{const core=createCore({dataDir:dir,publicUrl:'http://127.0.0.1:4320',token:'long-private-service-token-for-tests'}),reference=`http://${host}:${server.address().port}/monthly?month={month}`;
+  const source=await core.call('save_data_source',{baseRevision:0,name:'手游接口',kind:'api',reference,secretHeaders:{'X-API-Key':'private-test-key'}});
+  assert.equal(source.hasSecret,true);assert.equal((await core.call('list_data_sources',{})).find(s=>s.id===source.id).hasSecret,true);
+  assert.equal(fs.readFileSync(path.join(dir,'store.json'),'utf8').includes('private-test-key'),false);
+  const template=core.importPptxTemplate({title:'模板',project:project(),dataSourceId:source.id});
+  const result=await core.call('import_template_data',{templateId:template.templateId,baseRevision:0,templateRevision:0,projectRevision:1,month:'2026-08',confirmedWindow:true,sources:[],interface:{url:reference.replace('{month}','2026-08')}});
+  assert.equal(seen,'private-test-key');assert.equal(result.month,'2026-08');
+ }finally{await new Promise(resolve=>server.close(resolve));fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('real sources match table columns, scalar and chart series; ambiguous sources stay unselected and dates cannot drift',()=>{
  const sources=validateDataSources(raw().map(s=>jsonSource(s.name,s.json)),'2026-08'),p=project(),targets=matchTemplateData(p,sources);const mappings=targets.flatMap(t=>t.suggestion?[t.suggestion]:[]);assert.equal(mappings.length,3);
  const filled=fillTemplateData(p,sources,mappings,'2026-08',renderImportedChart);const objects=filled.project.deck.pages[0].objects;

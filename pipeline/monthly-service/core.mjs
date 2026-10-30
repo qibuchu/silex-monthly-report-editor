@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID,createHash,randomBytes,createCipheriv,createDecipheriv } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -78,7 +78,7 @@ tools.push(
   tool('get_template_data_sources','重新匹配已有模板的数据需求，读取已登记来源和JSON样例；不会执行接口',{templateId:idSchema},['templateId'],true),
   tool('configure_template_data_sources','按版本登记模板数据来源及JSON样例，供后续字段适配；不修改PPT或发布规则',{templateId:idSchema,baseRevision:{type:'integer',minimum:0},templateRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1},entries:{type:'array',minItems:1,maxItems:20,items:{type:'object',properties:{requirement:idSchema,name:idSchema,kind:{type:'string',enum:['steamauto','json','skill','api']},reference:{type:'string'},notes:{type:'string'},filename:{type:'string'},sample:{type:['object','array']}},required:['requirement','name','kind'],additionalProperties:false}}},['templateId','baseRevision','templateRevision','projectRevision','entries']),
   tool('list_data_sources','列出可复用的数据源定义、版本及模板引用；不包含凭据或实际月度数据',{},[],true),
-  tool('save_data_source','新增或修改可复用数据源定义，按版本检查；接口地址用 {month} 标记目标月，不保存鉴权信息',{id:idSchema,baseRevision:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:120},kind:{type:'string',enum:['api','upload','skill']},reference:{type:'string',maxLength:2000},description:{type:'string',maxLength:4000},sample:{type:['object','array']}},['baseRevision','name','kind']),
+  tool('save_data_source','新增或修改可复用数据源定义；接口地址用 {month} 标记目标月，secretHeaders 加密保存且不回显',{id:idSchema,baseRevision:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:120},kind:{type:'string',enum:['api','upload','skill']},reference:{type:'string',maxLength:2000},description:{type:'string',maxLength:4000},sample:{type:['object','array']},secretHeaders:{type:'object',additionalProperties:{type:'string'}}},['baseRevision','name','kind']),
   tool('delete_data_source','删除未被模板引用的自定义数据源',{id:idSchema,baseRevision:{type:'integer',minimum:1}},['id','baseRevision']),
   tool('bind_template_data_source','把模板编辑稿绑定到数据源库中的来源；不自动导入历史数据',{templateId:idSchema,dataSourceId:idSchema,baseRevision:{type:'integer',minimum:0},projectRevision:{type:'integer',minimum:1}},['templateId','dataSourceId','baseRevision','projectRevision']),
   tool('create_template','从已保存月报创建独立模板编辑稿，不修改来源项目',{projectId:idSchema,baseRevision:{type:'integer',minimum:1},title:{type:'string',minLength:1,maxLength:120},profile:{type:'string',enum:profiles},dataSourceId:idSchema},['projectId','baseRevision','title']),
@@ -117,6 +117,7 @@ export function createCore(config) {
   db.deletedProjects ||= {};
   db.templateSources ||= {};
   db.dataSources ||= {};
+  db.dataSourceSecrets ||= {};
   db.templateData ||= {};
   db.visualRuleDrafts ||= {};
   db.visualRuleSelections ||= {};
@@ -128,6 +129,9 @@ export function createCore(config) {
   const project = id => { if (!Object.hasOwn(db.projects, id)) throw new ServiceError('Project not found', 404); return db.projects[id]; };
   const builtinDataSources=[{id:'steamauto',name:'SteamAuto 月报数据',kind:'skill',reference:'monthly-report schema 2.0；由本地 Skill 获取目标月份标准数据包',description:'使用目标月 JSON 数据包。历史统计窗口须与目标月一致。',revision:1,builtin:true},{id:'minigame-monthly',name:'小游戏月报接口',kind:'api',reference:'http://9.135.95.168:5390/minigame-db/api/report/monthly/export?month={month}&format=json',description:'按目标月份返回小游戏月报 JSON；接口鉴权仅在实际导入时临时提供。',revision:1,builtin:true}];
   const dataSource=id=>db.dataSources[id]||builtinDataSources.find(s=>s.id===id);
+  const secretKey=config.token?createHash('sha256').update(config.token).digest():null;
+  const seal=value=>{if(!secretKey)throw new ServiceError('保存接口凭据需要配置服务访问令牌');const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',secretKey,iv),body=Buffer.concat([cipher.update(JSON.stringify(value)),cipher.final()]);return {iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),body:body.toString('base64')};};
+  const unseal=value=>{if(!secretKey)throw new ServiceError('无法读取已保存的接口凭据');const decipher=createDecipheriv('aes-256-gcm',secretKey,Buffer.from(value.iv,'base64'));decipher.setAuthTag(Buffer.from(value.tag,'base64'));return JSON.parse(Buffer.concat([decipher.update(Buffer.from(value.body,'base64')),decipher.final()]).toString('utf8'));};
   const sourceVersion=(id,revision)=>{const latest=dataSource(id);if(!latest)return null;if(!revision||latest.revision===revision)return latest;if(revision===1){const builtin=builtinDataSources.find(s=>s.id===id);if(builtin)return builtin;}const file=path.join(dir,'history','data-source-'+id,revision+'.json');return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):null;};
   // Browser presence is transient. Never restore stale tab selections after restart.
   const sessions = new Map();
@@ -375,7 +379,7 @@ export function createCore(config) {
         const t=await call('get_template',{templateId:args.templateId});if(!t.projectId)throw new ServiceError('请先启用模板编辑');assertEditorsSaved(t.projectId);
         const check=()=>{const current=db.templates[t.id];if(args.baseRevision!==(db.templateData[t.id]?.revision||0)||args.templateRevision!==current.revision||args.projectRevision!==project(t.projectId).revision)throw new ServiceError('模板或导入数据已变化，请重读后再导入',409);};check();
         if(args.confirmedWindow!==true)throw new ServiceError('请确认导入数据的统计窗口与目标月份一致');
-        const raw=[...(args.sources||[])];if(args.interface){raw.push(await fetchDataInterface(args.interface));check();assertEditorsSaved(t.projectId);}
+        const raw=[...(args.sources||[])];if(args.interface){const source=dataSource(t.dataSourceId),expected=source?.kind==='api'?source.reference.replaceAll('{month}',args.month):null,secret=expected===args.interface.url&&db.dataSourceSecrets[source.id]?unseal(db.dataSourceSecrets[source.id]):{};raw.push(await fetchDataInterface({...args.interface,headers:{...secret,...args.interface.headers}}));check();assertEditorsSaved(t.projectId);}
         const sources=validateDataSources(raw.map(s=>Object.hasOwn(s,'json')?{...jsonSource(s.name,s.json),origin:s.origin||'upload'}:s),args.month);
         const previous=db.templateData[t.id],next={revision:(previous?.revision||0)+1,projectRevision:t.projectRevision,templateRevision:t.revision,month:args.month,sources,mappings:[],approved:false,updatedAt:new Date().toISOString()};
         persistTemplateData(t.id,next);return call('get_template_data_matches',{templateId:t.id});
@@ -402,7 +406,7 @@ export function createCore(config) {
       }
       case 'list_data_sources': {
         const all=[...builtinDataSources.map(s=>db.dataSources[s.id]||s),...Object.values(db.dataSources).filter(s=>!builtinDataSources.some(b=>b.id===s.id))];
-        return all.map(({sample,...s})=>({...s,hasSample:!!sample,usedBy:Object.values(db.templates).filter(t=>(t.dataSourceId||'steamauto')===s.id).length}));
+        return all.map(({sample,...s})=>({...s,hasSample:!!sample,hasSecret:!!db.dataSourceSecrets[s.id],usedBy:Object.values(db.templates).filter(t=>(t.dataSourceId||'steamauto')===s.id).length}));
       }
       case 'save_data_source': {
         const prior=args.id?dataSource(args.id):null;
@@ -418,16 +422,17 @@ export function createCore(config) {
         const sample=args.sample===undefined?prior?.sample:args.sample;
         if(args.kind==='upload'&&!sample)throw new ServiceError('上传文件类型须先提供字段样例');
         if(sample!==undefined&&(!sample||typeof sample!=='object'||Buffer.byteLength(JSON.stringify(sample))>2*1024*1024))throw new ServiceError('样例须为2MB以内的JSON对象或数组');
+        if(args.secretHeaders!==undefined){if(args.kind!=='api'||!args.secretHeaders||typeof args.secretHeaders!=='object'||Array.isArray(args.secretHeaders)||Object.entries(args.secretHeaders).some(([k,v])=>!/^[\w-]+$/.test(k)||typeof v!=='string'||v.length>2000||/[\r\n]/.test(v)))throw new ServiceError('接口凭据请求头格式无效');}
         const id=prior?.id||randomUUID(),next={id,name,kind:args.kind,reference,description,revision:(prior?.revision||0)+1,builtin:!!prior?.builtin,...(sample?{sample:structuredClone(sample)}:{}),updatedAt:new Date().toISOString()};
         const folder=path.join(dir,'history','data-source-'+id);fs.mkdirSync(folder,{recursive:true});fs.writeFileSync(path.join(folder,next.revision+'.json'),JSON.stringify(next));
-        db.dataSources[id]=next;persist();return {id,revision:next.revision};
+        db.dataSources[id]=next;if(args.secretHeaders!==undefined){if(Object.keys(args.secretHeaders).length)db.dataSourceSecrets[id]=seal(args.secretHeaders);else delete db.dataSourceSecrets[id];}persist();return {id,revision:next.revision,hasSecret:!!db.dataSourceSecrets[id]};
       }
       case 'delete_data_source': {
         const prior=db.dataSources[args.id];if(builtinDataSources.some(s=>s.id===args.id))throw new ServiceError('内置数据源不能删除');
         if(!prior)throw new ServiceError('数据源不存在',404);
         if(prior.revision!==args.baseRevision)throw new ServiceError('数据源版本已变化，请刷新后重试',409);
         if(Object.values(db.templates).some(t=>t.dataSourceId===args.id))throw new ServiceError('已有模板使用此数据源，请先为模板切换来源',409);
-        delete db.dataSources[args.id];persist();return {id:args.id,deleted:true};
+        delete db.dataSources[args.id];delete db.dataSourceSecrets[args.id];persist();return {id:args.id,deleted:true};
       }
       case 'bind_template_data_source': {
         const t=db.templates[args.templateId];if(!t?.projectId)throw new ServiceError('请先建立可编辑模板',404);
