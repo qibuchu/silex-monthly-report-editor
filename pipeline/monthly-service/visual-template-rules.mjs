@@ -2,6 +2,7 @@ import {dataTargets,fillTemplateData} from './template-data.mjs';
 import {applyStructure} from './project-operations.mjs';
 import {analyzePptxTemplate,refreshPeriodText} from './template-recognition.mjs';
 import {blankContent} from './image-slot.mjs';
+import {detectPptDataRegions} from './ppt-data-regions.mjs';
 const fail=m=>{throw Object.assign(Error(m),{status:400});};
 const oid=o=>o.attributes['data-object-id'];
 export function validateVisualRules(rules,project){
@@ -13,7 +14,18 @@ export function validateVisualRules(rules,project){
  return rules;
 }
 export function recognitionClass(row){return row.binding==='report.period_text'?'date':row.mode==='auto'?'data':row.mode==='static'&&['shape','image'].includes(row.kind)&&!row.sample?'decorative':row.mode==='static'?'fixed':'review';}
-export function pendingVisualReviews(rules,project,aiSuggestions=[]){const decisions=new Map((rules.classifications||[]).map(c=>[c.id,c])),ai=new Map(aiSuggestions.map(s=>[s.id,s]));return analyzePptxTemplate(project).objects.filter(row=>{if(['decorative','fixed','data','date','manual'].includes(decisions.get(row.id)?.type))return false;const suggestion=ai.get(row.id);return suggestion? suggestion.confidence!=='high'||suggestion.type==='review':row.confidence==='review';});}
+export function pendingVisualReviews(rules,project,aiSuggestions=[]){
+ const decisions=new Map((rules.classifications||[]).map(c=>[c.id,c])),ai=new Map(aiSuggestions.map(s=>[s.id,s]));
+ const detected=detectPptDataRegions(project),targetIds=new Set(dataTargets(project).map(t=>t.id));
+ return analyzePptxTemplate(project).objects.filter(row=>{
+  if(detected.excludedIds.has(row.id)||detected.occludedIds.has(row.id)||targetIds.has(row.id))return false;
+  if(['decorative','fixed','data','date','manual'].includes(decisions.get(row.id)?.type))return false;
+  const suggestion=ai.get(row.id);
+  // Unmatched content defaults to blank; it needs no per-object approval. Data
+  // proposals are the only uncertain suggestions that can populate a draft.
+  return suggestion?.type==='data'&&suggestion.confidence!=='high';
+ });
+}
 export function fillVisualTemplate(project,sources,mappings,month,renderChart,rules){
  if(!rules?.visual)return fillTemplateData(project,sources,mappings,month,renderChart);
  validateVisualRules(rules,project);

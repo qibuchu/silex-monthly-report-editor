@@ -14,7 +14,7 @@ test('PPT upload creates local AI batches and retains manual review',async()=>{
  assert.equal(task.prompt.source.id,'steamauto');assert.ok(task.prompt.bindings.includes('report.period_text'));
  await assert.rejects(core.call('submit_template_ai_task',{taskId:task.taskId,projectRevision:1,decisions:[]}),/不完整/);
  await core.call('submit_template_ai_task',{taskId:task.taskId,projectRevision:1,decisions:[{id:'heading',type:'date',confidence:'high',reason:'包含月份',binding:'report.period_text'},{id:'analysis',type:'manual',confidence:'medium',reason:'需人工编写',binding:''}]});
- const canvas=await core.call('get_visual_rule_canvas',{templateId:created.templateId,pageIndex:0});assert.equal(canvas.ai.status,'completed');assert.equal(canvas.recognition.find(r=>r.id==='heading').source,'ai');assert.equal(canvas.recognition.find(r=>r.id==='analysis').confidence,'review');assert.ok(canvas.pendingReviewCount>=1);
+ const canvas=await core.call('get_visual_rule_canvas',{templateId:created.templateId,pageIndex:0});assert.equal(canvas.ai.status,'completed');assert.equal(canvas.recognition.find(r=>r.id==='heading').source,'ai');assert.equal(canvas.recognition.find(r=>r.id==='analysis').confidence,'review');assert.equal(canvas.pendingReviewCount,0,'manual content already defaults to blank');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('a new source is passed to AI without SteamAuto bindings',async()=>{

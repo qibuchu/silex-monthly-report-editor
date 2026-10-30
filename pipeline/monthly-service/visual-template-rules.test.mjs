@@ -6,6 +6,7 @@ const project=()=>({format:'steam-grapesjs-v2',deck:{css:'.sample{color:#123456}
 test('visual canvas rules save, preview continuation and publish with revision guards',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-visual-'));
  try{const core=createCore({dataDir:dir,publicUrl:'http://127.0.0.1:4320'}),created=core.importPptxTemplate({title:'PPT规则验收',project:project()}),templateId=created.templateId;
+  const beforeData=await core.call('get_visual_rule_canvas',{templateId,pageIndex:0});assert.ok(beforeData.targets.some(x=>x.id==='board'),'table should be visible before a data source is imported');assert.equal(beforeData.pendingReviewCount,0,'unmatched text is already blank by default');
   const rows=Array.from({length:5},(_,i)=>['游戏'+(i+1),'厂商'+(i+1)]),source={name:'本月数据',reportMonth:'2026-09',tables:[{name:'榜单',columns:['游戏','厂商'],rows}],scalars:[]};
   const imported=await core.call('import_template_data',{templateId,baseRevision:0,templateRevision:0,projectRevision:1,month:'2026-09',confirmedWindow:true,sources:[source]});
   const canvas=await core.call('get_visual_rule_canvas',{templateId,pageIndex:0});assert.equal(canvas.pageIndex,0);assert.ok(canvas.objects.some(o=>o.id==='board'));
@@ -15,11 +16,7 @@ test('visual canvas rules save, preview continuation and publish with revision g
   await assert.rejects(core.call('save_visual_rule_draft',{templateId,baseRevision:0,projectRevision:1,templateRevision:0,dataRevision:imported.revision,rules,mappings:[mapping]}),e=>e.status===409);
   await assert.rejects(core.call('publish_visual_rule_draft',{templateId,draftRevision:draft.revision,recognitionReviewed:true}),/先预览/);
   const preview=await core.call('preview_visual_rule_draft',{templateId,draftRevision:draft.revision});assert.equal(core.project(preview.projectId).project.deck.pages.length,3);assert.match(core.preview(preview.projectId),/游戏5/);assert.ok(!core.preview(preview.projectId).includes('旧月人工分析'));
-  await assert.rejects(core.call('publish_visual_rule_draft',{templateId,draftRevision:draft.revision,recognitionReviewed:true}),/未在画布确认/);
-  rules.classifications=canvas.recognition.filter(o=>o.confidence==='review').map(o=>({id:o.id,type:o.id==='board'?'data':o.id==='heading'?'date':'manual',confirmed:true}));
-  const reviewed=await core.call('save_visual_rule_draft',{templateId,baseRevision:draft.revision,projectRevision:1,templateRevision:0,dataRevision:imported.revision,rules,mappings:[mapping]});
-  await core.call('preview_visual_rule_draft',{templateId,draftRevision:reviewed.revision});
-  const published=await core.call('publish_visual_rule_draft',{templateId,draftRevision:reviewed.revision,recognitionReviewed:true});assert.equal(published.revision,1);
+  const published=await core.call('publish_visual_rule_draft',{templateId,draftRevision:draft.revision,recognitionReviewed:true});assert.equal(published.revision,1);
   const generated=await core.call('generate_monthly_report',{templateId,month:'2026-09'});assert.equal(generated.status,'succeeded');assert.equal(core.project(generated.projectId).project.deck.pages.length,3);assert.match(core.preview(generated.projectId),/游戏5/);
   assert.equal(core.project(created.projectId).project.deck.pages.length,1,'template source remains a single editable page');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
