@@ -1,55 +1,46 @@
-# 月报统一数据契约 1.0
+# 数据源接入契约 1.0
 
-状态：2026-10-30 冻结为**适配器输入/输出规范**。当前网站仍兼容 SteamAuto schema 2.0 原始包和小游戏接口原始 JSON；本文件不表示适配器已经上线。实现适配器后，以本契约作为数据源进入模板匹配器的唯一标准格式。
+状态：2026-10-30 修订。此契约只统一**接入、绑定、校验和追溯**，不规定跨业务的统一指标或表格 JSON。此前提出的 `monthly-data/1.0`、通用 `metrics/tables` 结构已撤回，不作为开发目标。当前网站的数据源库与模板绑定仍按现有实现运行；以下为后续接入边界。
 
-## 一句话定义
+## 原则
 
-Skill、JSON 接口和上传文件负责**获取数据**；各自的适配器负责转成 `monthly-data/1.0` JSON；模板只读取规范化的 `metrics` 和 `tables`，并按稳定 ID 绑定字段。模板的标题、版式、人工文案和图片空槽不属于数据契约。
+- 一个数据源可以服务一类或多类月报；每类业务保留自己的原始数据结构、字段、统计口径和版本。例如 SteamAuto 保留 `monthly-report` schema 2.0，小游戏保留其月报接口 JSON。CSV/XLSX 保留工作表、表头及行数据。不得为迁就 Steam 月报而重塑其他来源。
+- 统一的是数据源登记、按目标月份获取/上传、校验、模板字段绑定、版本与审计记录。模板只访问已绑定来源的明确字段；跨来源同名指标不自动等价，也不推算业务公式。
+- 获取方式可不同：本地 Skill、HTTP JSON 接口、人工上传文件。Skill 不是所有来源必须实现的形式，JSON 也不是所有来源必须转换成的业务格式。
+- 来源配置不是当月数据。字段样例不能作为目标月真实值；模板版本与历史月报不会因来源定义更新而被改写。
+
+## 三份记录
+
+### 1. 数据源定义 `DataSourceDefinition`
+
+按版本管理，包含 `id`、`revision`、`name`、`kind`、获取说明或接口地址模板、`native_schema`（来源自己的 schema ID 与版本）、支持的月份/窗口校验方式。只保存公开连接定义和脱敏样例；访问令牌不入库。
+
+实例：SteamAuto `steamauto` 使用本地 Skill 取得目标月 schema 2.0 JSON；小游戏 `minigame-monthly` 使用 `month={month}` 的 HTTP API，保留接口原始 JSON。定义的最小结构见 [source-definition.schema.json](source-definition.schema.json)。
+
+### 2. 模板绑定 `TemplateSourceBinding`
+
+模板发布版本记录所选 `source_id`、`source_revision`、`native_schema` 版本，以及对象/数据区域到**来源原生字段**的明确路径或工作表/列映射。当前界面支持一个主数据源；协议允许以后增加补充来源。绑定规则属于模板版本，修改来源或映射须重新核对并发布，不修改已有月报。
+
+字段路径不得脱离来源 schema 单独解释。例如 `head.top20` 只在 SteamAuto schema 2.0 中有其定义，小游戏榜单使用自身的路径。结构见 [template-binding.schema.json](template-binding.schema.json)。
+
+### 3. 导入凭证 `ImportReceipt`
+
+每次实际取数或上传都记录来源 ID/版本、目标月份、原始快照 ID/哈希、获取时间、来源原生 schema 版本、统计窗口及其证据、校验状态。原始内容独立保存或引用，不包裹成统一业务 JSON。结构见 [import-receipt.schema.json](import-receipt.schema.json)。
+
+## 必须通过的校验
+
+1. **身份和结构**：来源必须存在；实际数据符合该来源的原生 schema 或已确认的字段表。来源 schema 改版后，旧模板映射标为待核对。
+2. **目标月份**：优先读取来源提供的 `report_month`/`month`/`range` 等原生字段；与用户所选月份不符则拒绝。来源无期间字段时，必须人工确认，凭证标记 `operator-confirmed`，不能伪装成来源证明。
+3. **统计窗口**：保留每个字段自己的窗口。历史评测、好评率、月末状态不得用当前快照替代。上线 14 日指标按发售日 D0–D13 核对，允许跨月。具体窗口信息存于来源字段元数据或导入凭证，不能只靠生成时间猜测。
+4. **口径和单位**：原始字段的单位、公式版本和范围按来源说明解释。适配器可以做文件解析与显示格式转换，不能重算排名、收入、环比等已有业务指标。PCU 不能标作 DAU。
+5. **缺失与凭据**：未知值保持空并生成独立缺失记录，不能填 0 或沿用旧月份。在线获取发现 401/403 或凭据过期时暂停整个取数/生成任务，等待用户续期，不用旧快照绕过。
+
+## 工作流
 
 ```text
-SteamAuto Skill ─┐
-小游戏 JSON API ─┼─> 来源适配器 ─> monthly-data/1.0 ─> 窗口/口径校验 ─> 模板字段映射
-Excel/CSV/JSON ──┘
+选择模板 → 读取模板绑定的数据源版本 → 通过 Skill/API/上传取得目标月原始数据
+      → 按该来源的原生 schema 与统计窗口校验 → 保存导入凭证
+      → 按模板映射填入数据对象 → 未匹配/缺失单独列出 → 人工与 AI 完善
 ```
 
-## 顶层字段
-
-| 字段 | 规则 |
-|---|---|
-| `contract_version` | 固定 `1.0`。不兼容变更升主版本。 |
-| `report_month` | `YYYY-MM`，表示月报目标月，不等于所有明细的日期范围。 |
-| `status` | `complete` 或 `partial`；缺失信息必须列在 `missing`。 |
-| `producer` | 数据源库 ID、来源版本、适配器版本、原始快照 ID、生成时间。保留上游计算版本。 |
-| `scope` | 平台、地区、统计人群/样本范围；不可用同名字段跨不同口径直接比较。 |
-| `windows` | 具名时间窗口，起止日期均包含当天。所有指标和表格都必须引用窗口。 |
-| `metrics` | 独立指标，数值保留原始类型和明确单位；不得只存格式化字符串。 |
-| `tables` | 明细/榜单/图表数据；每行有稳定业务 ID，每列有类型、单位及来源字段。 |
-| `missing` | 无法取得或无法确认的字段；以 JSON Pointer 指向空值，说明原因。 |
-
-详见 [schema.json](schema.json)。示例：[SteamAuto](example-steamauto.json)、[小游戏](example-minigame.json)。
-
-## 时间与历史约束
-
-1. `monthly` 窗口须恰好覆盖目标月的第一天至最后一天，时区为 IANA 名称，例如 `Asia/Shanghai`。同比、环比的对照月使用单独窗口。服务不得以当前快照替代历史评测、好评率、定级等状态。
-2. `release_d0_d13` 窗口以发售日为 D0，结束日必须为 D13，允许跨入下月。每款游戏独立设置窗口与 `release_date`。
-3. 其他窗口用 `custom`，必须写 `purpose` 和日期。`observed_as_of` 表示原始状态截至哪天；如上游不能证明历史状态，指标置 `null` 并登记缺失。
-4. `producer.generated_at` 是生成包的时间，不能代替业务统计窗口。接口的 `report_month`、`range` 与包中的目标月不一致时拒绝；没有期间信息时只能由人工明确确认，并在 `producer.window_evidence` 标为 `operator-confirmed`。
-
-## 口径、单位与溯源
-
-- 指标 ID 使用来源命名空间，例如 `steam.market.release_total`、`minigame.iap.revenue`；同一 ID 的含义、单位、公式不可随月份变化。改变公式或统计范围须改 ID 或升 `producer.calculation_version` 并在模板中重新核对。
-- `metric.value` 保持数字、布尔、日期/文本或 `null`。比例统一用小数：占比 `0.894` 表示 89.4%，环比可以为负或大于 1。金额使用明确币种（如 `USD`），人数/次数用 `count`。前端负责显示“万”“%”等格式，不在适配器里把 `0.894` 写成 `89.4%`。
-- 表格列 `key` 稳定，`label` 可以中文；行 `id` 使用 appid/业务游戏 ID 等，不用数组下标代替身份。`origin.path` 或列的 `source_field` 指向原始包字段；业务计算由上游完成，适配器只搬运和单位标准化，不重新计算收入、榜单、环比、D0–D13 指标。
-- 如确实需要适配器做纯格式转换，记录 `origin.transform`；业务公式仍须提供上游 `calculation_id` 和 `calculation_version`。来源本身没有此信息时写 `unknown`，不得编造公式。
-- 缺失的数值填 `null`，同时写 `missing` 项；`0` 只表示已证实的零。`missing.reason` 采用 `not_provided`、`window_unavailable`、`credential_expired`、`ambiguous_definition` 或 `source_error`。凭据 401/403 时整个在线取数任务暂停，不产出“部分成功”包。
-- PCU 与 DAU 必须使用不同 ID，且 `label` 和 `unit` 准确；PCU 不得标作 DAU。人工分析和外部研究另走内容层，不进入数值指标。
-
-## 适配器边界与迁移
-
-| 来源 | 输入 | 适配器职责 | 当前状态 |
-|---|---|---|---|
-| SteamAuto | `monthly-report` schema 2.0 标准 JSON | 显式映射 KPI、头部榜、大盘、新游等已有字段，保留 `calculation_version`、`snapshot_id`、统计范围与缺失项 | 待实现；旧生成器仍直接读取原始包 |
-| 小游戏 | `/minigame-db/api/report/monthly/export?month=YYYY-MM&format=json` | 显式映射 IAP/IAA/买量表，保留接口给出的排序与计算结果，不自行补 MAU 等缺项 | 待实现；当前模板可直接导入原始 JSON 并人工核对映射 |
-| 上传文件 | JSON/CSV/XLSX | 明确指定字段表头、月份、窗口和单位；无法判断口径时拒绝自动映射 | 待实现；目前只可上传样例登记来源并按月导入实际文件 |
-
-数据源库记录**连接定义与字段样例**；每期数据包是独立、不可变的快照，须记录所用 `data_source_id` 和版本。修改来源配置不改已发布模板和历史包。模板发布快照记录数据源版本和字段映射版本。先实现两个适配器，再在导入入口校验 schema 和语义，最后切换模板读取规范包；迁移期间保留旧版路径，不默默改写已有月报。
+新增模板必须先选已登记的数据源，或先登记新来源并上传字段样例。数据源登记不代表自动取数已接通；接口凭据只在本次调用临时使用。当前网站已有数据源库、模板绑定、实际文件/API 导入和人工字段匹配；完整的来源原生 schema 校验、导入凭证和多来源绑定仍待实现。

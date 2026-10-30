@@ -1,0 +1,22 @@
+[
+  {
+    "id": "steamauto",
+    "revision": 1,
+    "name": "SteamAuto 月报数据",
+    "kind": "skill",
+    "locator": "SteamAuto monthly-report Skill",
+    "native_schema": {"id": "steamauto.monthly-report", "version": "2.0", "format": "json"},
+    "month_detection": {"strategy": "native-field", "field_path": "report_month"},
+    "description": "保留 SteamAuto 原始标准包；字段由 Steam 月报模板独立映射。"
+  },
+  {
+    "id": "minigame-monthly",
+    "revision": 1,
+    "name": "小游戏月报接口",
+    "kind": "api",
+    "locator": "http://9.135.95.168:5390/minigame-db/api/report/monthly/export?month={month}&format=json",
+    "native_schema": {"id": "minigame-db.monthly-export", "version": "unverified", "format": "json"},
+    "month_detection": {"strategy": "operator-confirmed"},
+    "description": "保留接口原始 JSON；具体字段与口径按小游戏接口核验。"
+  }
+]

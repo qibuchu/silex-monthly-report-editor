@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ImportReceipt 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_id", "source_revision", "report_month", "native_schema_id", "native_schema_version", "payload_hash", "captured_at", "window_evidence", "validation_status"],
+  "properties": {
+    "source_id": {"type": "string", "minLength": 1},
+    "source_revision": {"type": "integer", "minimum": 1},
+    "report_month": {"type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"},
+    "native_schema_id": {"type": "string", "minLength": 1},
+    "native_schema_version": {"type": "string", "minLength": 1},
+    "source_snapshot_id": {"type": "string"},
+    "payload_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "原始内容的 SHA-256；原始文件另存，不嵌入此记录"},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "window_evidence": {"enum": ["source", "operator-confirmed"]},
+    "validation_status": {"enum": ["accepted", "needs-review"]},
+    "windows": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["field_path", "start", "end", "timezone"], "properties": {"field_path": {"type": "string", "minLength": 1}, "start": {"type": "string", "format": "date"}, "end": {"type": "string", "format": "date"}, "timezone": {"type": "string", "minLength": 1}, "observed_as_of": {"type": "string", "format": "date"}}}},
+    "issues": {"type": "array", "items": {"type": "string"}}
+  }
+}

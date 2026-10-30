@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DataSourceDefinition 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "revision", "name", "kind", "locator", "native_schema", "month_detection"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "name": {"type": "string", "minLength": 1},
+    "kind": {"enum": ["skill", "api", "upload"]},
+    "locator": {"type": "string", "minLength": 1, "description": "非秘密的接口 URL 模板、Skill 名称或文件格式说明"},
+    "native_schema": {"type": "object", "additionalProperties": false, "required": ["id", "version", "format"], "properties": {"id": {"type": "string", "minLength": 1}, "version": {"type": "string", "minLength": 1}, "format": {"enum": ["json", "csv", "xlsx", "mixed"]}}},
+    "month_detection": {"type": "object", "additionalProperties": false, "required": ["strategy"], "properties": {"strategy": {"enum": ["native-field", "operator-confirmed"]}, "field_path": {"type": "string"}, "window_field_path": {"type": "string"}}},
+    "description": {"type": "string"}
+  }
+}
