@@ -143,16 +143,27 @@ $('pptxTemplateFile').onchange=()=>{const file=$('pptxTemplateFile').files[0];if
 $('pptxTemplateDialog').addEventListener('cancel',event=>{if(state.pptxBusy)event.preventDefault();});
 $('pptxTemplateForm').onsubmit=async event=>{
  event.preventDefault();if(state.pptxBusy||$('pptxTemplateSubmit').hidden)return;
- const file=$('pptxTemplateFile').files[0],title=$('pptxTemplateTitle').value.trim(),dataSourceId=$('pptxDataSource').value;
+ const file=$('pptxTemplateFile').files[0],title=$('pptxTemplateTitle').value.trim(),selectedSourceId=$('pptxDataSource').value,temporaryFile=$('pptxTemporaryData').files[0],month=$('pptxTemporaryMonth').value;
  fieldError('pptxTemplateError','');$('pptxTemplateResult').hidden=true;
- if(!file||!title||!dataSourceId){fieldError('pptxTemplateError','请选择PPTX、模板名称和数据源；没有合适的来源请先到数据源库新建。');return;}
+ if(!file||!title||(!selectedSourceId&&!temporaryFile)){fieldError('pptxTemplateError','请选择PPTX、模板名称，以及已有数据源或临时数据文件。');return;}
+ if(temporaryFile&&(!month||!$('pptxTemporaryWindow').checked)){fieldError('pptxTemplateError','临时数据文件需要填写目标月份，并确认统计窗口一致。');return;}
  if(!/\.pptx$/i.test(file.name)||file.size>100*1024*1024){fieldError('pptxTemplateError','请选择100MB以内的 .pptx 文件；.ppt需先另存为.pptx。');return;}
  state.pptxBusy=true;for(const el of $('pptxTemplateForm').querySelectorAll('input,select,button'))el.disabled=true;
  try{
   $('pptxTemplateProgress').textContent='正在读取PPT页面、文字与图片，请勿刷新页面…';
   const reader=await loadPptxReader(),project=await reader.read(file);
+  let dataSourceId=selectedSourceId,temporaryData=null;
+  if(temporaryFile){
+   $('pptxTemplateProgress').textContent='正在读取临时数据文件并登记字段…';
+   if(temporaryFile.size>10*1024*1024)throw Error('临时数据文件最大10MB');
+   temporaryData=await (await loadMonthlyData()).read(temporaryFile);
+   const sample={reportMonth:temporaryData.reportMonth||month,tables:(temporaryData.tables||[]).map(t=>({...t,rows:(t.rows||[]).slice(0,5)})),scalars:(temporaryData.scalars||[]).slice(0,100)};
+   const source=await call('save_data_source',{baseRevision:0,name:`${title} · ${temporaryFile.name}`,kind:'upload',description:`由 ${temporaryFile.name} 临时上传；统计月份 ${month}。发布前核对字段与口径。`,sample});
+   dataSourceId=source.id;
+  }
   $('pptxTemplateProgress').textContent='已识别 '+project.deck.pages.length+' 页，正在保存模板与图片资源…';
   const result=await request('/api/templates/import-pptx',{title,project,aiMode:'local',dataSourceId});
+  if(temporaryData){$('pptxTemplateProgress').textContent='模板已创建，正在导入目标月数据并生成字段匹配建议…';await call('import_template_data',{templateId:result.templateId,baseRevision:0,templateRevision:0,projectRevision:1,month,confirmedWindow:true,sources:[temporaryData]});}
   $('pptxTemplateSubmit').hidden=true;
   const reports=project.deck.notes.pptx_imports[0].pages,unsupported=reports.reduce((sum,p)=>sum+p.unsupported,0);
   $('pptxTemplateProgress').textContent=`已创建 ${result.pages} 页未发布模板。${unsupported?unsupported+' 个复杂对象保留占位。':''}本地AI识别任务 ${result.ai?.total||0} 批；请进入可视化画布核对识别建议。`;

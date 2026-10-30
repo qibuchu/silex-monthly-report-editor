@@ -4,6 +4,15 @@ export const aiTypes=['decorative','fixed','data','date','manual','review'];
 export const aiConfidences=['high','medium','low'];
 export const aiOutputSchema={type:'object',additionalProperties:false,required:['decisions'],properties:{decisions:{type:'array',items:{type:'object',additionalProperties:false,required:['id','type','confidence','reason','binding'],properties:{id:{type:'string'},type:{type:'string',enum:aiTypes},confidence:{type:'string',enum:aiConfidences},reason:{type:'string'},binding:{type:'string'}}}}}};
 const text=html=>String(html||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+function sampleFields(sample){
+ const fields=[];
+ const visit=(value,prefix='',depth=0)=>{if(fields.length>=150||depth>4||value==null)return;
+  if(Array.isArray(value)){if(value.length)visit(value[0],prefix+'[]',depth+1);return;}
+  if(typeof value==='object'){for(const [key,child] of Object.entries(value)){if(fields.length>=150)break;visit(child,prefix?prefix+'.'+key:key,depth+1);}return;}
+  if(prefix)fields.push(prefix);
+ };
+ visit(sample);return fields;
+}
 
 export function createTemplateAiTasks(templateId,project,mode='local',source=null){
  const recognized=analyzePptxTemplate(project),tasks=[];
@@ -12,7 +21,7 @@ export function createTemplateAiTasks(templateId,project,mode='local',source=nul
    const id=o.attributes['data-object-id'],rule=recognized.objects.find(r=>r.id===id);
    return {id,name:o.attributes['data-name']||id,kind:o.attributes['data-kind']||'unknown',pptKind:o.attributes['data-pptx-kind']||'',text:text(o.content).slice(0,350),position:{left:o.style.left,top:o.style.top,width:o.style.width,height:o.style.height},ruleSuggestion:{type:rule?.binding==='report.period_text'?'date':rule?.mode==='auto'?'data':rule?.mode==='static'?'fixed':'review',binding:rule?.binding||'',reason:rule?.reason||''},hasImage:/<img\b|data-pptx-kind.?image/i.test(o.content)||o.attributes['data-kind']==='image'};
   });
-  for(let start=0;start<rows.length;start+=60)tasks.push({id:`${templateId}:${pageIndex}:${start}`,templateId,pageIndex,pageName:page.name,pageRole:recognized.pages[pageIndex]?.label||'待确认',projectRevision:1,mode,status:'pending',source:source?{id:source.id,name:source.name,kind:source.kind,description:source.description||'',sampleFields:source.sample&&typeof source.sample==='object'?Object.keys(source.sample).slice(0,100):[]}:null,objects:rows.slice(start,start+60),createdAt:new Date().toISOString()});
+  for(let start=0;start<rows.length;start+=60)tasks.push({id:`${templateId}:${pageIndex}:${start}`,templateId,pageIndex,pageName:page.name,pageRole:recognized.pages[pageIndex]?.label||'待确认',projectRevision:1,mode,status:'pending',source:source?{id:source.id,name:source.name,kind:source.kind,description:source.description||'',sampleFields:sampleFields(source.sample)}:null,objects:rows.slice(start,start+60),createdAt:new Date().toISOString()});
  }
  return tasks;
 }
