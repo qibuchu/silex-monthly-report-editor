@@ -726,7 +726,7 @@ export function createCore(config) {
     const rules={profile:'full',structure:'pptx',description:'按上传PPT的页面和对象生成；已按标题、表头和图表系列匹配常见数据字段。未知区域留空，公式与筛选沿用上游数据规则；发布前需核对识别结果。',objects:recognition.objects.map(({id,mode,binding})=>({id,mode,...(binding?{binding}:{})}))};
     db.projects[projectId]={id:projectId,revision:1,month:'imported',kind:'template-draft',title:'模板编辑 · '+title,project:value,updatedAt:new Date().toISOString(),author:'pptx-template-import'};
     db.templates[id]={id,title,profile:'full',revision:0,projectId,builtin:false,origin:'pptx',rules,dataSourceId,dataSourceRevision:dataSource(dataSourceId).revision};
-    db.templateAi[id]={revision:1,projectRevision:1,mode:aiMode,tasks:createTemplateAiTasks(id,value,aiMode)};persist();
+    db.templateAi[id]={revision:1,projectRevision:1,mode:aiMode,tasks:createTemplateAiTasks(id,value,aiMode,dataSource(dataSourceId))};persist();
     return {templateId:id,projectId,revision:0,editor:links(projectId).editor,preview:links(projectId).preview,pages:value.deck.pages.length,recognition,ai:aiSummary(id)};
   }, importProject(input) {
     const id = randomUUID();
