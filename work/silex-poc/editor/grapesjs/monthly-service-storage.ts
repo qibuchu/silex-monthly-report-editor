@@ -215,8 +215,11 @@ export function attachServiceSync(editor: Editor) {
       while (root.parent() && !root.parent()!.getAttributes()['data-report-page'] && !root.parent()!.getAttributes()['data-pptx-page']) root = root.parent()!
       return String(root.getAttributes()['data-object-id'] || root.getId())
     })
+    const pageIndex = Math.max(0, editor.Pages.getAll().indexOf(editor.Pages.getSelected()!))
+    const dirty = !syncing && (failed || editor.getDirtyCount() > 0)
+    if (window.parent !== window) window.parent.postMessage({ type: 'monthly-layout-context', projectId: serviceProjectId, pageIndex, objectIds, dirty, saving: Boolean(saving) || syncing, revision }, new URL(serviceBase).origin)
     try {
-      await serviceRequest('editor-context', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, pageIndex: Math.max(0, editor.Pages.getAll().indexOf(editor.Pages.getSelected()!)), objectIds, dirty: !syncing && (failed || editor.getDirtyCount() > 0), saving: Boolean(saving) || syncing, focused: document.visibilityState === 'visible' && document.hasFocus() }) })
+      await serviceRequest('editor-context', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, pageIndex, objectIds, dirty, saving: Boolean(saving) || syncing, focused: document.visibilityState === 'visible' && document.hasFocus() }) })
     } catch (error) { console.warn('聊天编辑上下文同步失败', error) } finally { publishing = false }
   }
   const scheduleContext = () => {
