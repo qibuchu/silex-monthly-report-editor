@@ -124,8 +124,9 @@ export function createCore(config) {
   db.templateAi ||= {};
   db.editingTargets ||= {};
   const persist = () => { fs.writeFileSync(dbPath + '.tmp', JSON.stringify(db)); fs.renameSync(dbPath + '.tmp', dbPath); };
-  for (const task of Object.values(db.tasks)) if (task.status === 'running') { task.status = 'failed'; task.error = 'Service restarted; task interrupted'; }
-  persist();
+  let interrupted = false;
+  for (const task of Object.values(db.tasks)) if (task.status === 'running') { task.status = 'failed'; task.error = 'Service restarted; task interrupted'; interrupted = true; }
+  if (interrupted) persist();
   const project = id => { if (!Object.hasOwn(db.projects, id)) throw new ServiceError('Project not found', 404); return db.projects[id]; };
   const builtinDataSources=[{id:'steamauto',name:'SteamAuto 月报数据',kind:'skill',reference:'monthly-report schema 2.0；由本地 Skill 获取目标月份标准数据包',description:'使用目标月 JSON 数据包。历史统计窗口须与目标月一致。',revision:1,builtin:true},{id:'minigame-monthly',name:'小游戏月报接口',kind:'api',reference:'http://9.135.95.168:5390/minigame-db/api/report/monthly/export?month={month}&format=json',description:'按目标月份返回小游戏月报 JSON；接口鉴权仅在实际导入时临时提供。',revision:1,builtin:true}];
   const dataSource=id=>db.dataSources[id]||builtinDataSources.find(s=>s.id===id);
