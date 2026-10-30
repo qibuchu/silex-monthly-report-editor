@@ -1,0 +1,28 @@
+{
+  "contract_version": "1.0",
+  "report_month": "2026-09",
+  "status": "partial",
+  "producer": {
+    "data_source_id": "minigame-monthly",
+    "data_source_revision": 1,
+    "adapter_version": "example-only",
+    "source_schema_version": "unknown",
+    "source_snapshot_id": "synthetic-example-minigame-2026-09",
+    "generated_at": "2026-10-02T12:00:00+08:00",
+    "window_evidence": "source"
+  },
+  "scope": {"platform": "微信小游戏", "region": "CN", "population": "示例榜单集合；非真实业务统计"},
+  "windows": [
+    {"id": "report_month", "kind": "monthly", "start": "2026-09-01", "end": "2026-09-30", "timezone": "Asia/Shanghai", "purpose": "目标月", "observed_as_of": "2026-09-30"}
+  ],
+  "metrics": [
+    {"id": "minigame.market.mau", "label": "月活人数", "type": "count", "value": null, "unit": "people", "window_id": "report_month", "origin": {"path": "not_provided"}}
+  ],
+  "tables": [
+    {"id": "minigame.iap.bestseller", "label": "畅销榜", "window_id": "report_month", "row_key": "game_id", "source_path": "bestseller", "columns": [
+      {"key": "game_name", "label": "游戏名", "type": "text", "unit": "text", "source_field": "game_name"},
+      {"key": "avg_rank", "label": "月均排名", "type": "rank", "unit": "rank", "source_field": "avg_rank"}
+    ], "rows": [{"id": "demo-game-1", "values": {"game_name": "示例小游戏", "avg_rank": 3}}]}
+  ],
+  "missing": [{"path": "/metrics/0/value", "reason": "not_provided", "detail": "原始接口没有提供 MAU，不从其他指标推算。"}]
+}
