@@ -26,9 +26,14 @@ done
 
 # A recoverable project backup precedes every code switch; state is never copied over.
 sudo docker exec steam-monthly-app node -e 'import("/app/pipeline/monthly-service/maintenance.mjs").then(m=>console.log(m.backupStore("/state/data","/state/backups")))'
+sudo docker compose -p steam-monthly -f compose.yaml stop app
+# The container was stopped before the new process starts; its PID lock is now stale.
+sudo rm -f -- state/data/.service-lock.json
 ln -sfn "releases/$release_id" current-next
 mv -Tf current-next current
 if ! sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app; then
+  sudo docker compose -p steam-monthly -f compose.yaml stop app || true
+  sudo rm -f -- state/data/.service-lock.json
   ln -sfn "$previous" current-next; mv -Tf current-next current
   sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app
   echo '新版本启动失败，已回滚' >&2; exit 1
@@ -39,6 +44,8 @@ for _ in $(seq 1 24); do
   sleep 5
 done
 if [[ $healthy != true ]]; then
+  sudo docker compose -p steam-monthly -f compose.yaml stop app
+  sudo rm -f -- state/data/.service-lock.json
   ln -sfn "$previous" current-next; mv -Tf current-next current
   sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app
   echo '健康检查未通过，已回滚' >&2; exit 1

@@ -19,7 +19,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=128m,mode=1777
-    mem_limit: 1g
+    mem_limit: 1536m
     cpus: 1.0
     pids_limit: 160
     cap_drop: [ALL]
