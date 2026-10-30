@@ -11,9 +11,19 @@ test('PPT upload creates local AI batches and retains manual review',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'template-ai-test-'));
  try{const core=createCore({dataDir:dir,publicUrl:'http://127.0.0.1:4320'}),created=core.importPptxTemplate({title:'AI模板',project,aiMode:'local'});assert.equal(created.ai.total,1);
  const task=await core.call('get_template_ai_task',{templateId:created.templateId,mode:'local'});assert.equal(task.status,'pending');assert.equal(task.task.objects.length,2);
+ assert.equal(task.prompt.source.id,'steamauto');assert.ok(task.prompt.bindings.includes('report.period_text'));
  await assert.rejects(core.call('submit_template_ai_task',{taskId:task.taskId,projectRevision:1,decisions:[]}),/不完整/);
  await core.call('submit_template_ai_task',{taskId:task.taskId,projectRevision:1,decisions:[{id:'heading',type:'date',confidence:'high',reason:'包含月份',binding:'report.period_text'},{id:'analysis',type:'manual',confidence:'medium',reason:'需人工编写',binding:''}]});
  const canvas=await core.call('get_visual_rule_canvas',{templateId:created.templateId,pageIndex:0});assert.equal(canvas.ai.status,'completed');assert.equal(canvas.recognition.find(r=>r.id==='heading').source,'ai');assert.equal(canvas.recognition.find(r=>r.id==='analysis').confidence,'review');assert.ok(canvas.pendingReviewCount>=1);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('a new source is passed to AI without SteamAuto bindings',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'template-ai-source-'));
+ try{const core=createCore({dataDir:dir,publicUrl:'http://127.0.0.1:4320'});
+ const source=await core.call('save_data_source',{baseRevision:0,name:'其他业务月报',kind:'upload',description:'用户上传的业务文件',sample:{month:'2026-08',income:10}});
+ const created=core.importPptxTemplate({title:'新业务模板',project,aiMode:'local',dataSourceId:source.id});
+ const task=await core.call('get_template_ai_task',{templateId:created.templateId,mode:'local'});
+ assert.deepEqual(task.prompt.bindings,[]);assert.deepEqual(task.prompt.source.sampleFields,['month','income']);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('server model adapter validates structured decisions without network',async()=>{
