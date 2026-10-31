@@ -1,10 +1,13 @@
 """Proof of concept: replace selected native PPTX table cells without rebuilding slides."""
 
 import argparse
+import copy
 import hashlib
 import html
 import json
+import os
 import re
+import tempfile
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
@@ -67,7 +70,8 @@ def table_values(slide_xml: bytes, table_id: int):
 
 
 def patch_table(slide_xml: bytes, table_id: int, header_row: int, expected_header: list[str],
-                rows: list[list[str]], first_data_row: int | None = None):
+                rows: list[list[str]], first_data_row: int | None = None,
+                new_header: list[str] | None = None):
     old = table_values(slide_xml, table_id)
     if header_row < 0 or header_row >= len(old) or old[header_row] != expected_header:
         raise ValueError("Table header changed; remap before filling")
@@ -80,6 +84,11 @@ def patch_table(slide_xml: bytes, table_id: int, header_row: int, expected_heade
     columns = len(old[header_row])
     if any(len(row) != columns for row in rows) or any(len(row) != columns for row in old[first:]):
         raise ValueError("Table column count changed; remap before filling")
+    if new_header is not None:
+        if len(new_header) != columns:
+            raise ValueError("New table header column count differs from template")
+        for column, value in enumerate(new_header):
+            slide_xml = patch_cell(slide_xml, table_id, header_row, column, expected_header[column], str(value))
     for index in range(capacity):
         values = rows[index] if index < len(rows) else [""] * columns
         for column, value in enumerate(values):
@@ -87,6 +96,46 @@ def patch_table(slide_xml: bytes, table_id: int, header_row: int, expected_heade
                 raise ValueError("Table cell must contain an explicit string or number")
             slide_xml = patch_cell(slide_xml, table_id, first + index, column, old[first + index][column], str(value))
     return slide_xml
+
+
+def patch_shape_fragment(slide_xml: bytes, shape_id: int, expected_text: str, old_fragment: str, new_fragment: str):
+    shapes = list(re.finditer(rb"<p:sp\b[^>]*>.*?</p:sp>", slide_xml, re.DOTALL))
+    matches = [match for match in shapes if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(shape_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError(f"Native shape id {shape_id} missing or ambiguous")
+    shape = matches[0]
+    runs = list(re.finditer(rb"<a:t(?:\s[^>]*)?>.*?</a:t>", shape.group(), re.DOTALL))
+    texts = [html.unescape(re.sub(rb"<[^>]+>", b"", run.group()).decode("utf-8")) for run in runs]
+    if "".join(texts) != expected_text or not old_fragment:
+        raise ValueError("Shape text changed; review month binding")
+    full_text = "".join(texts)
+    if full_text.count(old_fragment) != 1:
+        raise ValueError("Month fragment is not unique")
+    start = full_text.index(old_fragment)
+    end = start + len(old_fragment)
+    affected = []
+    offset = 0
+    for index, value in enumerate(texts):
+        left, right = max(start, offset), min(end, offset + len(value))
+        if left < right:
+            affected.append((index, left - offset, right - offset, left - start, right - start))
+        offset += len(value)
+    if len(affected) > 1 and len(old_fragment) != len(new_fragment):
+        raise ValueError("Changed-length fragment crosses styled text runs")
+    if old_fragment == new_fragment:
+        return slide_xml
+    changed = shape.group()
+    for index, left, right, replacement_left, replacement_right in reversed(affected):
+        run = runs[index]
+        original = run.group()
+        opening = original[:original.find(b">") + 1]
+        fragment_part = new_fragment if len(affected) == 1 else new_fragment[replacement_left:replacement_right]
+        replacement_text = texts[index][:left] + fragment_part + texts[index][right:]
+        if replacement_text == texts[index]:
+            continue
+        replacement = opening + html.escape(replacement_text, quote=False).encode("utf-8") + b"</a:t>"
+        changed = changed[:run.start()] + replacement + changed[run.end():]
+    return slide_xml[:shape.start()] + changed + slide_xml[shape.end():]
 
 
 def main():
@@ -115,20 +164,31 @@ def main():
             data = changed.get(name, source.read(name))
             if item.get("kind") == "table":
                 changed[name] = patch_table(data, int(item["tableId"]), int(item["headerRow"]),
-                                            item["expectedHeader"], item["rows"], item.get("firstDataRow"))
+                                            item["expectedHeader"], item["rows"], item.get("firstDataRow"),
+                                            item.get("newHeader"))
+            elif item.get("kind") == "shapeText":
+                changed[name] = patch_shape_fragment(data, int(item["shapeId"]), item["expectedText"],
+                                                     item["oldFragment"], item["newFragment"])
             else:
                 changed[name] = patch_cell(data, int(item["tableId"]), int(item["row"]),
                                            int(item["column"]), str(item["expected"]), str(item["value"]))
             ElementTree.fromstring(changed[name])
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(args.output, "w") as output:
-            output.comment = source.comment
-            for info in source.infolist():
-                output.writestr(info, changed.get(info.filename, source.read(info.filename)))
-    with zipfile.ZipFile(args.source) as before, zipfile.ZipFile(args.output) as after:
-        modified = [name for name in before.namelist() if hashlib.sha256(before.read(name)).digest() != hashlib.sha256(after.read(name)).digest()]
-        assert set(modified).issubset(changed), modified
-        assert after.testzip() is None
+        with tempfile.NamedTemporaryFile(dir=args.output.parent, suffix=".partial", delete=False) as temp:
+            temp_path = Path(temp.name)
+        try:
+            with zipfile.ZipFile(temp_path, "w") as output:
+                output.comment = source.comment
+                for info in source.infolist():
+                    output.writestr(copy.copy(info), changed.get(info.filename, source.read(info.filename)))
+            with zipfile.ZipFile(temp_path) as after:
+                modified = [name for name in source.namelist()
+                            if hashlib.sha256(source.read(name)).digest() != hashlib.sha256(after.read(name)).digest()]
+                if not set(modified).issubset(changed) or after.testzip() is not None:
+                    raise ValueError("PPTX output integrity check failed")
+            os.replace(temp_path, args.output)
+        finally:
+            temp_path.unlink(missing_ok=True)
     print(json.dumps({"output": str(args.output), "modifiedEntries": modified, "replacements": len(replacements)}, ensure_ascii=False))
 
 

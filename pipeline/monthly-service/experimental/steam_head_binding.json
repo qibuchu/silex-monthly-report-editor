@@ -1,0 +1,12 @@
+{
+  "templateSha256": "9e5577353e1f1721383a6c50bee63a5e9dbbee5dd3cb6e4d441655a5bb4621cf",
+  "slide": 2,
+  "tableId": 9,
+  "headerRow": 0,
+  "expectedHeader": ["排名", "游戏名", "环比6月涨幅", "营收榜排名环比"],
+  "capacity": 20,
+  "monthText": [
+    {"slide": 2, "shapeId": 4, "expectedText": "7月Steam头部游戏营收排名概况", "oldFragment": "7月", "format": "month_label"},
+    {"slide": 2, "shapeId": 24, "expectedText": "DATE 2026.07.31截止", "oldFragment": "2026.07.31", "format": "month_end"}
+  ]
+}
