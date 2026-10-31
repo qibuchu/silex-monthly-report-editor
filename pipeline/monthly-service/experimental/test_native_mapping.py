@@ -89,7 +89,7 @@ class SourceTests(Base):
 
 class CompileTests(Base):
     def compiled(self, *ops):
-        return compile_mapping(self.mapping(*ops), self.template, self.data, self.audit)
+        return compile_mapping(self.mapping(*ops), self.template, self.data, {"audit": self.audit})
 
     def test_mismatched_audit_stops_generation(self):
         pptx(self.template, {1: slide(shape(4, '7月'))})

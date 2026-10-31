@@ -22,6 +22,12 @@ def scoped_sub(data: bytes, pattern: bytes, index: int, replacement):
 
 
 PARAGRAPH = rb"<a:p\s*/>|<a:p(?:\s[^>]*)?>.*?</a:p>"
+
+
+def run_text(element: bytes):
+    """Text of an a:t element as an XML parser reads it (line breaks normalised to \n)."""
+    raw = re.sub(rb"<[^>]+>", b"", element).replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return html.unescape(raw.decode("utf-8"))
 RUN = rb"<a:r(?:\s[^>]*)?>.*?</a:r>"
 
 
@@ -164,7 +170,7 @@ def patch_shape_fragment(slide_xml: bytes, shape_id: int, expected_text: str, ol
         raise ValueError(f"Native shape id {shape_id} missing or ambiguous")
     shape = matches[0]
     runs = list(re.finditer(rb"<a:t(?:\s[^>]*)?>.*?</a:t>", shape.group(), re.DOTALL))
-    texts = [html.unescape(re.sub(rb"<[^>]+>", b"", run.group()).decode("utf-8")) for run in runs]
+    texts = [run_text(run.group()) for run in runs]
     if "".join(texts) != expected_text or not old_fragment:
         raise ValueError("Shape text changed; review month binding")
     full_text = "".join(texts)
@@ -210,7 +216,7 @@ def replace_shape_text(slide_xml: bytes, shape_id: int, expected_text: str, valu
         raise ValueError("Native text shape missing or ambiguous")
     shape = matches[0]
     runs = list(re.finditer(rb"<a:t(?:\s[^>]*)?>.*?</a:t>", shape.group(), re.DOTALL))
-    old = "".join(html.unescape(re.sub(rb"<[^>]+>", b"", run.group()).decode("utf-8")) for run in runs)
+    old = "".join(run_text(run.group()) for run in runs)
     if not runs or old != expected_text:
         raise ValueError("Text shape changed; review manual slot mapping")
     changed = shape.group()
@@ -230,7 +236,7 @@ def replace_shape_runs(slide_xml: bytes, shape_id: int, expected_runs: list[str]
         raise ValueError("Native text shape missing or ambiguous")
     shape = matches[0]
     runs = list(re.finditer(rb"<a:t(?:\s[^>]*)?>.*?</a:t>", shape.group(), re.DOTALL))
-    old = [html.unescape(re.sub(rb"<[^>]+>", b"", run.group()).decode("utf-8")) for run in runs]
+    old = [run_text(run.group()) for run in runs]
     if old != expected_runs or len(values) != len(old):
         raise ValueError("Styled shape runs changed; review KPI binding")
     changed = shape.group()
@@ -360,6 +366,42 @@ def set_row_fills(slide_xml: bytes, table_id: int, first_row: int, flags: list, 
     return slide_xml[:matches[0].start()] + frame + slide_xml[matches[0].end():]
 
 
+def drawing_xml(element: str, tag: str):
+    """Serialise an ElementTree a:* fragment back with the slide's a: prefix."""
+    node = ElementTree.fromstring(element)
+    if node.tag != "{http://schemas.openxmlformats.org/drawingml/2006/main}" + tag:
+        raise ValueError(f"Style must be a:{tag}")
+    ElementTree.register_namespace("a", "http://schemas.openxmlformats.org/drawingml/2006/main")
+    text = ElementTree.tostring(node, encoding="unicode")
+    return re.sub(r'\s+xmlns:a="[^"]+"', "", text, count=1).encode("utf-8")
+
+
+def set_run_style(slide_xml: bytes, shape_id: int, style: str, paragraph: str | None = None):
+    """Give every run (and paragraph) in a shape the same properties as a reference cell.
+
+    Used to clear per-row highlight colours and stray fonts in text-box tables.
+    """
+    shapes = list(re.finditer(rb"<p:sp\b[^>]*>.*?</p:sp>", slide_xml, re.DOTALL))
+    matches = [match for match in shapes if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(shape_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError("Styled text shape missing or ambiguous")
+    replacement = drawing_xml(style, "rPr")
+    pattern = rb"<a:rPr\b[^>]*/>|<a:rPr\b[^>]*>.*?</a:rPr>"
+    changed = re.sub(rb"(<a:r>|<a:r\s[^>]*>)(" + pattern + rb")?", lambda m: m.group(1) + replacement,
+                     matches[0].group(), flags=re.DOTALL)
+    # Cleared cells keep their style on the end-of-paragraph marker; restyle that too.
+    marker = b"<a:endParaRPr" + replacement[len(b"<a:rPr"):]
+    if marker.endswith(b"</a:rPr>"):
+        marker = marker[:-len(b"</a:rPr>")] + b"</a:endParaRPr>"
+    changed = re.sub(rb"<a:endParaRPr\b[^>]*/>|<a:endParaRPr\b[^>]*>.*?</a:endParaRPr>", lambda m: marker,
+                     changed, flags=re.DOTALL)
+    if paragraph:
+        layout = drawing_xml(paragraph, "pPr")
+        changed = re.sub(rb"(<a:p>|<a:p\s[^>]*>)(<a:pPr\b[^>]*/>|<a:pPr\b[^>]*>.*?</a:pPr>)?",
+                         lambda m: m.group(1) + layout, changed, flags=re.DOTALL)
+    return slide_xml[:matches[0].start()] + changed + slide_xml[matches[0].end():]
+
+
 def hide_shape_fill(slide_xml: bytes, shape_id: int, expected_color: str):
     shapes = list(re.finditer(rb"<p:sp\b[^>]*>.*?</p:sp>", slide_xml, re.DOTALL))
     matches = [match for match in shapes if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(shape_id).encode() + rb'"', match.group())]
@@ -421,6 +463,8 @@ def main():
                 added[SLOT_MEDIA] = slot_png()
             elif item.get("kind") == "tableFills":
                 changed[name] = set_row_fills(data, int(item["tableId"]), int(item["firstRow"]), item["flags"], item["color"])
+            elif item.get("kind") == "shapeRunStyle":
+                changed[name] = set_run_style(data, int(item["shapeId"]), item["style"], item.get("paragraph"))
             elif item.get("kind") == "hideShapeFill":
                 changed[name] = hide_shape_fill(data, int(item["shapeId"]), item["expectedColor"])
             else:

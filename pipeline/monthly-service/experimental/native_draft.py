@@ -22,13 +22,13 @@ def run_script(script, *args):
                    check=True, capture_output=True, text=True)
 
 
-def scan_old_month(output, mapping, data):
+def scan_old_month(output, mapping, contract):
     """Report text that still names the template's own month."""
     source = mapping.get("sourceMonth")
-    if not source or source == data["report_month"]:
+    if not source or source == contract["month"]:
         return []
     label, dotted = f"{int(source[-2:])}月", source.replace("-", ".")
-    comparison = f"环比{int(data['previous_month'][-2:])}月"
+    comparison = f"环比{int(contract['previous'][-2:])}月"
     stale = []
     with zipfile.ZipFile(output) as archive:
         for position, slide in enumerate(presentation_order(archive), 1):
@@ -39,11 +39,13 @@ def scan_old_month(output, mapping, data):
     return stale
 
 
-def build(original: Path, data_file: Path, audit_file: Path, output: Path, mapping_file: Path):
+def build(original: Path, data_file: Path, output: Path, mapping_file: Path, extra_files=None):
+    """extra_files: named side inputs a data source may need (Steam: audit; minigame: previous)."""
     if output.suffix.lower() != ".pptx" or output.resolve() == original.resolve():
         raise ValueError("Output must be a distinct PPTX file")
     load = lambda path: json.loads(path.read_text(encoding="utf-8"))
-    data, audit, mapping = load(data_file), load(audit_file), validate_mapping(load(mapping_file))
+    data, mapping = load(data_file), validate_mapping(load(mapping_file))
+    extras = {name: load(path) for name, path in (extra_files or {}).items() if path is not None}
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="native-draft-", dir=output.parent) as temp:
         temp = Path(temp)
@@ -55,9 +57,10 @@ def build(original: Path, data_file: Path, audit_file: Path, output: Path, mappi
             run_script("pptx_clone_slides.py", original, plan_file, cloned)
         else:
             shutil.copyfile(original, cloned)
-        compiled = compile_mapping(mapping, cloned, data, audit)
-        merged = {"sourceSha256": hashlib.sha256(cloned.read_bytes()).hexdigest(), "reportMonth": data["report_month"],
-                  "dataSnapshotId": data["snapshot_id"], "replacements": compiled["replacements"]}
+        compiled = compile_mapping(mapping, cloned, data, extras)
+        contract = compiled["contract"]
+        merged = {"sourceSha256": hashlib.sha256(cloned.read_bytes()).hexdigest(), "reportMonth": contract["month"],
+                  "dataSnapshotId": contract["snapshotId"], "replacements": compiled["replacements"]}
         merged_file.write_text(json.dumps(merged, ensure_ascii=False), encoding="utf-8")
         try:
             subprocess.run([sys.executable, "-B", str(HERE / "pptx_preserve_patch.py"), str(cloned), str(merged_file), str(slides_only)],
@@ -72,8 +75,8 @@ def build(original: Path, data_file: Path, audit_file: Path, output: Path, mappi
         if archive.testzip() is not None:
             raise ValueError("Native draft ZIP integrity failed")
         pages = len(presentation_order(archive))
-    manifest = {"status": "partial_experiment", "reportMonth": data["report_month"],
-                "dataSnapshotId": data["snapshot_id"], "output": str(output), "pages": pages,
+    manifest = {"status": "partial_experiment", "dataSource": compiled["dataSource"], "reportMonth": contract["month"],
+                "dataSnapshotId": contract["snapshotId"], "output": str(output), "pages": pages,
                 "marketDataStatus": (data.get("market") or {}).get("status"),
                 "marketReviewTrendAvailable": bool((data.get("market") or {}).get("review_trend")) and
                     all(item.get("review_rate_all") is not None
@@ -82,8 +85,8 @@ def build(original: Path, data_file: Path, audit_file: Path, output: Path, mappi
                 "manualSlots": compiled["slots"],
                 "unfilledOriginalPages": [{"sourceSlide": int(slide), "reason": reason}
                                           for slide, reason in (mapping.get("pageNotes") or {}).items()],
-                "oldMonthText": scan_old_month(output, mapping, data),
-                "warning": "历史评测、AI披露和研究文案仍待补；生成结果尚未完成数据与视觉验收。"}
+                "oldMonthText": scan_old_month(output, mapping, contract),
+                "warning": compiled["warning"]}
     issues_path = output.with_suffix(".issues.json")
     issues_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     return manifest, issues_path
@@ -94,8 +97,10 @@ def main():
     parser = argparse.ArgumentParser()
     subcommands = parser.add_subparsers(dest="command", required=True)
     generate = subcommands.add_parser("generate")
-    for name in ("original", "data", "audit", "output", "mapping"):
+    for name in ("original", "data", "output", "mapping"):
         generate.add_argument(name, type=Path)
+    generate.add_argument("--audit", type=Path)
+    generate.add_argument("--previous", type=Path)
     check = subcommands.add_parser("check")
     for name in ("original", "mapping"):
         check.add_argument(name, type=Path)
@@ -104,7 +109,8 @@ def main():
         mapping = json.loads(args.mapping.read_text(encoding="utf-8"))
         print(json.dumps(check_mapping(mapping, args.original), ensure_ascii=False))
         return
-    manifest, issues = build(args.original, args.data, args.audit, args.output, args.mapping)
+    manifest, issues = build(args.original, args.data, args.output, args.mapping,
+                             {"audit": args.audit, "previous": args.previous})
     print(json.dumps({"output": str(args.output), "issuesFile": str(issues), "pages": manifest["pages"],
                       "sourceIssues": len(manifest["sourceIssues"]), "mappingIssues": len(manifest["mappingIssues"]),
                       "oldMonthShapes": len(manifest["oldMonthText"])}, ensure_ascii=False))

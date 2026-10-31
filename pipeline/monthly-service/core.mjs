@@ -46,7 +46,7 @@ export const tools = [
   tool('restore_deleted_project', '把回收站中的月报草稿恢复到项目列表', { projectId: idSchema }, ['projectId']),
   tool('empty_recycle_bin', '永久清空当前回收站；要求完整项目ID清单和明确确认，先创建完整备份，删除独有的历史与素材', { expectedProjectIds:{type:'array',items:idSchema},confirmation:{type:'string',const:'永久清空'} }, ['expectedProjectIds','confirmation']),
   tool('generate_monthly_report', '按所选已发布模板创建独立月报，记录模板版本；数据仍来自目标月数据包', { month: idSchema, templateId:idSchema,templateRevision:{type:'integer',minimum:1}, data: { type: 'object' }, full: { type: 'boolean' }, profile: { type:'string', enum:['data-supported','finished-eight','full'] }, selection: { type:'object', properties:{ movement_appid:{type:'integer'}, indie_appids:{type:'array',maxItems:2,items:{type:'integer'}} }, additionalProperties:false } }, ['month']),
-  tool('generate_native_pptx', '按已发布模板的原始 PPTX 和对象映射，以目标月数据和匹配的时间窗口审计生成可编辑 PPTX 草稿及问题清单', {month:idSchema,templateId:idSchema,data:{type:'object'},audit:{type:'object'}}, ['month','templateId','data','audit']),
+  tool('generate_native_pptx', '按已发布模板的原始 PPTX 和对象映射，以目标月数据生成可编辑 PPTX 草稿及问题清单。Steam 模板需附匹配的时间窗口审计 audit；小游戏模板传 minigame-db 月报导出 data，可附上月导出 previous 以计算名次环比', {month:idSchema,templateId:idSchema,data:{type:'object'},audit:{type:'object'},previous:{type:'object'}}, ['month','templateId','data']),
   tool('get_native_mapping', '读取模板的 PPTX 对象映射、版本及与当前原始 PPTX 的核对结果', {templateId:idSchema}, ['templateId'], true),
   tool('save_native_mapping', '保存模板的 PPTX 对象映射草稿，发布模板后生效；须带刚读取的映射版本。对象已不存在时返回问题清单，不阻止保存', {templateId:idSchema,baseRevision:{type:'integer',minimum:0},mapping:{type:'object'}}, ['templateId','baseRevision','mapping']),
   tool('list_native_drafts', '列出已生成的原生 PPTX 草稿及其问题清单下载链接', {}, [], true),
@@ -331,8 +331,8 @@ export function createCore(config) {
     db.projects[id]={id,revision:1,month:task.month,title:`${template.title} · ${task.month} PPTX 草稿`,stage:'draft',dataOrigin:{kind:'native-pptx',taskId:task.id,snapshotId},template:task.template,project:built.project,updatedAt:new Date().toISOString(),author:'native-pptx',native:{taskId:task.id,syncedRevision:1,pending:[],rejected:[],unsupported:[],missing:built.missing}};
     return id;
   }
-  const seedMapping=JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental','steam_monthly_mapping.json'),'utf8'));
-  const seedTemplateMapping=t=>{if(!t.nativeMapping&&t.sourcePptx?.sha256===seedMapping.seedSha256){t.nativeMapping=seedMapping;t.nativeMappingRevision=(t.nativeMappingRevision||0)+1;return true;}return false;};
+  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
+  const seedTemplateMapping=t=>{const seed=!t.nativeMapping&&seedMappings.find(item=>item.seedSha256===t.sourcePptx?.sha256);if(seed){t.nativeMapping=seed;t.nativeMappingRevision=(t.nativeMappingRevision||0)+1;return true;}return false;};
   const snapshotNative=t=>{if(t.origin==='pptx')t.nativePublished={sourcePptx:t.sourcePptx,mapping:t.nativeMapping,mappingRevision:t.nativeMappingRevision||0,templateRevision:t.revision};};
   function checkNativeMapping(t,mapping=t.nativeMapping){
     if(!mapping)return {ok:false,configured:false,problems:[{reason:'尚未配置对象映射'}]};
@@ -347,6 +347,16 @@ export function createCore(config) {
     }finally{fs.rmSync(dir2,{recursive:true,force:true});}
   }
   for(const t of Object.values(db.templates))seedTemplateMapping(t);
+  const previousMonthOf=month=>{const [y,m]=month.split('-').map(Number);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;};
+  // Each data source checks its own package; the Python generator re-checks the full contract.
+  const nativeSources={
+    'steam-monthly':{extras:['audit'],snapshot:args=>args.data.snapshot_id,
+      check:(args,month)=>!!(args.data&&args.audit&&args.data.report_month===month&&args.audit.month===month&&args.data.snapshot_id&&args.audit.snapshot_id===args.data.snapshot_id&&Array.isArray(args.audit.contract_errors)&&!args.audit.contract_errors.length),
+      error:'目标月数据包与时间窗口审计不匹配，或审计未通过'},
+    'minigame-monthly':{extras:['previous'],snapshot:args=>`${args.data.snapshot.id}@${args.data.snapshot.revision??0}`,
+      check:(args,month)=>!!(args.data&&args.data.month===month&&args.data.snapshot?.id!=null&&args.data.coverage?.calendar_complete===true&&(!args.previous||args.previous.month===previousMonthOf(month))),
+      error:'小游戏月报导出与目标月份不符、月份未结束，或上月导出月份不对'}
+  };
   function generateNativePptx(args){
     const month=args.month,template=db.templates[args.templateId];
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||''))throw new ServiceError('目标月份无效');
@@ -354,17 +364,21 @@ export function createCore(config) {
     const native=template.nativePublished;
     if(!native?.sourcePptx)throw new ServiceError('此模板发布时还没有原始PPTX，请上传后重新发布',400);
     if(!native.mapping)throw new ServiceError('此模板尚未配置PPTX对象映射，请配置后重新发布',400);
-    if(!args.data||!args.audit||args.data.report_month!==month||args.audit.month!==month||!args.data.snapshot_id||args.audit.snapshot_id!==args.data.snapshot_id||!Array.isArray(args.audit.contract_errors)||args.audit.contract_errors.length)throw new ServiceError('目标月数据包与时间窗口审计不匹配，或审计未通过',400);
+    const sourceName=native.mapping.dataSource||'steam-monthly',dataSource=nativeSources[sourceName];
+    if(!dataSource)throw new ServiceError(`未知数据源：${sourceName}`,400);
+    if(!dataSource.check(args,month))throw new ServiceError(dataSource.error,400);
+    const snapshotId=dataSource.snapshot(args);
     const expected=native.sourcePptx.sha256,source=path.join(dir,'template-pptx',expected+'.pptx');
     if(!fs.existsSync(source)||createHash('sha256').update(fs.readFileSync(source)).digest('hex')!==expected)throw new ServiceError('原始PPTX文件缺失或校验失败',409);
     const id=randomUUID(),taskDir=path.join(dir,'tasks',id),output=path.join(taskDir,'draft.pptx');
     fs.mkdirSync(taskDir,{recursive:true});
     fs.writeFileSync(path.join(taskDir,'data.json'),JSON.stringify(args.data));
-    fs.writeFileSync(path.join(taskDir,'audit.json'),JSON.stringify(args.audit));
+    const extraArgs=[];
+    for(const name of dataSource.extras)if(args[name]){fs.writeFileSync(path.join(taskDir,`${name}.json`),JSON.stringify(args[name]));extraArgs.push(`--${name}`,path.join(taskDir,`${name}.json`));}
     fs.writeFileSync(path.join(taskDir,'mapping.json'),JSON.stringify(native.mapping));
-    db.tasks[id]={id,kind:'native-pptx',status:'running',month,template:{id:template.id,title:template.title,revision:template.revision},startedAt:new Date().toISOString()};persist();
+    db.tasks[id]={id,kind:'native-pptx',status:'running',month,dataSource:sourceName,template:{id:template.id,title:template.title,revision:template.revision},startedAt:new Date().toISOString()};persist();
     const script=nativeScript;
-    const child=spawn(config.pythonExecutable||(process.platform==='win32'?'python':'python3'),['-B',script,'generate',source,path.join(taskDir,'data.json'),path.join(taskDir,'audit.json'),output,path.join(taskDir,'mapping.json')],{stdio:['ignore','pipe','pipe']});
+    const child=spawn(config.pythonExecutable||(process.platform==='win32'?'python':'python3'),['-B',script,'generate',source,path.join(taskDir,'data.json'),output,path.join(taskDir,'mapping.json'),...extraArgs],{stdio:['ignore','pipe','pipe']});
     let stderr='';child.stdout.resume();child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});
     let settled=false;const fail=message=>{if(settled)return;settled=true;Object.assign(db.tasks[id],{status:'failed',error:message,finishedAt:new Date().toISOString()});persist();};
     child.on('error',error=>fail(error.message));
@@ -373,9 +387,9 @@ export function createCore(config) {
       try{
         if(code!==0)throw Error(stderr||`PPTX生成进程退出：${code}`);
         const issuesPath=path.join(taskDir,'draft.issues.json'),issues=JSON.parse(fs.readFileSync(issuesPath,'utf8'));
-        if(!fs.existsSync(output)||issues.reportMonth!==month||issues.dataSnapshotId!==args.data.snapshot_id)throw Error('生成结果校验未通过');
+        if(!fs.existsSync(output)||issues.reportMonth!==month||issues.dataSnapshotId!==snapshotId)throw Error('生成结果校验未通过');
         let projectId,projectError;
-        try{projectId=await createNativeProject(db.tasks[id],template,output,args.data.snapshot_id,native.mapping.continuations||[]);}catch(error){projectError=error.message;}
+        try{projectId=await createNativeProject(db.tasks[id],template,output,snapshotId,native.mapping.continuations||[]);}catch(error){projectError=error.message;}
         Object.assign(db.tasks[id],{status:'succeeded',resultStatus:issues.status,projectId,projectError,sourceIssues:issues.sourceIssues?.length||0,mappingIssues:issues.mappingIssues?.length||0,oldMonthText:issues.oldMonthText?.length||0,pages:issues.pages,manualSlots:issues.manualSlots?.length||0,pptx:`${config.publicUrl}/api/tasks/${id}/draft.pptx`,issues:`${config.publicUrl}/api/tasks/${id}/issues.json`,finishedAt:new Date().toISOString()});persist();
       }catch(error){fail(error.message);}
     });
@@ -564,7 +578,7 @@ export function createCore(config) {
         if(t.dataSourceId!==source.id||t.dataSourceRevision!==source.revision){delete db.templateData[t.id];delete db.visualRuleDrafts[t.id];t.dataSourceDraftChanged=true;}
         t.dataSourceId=source.id;t.dataSourceRevision=source.revision;persist();return {templateId:t.id,dataSourceId:source.id,dataSourceRevision:source.revision};
       }
-      case 'list_templates': return [...builtinTemplates.map(t=>db.templates[t.id]||t),...Object.values(db.templates).filter(t=>!builtinTemplates.some(b=>b.id===t.id))].map(({rules,nativeMapping,nativePublished,...t})=>({...t,nativeMappingConfigured:Boolean(nativeMapping),nativeReady:Boolean(nativePublished?.sourcePptx&&nativePublished?.mapping),dataSourceId:t.dataSourceId||'steamauto',description:rules?.description||t.description||'',editor:t.projectId?links(t.projectId).editor:null,...(t.projectId?{pageCount:project(t.projectId).project.deck.pages.length,draftProjectRevision:project(t.projectId).revision}:{})}));
+      case 'list_templates': return [...builtinTemplates.map(t=>db.templates[t.id]||t),...Object.values(db.templates).filter(t=>!builtinTemplates.some(b=>b.id===t.id))].map(({rules,nativeMapping,nativePublished,...t})=>({...t,nativeMappingConfigured:Boolean(nativeMapping),nativeReady:Boolean(nativePublished?.sourcePptx&&nativePublished?.mapping),nativeDataSource:(nativePublished?.mapping||nativeMapping)?.dataSource||'steam-monthly',dataSourceId:t.dataSourceId||'steamauto',description:rules?.description||t.description||'',editor:t.projectId?links(t.projectId).editor:null,...(t.projectId?{pageCount:project(t.projectId).project.deck.pages.length,draftProjectRevision:project(t.projectId).revision}:{})}));
       case 'delete_template': {
         if(builtinTemplates.some(t=>t.id===args.templateId))throw new ServiceError('内置模板不能删除',400);
         const t=db.templates[args.templateId];if(!t)throw new ServiceError('自定义模板不存在或已删除',404);

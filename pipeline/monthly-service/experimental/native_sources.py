@@ -34,7 +34,8 @@ def month_context(month):
     previous = previous_month(month)
     return {"year": str(year), "monthNumber": str(number), "yearMonthDot": month.replace("-", "."),
             "monthEnd": f"{year}.{number:02d}.{calendar.monthrange(year, number)[1]}",
-            "previousMonthNumber": str(int(previous[-2:]))}
+            "previousMonthNumber": str(int(previous[-2:])),
+            "twoMonthsAgoNumber": str(int(previous_month(previous)[-2:]))}
 
 
 def head_rows(data):
@@ -104,12 +105,12 @@ def head_highlight_ranks(data):
     return {str(item.get("rank")) for item in (data.get("head") or {}).get("highlights") or [] if item.get("rank") is not None}
 
 
-HIGHLIGHT_SOURCES = {"head.highlights": head_highlight_ranks}
+HIGHLIGHT_SOURCES = {"head.highlights": lambda data, extras: head_highlight_ranks(data)}
 
-TABLE_SOURCES = {"head.top20": head_rows,
-                 "new_releases.gold": lambda data: tier_rows(data, "gold"),
-                 "new_releases.silver": lambda data: tier_rows(data, "silver"),
-                 "new_releases.bronze": lambda data: tier_rows(data, "bronze")}
+TABLE_SOURCES = {"head.top20": lambda data, extras: head_rows(data),
+                 "new_releases.gold": lambda data, extras: tier_rows(data, "gold"),
+                 "new_releases.silver": lambda data, extras: tier_rows(data, "silver"),
+                 "new_releases.bronze": lambda data, extras: tier_rows(data, "bronze")}
 
 MARKET_ISSUES = [
     {"field": "market.review_trend", "reason": "historical_window_unavailable"},
@@ -150,3 +151,13 @@ def market_values(data):
               "market.total": [item["total"] for item in months],
               "market.daily": [int(item["daily_avg"] + 0.5) for item in months]}
     return text, series
+
+
+def steam_contract(data, extras):
+    month = check_contract(data, extras.get("audit") or {})
+    return {"month": month, "previous": data["previous_month"], "snapshotId": data["snapshot_id"]}
+
+
+STEAM = {"contract": steam_contract, "tables": TABLE_SOURCES, "highlights": HIGHLIGHT_SOURCES,
+         "values": None, "market": market_values, "marketIssues": MARKET_ISSUES,
+         "warning": "历史评测、AI披露和研究文案仍待补；生成结果尚未完成数据与视觉验收。"}

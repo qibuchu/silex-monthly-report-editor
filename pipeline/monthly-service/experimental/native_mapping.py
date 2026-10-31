@@ -5,12 +5,14 @@ longer find are skipped and listed in mappingIssues; only a broken data contract
 stops generation.
 """
 
+import copy
 import json
 import re
 import zipfile
 from xml.etree import ElementTree
 
-from native_sources import HIGHLIGHT_SOURCES, MARKET_ISSUES, TABLE_SOURCES, check_contract, market_values, month_context
+from native_sources import STEAM, month_context
+from native_sources_minigame import MINIGAME
 from pptx_market_charts import resolve_chart
 from pptx_preserve_patch import table_values
 
@@ -20,7 +22,10 @@ NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
-       "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart"}
+       "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
+       "fillGrid", "fillShapes", "replaceAll", "clearRegion"}
+SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME}
+PX = 9525  # EMU per 1/96 inch; slide coordinates in mappings use this unit.
 
 
 def shape_texts(xml):
@@ -36,6 +41,39 @@ def shape_runs(xml, shape_id):
               if shape.find("p:nvSpPr/p:cNvPr", NS) is not None
               and shape.find("p:nvSpPr/p:cNvPr", NS).get("id") == str(shape_id)]
     return [node.text or "" for node in shapes[0].findall(".//a:t", NS)] if len(shapes) == 1 else None
+
+
+def shape_boxes(xml):
+    """Geometry, text and first run style of top-level shapes and pictures, in z-order."""
+    root = ElementTree.fromstring(xml)
+    tree = root.find("p:cSld/p:spTree", NS)
+    boxes = []
+    for order, item in enumerate(tree):
+        tag = item.tag.rsplit("}", 1)[-1]
+        if tag not in ("sp", "pic"):
+            continue
+        marker = item.find(f"p:nv{'Sp' if tag == 'sp' else 'Pic'}Pr/p:cNvPr", NS)
+        offset, extent = item.find("p:spPr/a:xfrm/a:off", NS), item.find("p:spPr/a:xfrm/a:ext", NS)
+        if marker is None or offset is None or extent is None:
+            continue
+        style, paragraph = item.find(".//a:r/a:rPr", NS), item.find(".//a:p/a:pPr", NS)
+        layout = ElementTree.tostring(paragraph, encoding="unicode") if paragraph is not None else None
+        if paragraph is not None:
+            # Paragraph default fonts differ cell by cell in hand-made grids (e.g. a stray
+            # 华文楷体); the run carries the real font, so the copied layout drops them.
+            paragraph = copy.deepcopy(paragraph)
+            for default in paragraph.findall("a:defRPr", NS):
+                for font in [*default.findall("a:latin", NS), *default.findall("a:ea", NS), *default.findall("a:cs", NS)]:
+                    default.remove(font)
+        boxes.append({"id": int(marker.get("id")), "kind": tag, "z": order,
+                      "x": int(offset.get("x")), "y": int(offset.get("y")),
+                      "cx": int(extent.get("cx")), "cy": int(extent.get("cy")),
+                      "text": "".join(t.text or "" for t in item.findall(".//a:t", NS)),
+                      "runs": len(item.findall(".//a:r", NS)),
+                      "style": ElementTree.tostring(style, encoding="unicode") if style is not None else None,
+                      "paragraph": ElementTree.tostring(paragraph, encoding="unicode") if paragraph is not None else None,
+                      "layout": layout})
+    return boxes
 
 
 def presentation_order(archive):
@@ -81,10 +119,10 @@ def uses_market(mapping):
 
 
 class Compiler:
-    def __init__(self, archive, data):
-        self.archive, self.data = archive, data
+    def __init__(self, archive, data, source, month, extras=None):
+        self.archive, self.data, self.source, self.extras = archive, data, source, extras or {}
         self.replacements, self.slots, self.source_issues, self.mapping_issues, self.charts, self.blank_charts = [], [], [], [], [], []
-        self.table_rows, self.context, self.series = {}, month_context(data["report_month"]), {}
+        self.table_rows, self.context, self.series = {}, month_context(month), {}
         self.page_order = presentation_order(archive)
 
     def problem(self, op, reason):
@@ -103,12 +141,12 @@ class Compiler:
             return None
 
     def rows(self, op):
-        source = op.get("source")
-        if source not in TABLE_SOURCES:
+        source, tables = op.get("source"), self.source["tables"]
+        if source not in tables:
             self.problem(op, f"未知数据源字段 {source}")
             return None
         if source not in self.table_rows:
-            rows, issues = TABLE_SOURCES[source](self.data)
+            rows, issues = tables[source](self.data, self.extras)
             self.table_rows[source] = rows
             self.source_issues.extend(issues)
         return self.table_rows[source]
@@ -168,10 +206,10 @@ class Compiler:
         highlight = op.get("highlight")
         if highlight:
             source = highlight.get("source")
-            if source and source not in HIGHLIGHT_SOURCES:
+            if source and source not in self.source["highlights"]:
                 self.problem(op, f"未知高亮数据 {source}")
             else:
-                keys = HIGHLIGHT_SOURCES[source](self.data) if source else set()
+                keys = self.source["highlights"][source](self.data, self.extras) if source else set()
                 column = int(highlight.get("keyColumn", 0))
                 self.replacements.append({"kind": "tableFills", "slide": op["slide"], "tableId": op["tableId"],
                                           "firstRow": header_row + 1, "color": highlight.get("color", "FAF3E3"),
@@ -299,22 +337,155 @@ class Compiler:
                             "blankAuxiliary": bool(op.get("blankAuxiliary"))})
 
 
-def compile_mapping(mapping, template, data, audit):
+    # Text-box layouts: tables drawn as separate text boxes, cards, and free regions.
+
+    def boxes(self, op):
+        xml = self.slide(op["slide"])
+        if xml is None:
+            self.problem(op, "幻灯片不存在")
+            return None
+        return {box["id"]: box for box in shape_boxes(xml)}
+
+    def fill_cells(self, op, boxes, grid):
+        """grid: rows of shape ids (None to skip). Data rows fill in order; spare rows are cleared."""
+        rows = self.rows(op)
+        if rows is None:
+            return
+        columns = op.get("columns") or list(range(len(grid[0]) if grid else 0))
+        if len(rows) > len(grid):
+            self.problem(op, f"版面只能放 {len(grid)} 行，{len(rows) - len(grid)} 行数据未填入")
+        reference = grid[0] if grid else []
+        for row_index, ids in enumerate(grid):
+            values = rows[row_index] if row_index < len(rows) else None
+            for position, shape_id in enumerate(ids):
+                if shape_id is None or shape_id not in boxes:
+                    if shape_id is not None:
+                        self.problem({**op, "shapeId": shape_id}, "文字对象不存在")
+                    continue
+                box, column = boxes[shape_id], columns[position] if position < len(columns) else None
+                value = "" if values is None or column is None or column >= len(values) else values[column]
+                if box["runs"] == 0:
+                    if value:
+                        self.problem({**op, "shapeId": shape_id}, "文字对象没有文字格式，无法填入")
+                    continue
+                if value != box["text"]:
+                    self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": shape_id,
+                                              "expectedText": box["text"], "value": value})
+                if not value and (values is None or column is None):
+                    self.slots.append({"slide": op["slide"], "objectId": shape_id, "type": "text"})
+                style_id = reference[position] if position < len(reference) else None
+                model = boxes.get(style_id, {})
+                if op.get("uniformStyle") and model.get("style") and \
+                        (box["style"], box["layout"]) != (model["style"], model["paragraph"]):
+                    self.replacements.append({"kind": "shapeRunStyle", "slide": op["slide"], "shapeId": shape_id,
+                                              "style": model["style"], "paragraph": model["paragraph"]})
+
+    def do_fillShapes(self, op):
+        boxes = self.boxes(op)
+        if boxes is not None:
+            self.fill_cells(op, boxes, op["cells"])
+
+    def do_fillGrid(self, op):
+        """Find a text-box table from its header boxes: each column is the boxes centred under its header."""
+        boxes = self.boxes(op)
+        if boxes is None:
+            return
+        headers = [boxes.get(shape_id) for shape_id in op["header"]]
+        if None in headers:
+            self.problem(op, "表头文字对象不存在")
+            return
+        tolerance = int(op.get("tolerance", 3)) * PX
+        bottom = op.get("bottom", 10 ** 9 // PX) * PX
+        columns = []
+        for header in headers:
+            centre = header["x"] + header["cx"] // 2
+            members = [box for box in boxes.values()
+                       if box["kind"] == "sp" and box["id"] not in op["header"] and box["y"] > header["y"]
+                       and box["y"] < bottom and abs(box["x"] + box["cx"] // 2 - centre) <= tolerance
+                       and box["cx"] <= header["cx"] * 2 and box["cy"] <= header["cy"] * 2]
+            columns.append(sorted(members, key=lambda box: box["y"]))
+        anchors, grid = columns[0], []
+        for anchor in anchors:
+            middle = anchor["y"] + anchor["cy"] // 2
+            row = []
+            for members in columns:
+                found = [box for box in members if abs(box["y"] + box["cy"] // 2 - middle) <= 6 * PX]
+                row.append(found[0]["id"] if len(found) == 1 else None)
+                if len(found) != 1:
+                    self.problem(op, f"第 {len(grid) + 1} 行有一列找不到唯一的文字对象")
+            grid.append(row)
+        if op.get("rows") and len(grid) != op["rows"]:
+            self.problem(op, f"找到 {len(grid)} 行，映射预期 {op['rows']} 行")
+        self.fill_cells(op, boxes, grid)
+
+    def do_replaceAll(self, op):
+        xml = self.slide(op["slide"])
+        runs = shape_runs(xml, op["shapeId"]) if xml is not None else None
+        value = self.text(op, op["value"])
+        if runs is None or value is None:
+            if runs is None:
+                self.problem(op, "文字对象不存在")
+            return
+        joined = len(re.findall(op["find"], "".join(runs)))
+        if not joined:
+            self.problem(op, f"未找到文字 {op['find']}")
+            return
+        if joined != sum(len(re.findall(op["find"], run)) for run in runs):
+            self.problem(op, f"文字 {op['find']} 跨越了不同格式，未替换")
+            return
+        values = [re.sub(op["find"], value, run) for run in runs]
+        self.replacements.append({"kind": "shapeRuns", "slide": op["slide"], "shapeId": op["shapeId"],
+                                  "expectedRuns": runs, "values": values})
+
+    def do_clearRegion(self, op):
+        """Empty every text box and picture fully inside a box (in px), except those kept."""
+        boxes = self.boxes(op)
+        if boxes is None:
+            return
+        left, top, right, bottom = (value * PX for value in op["box"])
+        keep = set(op.get("keep") or [])
+        found = 0
+        for box in sorted(boxes.values(), key=lambda item: item["z"]):
+            inside = left <= box["x"] and top <= box["y"] and box["x"] + box["cx"] <= right and box["y"] + box["cy"] <= bottom
+            if not inside or box["id"] in keep:
+                continue
+            if box["kind"] == "pic" and op.get("images", True):
+                found += 1
+                self.do_imageSlot({"op": "imageSlot", "slide": op["slide"], "pictureId": box["id"]})
+            elif box["kind"] == "sp" and op.get("texts", True) and box["text"].strip():
+                found += 1
+                self.do_clearText({"op": "clearText", "slide": op["slide"], "shapeId": box["id"]})
+        if not found:
+            self.problem(op, "区域内没有可清空的对象")
+
+
+def compile_mapping(mapping, template, data, extras=None):
     validate_mapping(mapping)
-    check_contract(data, audit)
+    extras = extras or {}
+    source_name = mapping.get("dataSource", "steam-monthly")
+    if source_name not in SOURCES:
+        raise ValueError(f"Unknown data source {source_name}")
+    source = SOURCES[source_name]
+    contract = source["contract"](data, extras)
     with zipfile.ZipFile(template) as archive:
         if archive.testzip() is not None:
             raise ValueError("Template PPTX ZIP damaged")
-        compiler = Compiler(archive, data)
-        if uses_market(mapping):
-            text, compiler.series = market_values(data)
+        compiler = Compiler(archive, data, source, contract["month"], extras)
+        market = source["market"] and uses_market(mapping)
+        if market:
+            text, compiler.series = source["market"](data)
             compiler.context.update(text)
+        if source["values"]:
+            text, issues = source["values"](data, extras)
+            compiler.context.update(text)
+            compiler.source_issues.extend(issues)
         for op in mapping["ops"]:
             getattr(compiler, "do_" + op["op"])(op)
-        if uses_market(mapping):
-            compiler.source_issues.extend(MARKET_ISSUES)
+        if market:
+            compiler.source_issues.extend(source["marketIssues"])
     return {"replacements": compiler.replacements, "slots": compiler.slots, "charts": compiler.charts, "blankCharts": compiler.blank_charts,
-            "sourceIssues": compiler.source_issues, "mappingIssues": compiler.mapping_issues}
+            "sourceIssues": compiler.source_issues, "mappingIssues": compiler.mapping_issues, "contract": contract,
+            "warning": source["warning"], "dataSource": source_name}
 
 
 def check_mapping(mapping, template):
@@ -338,7 +509,13 @@ def check_mapping(mapping, template):
                 problems.append({"op": op["op"], "slide": op["slide"], "reason": "幻灯片不存在"})
                 continue
             xml = archive.read(name)
-            if "shapeId" in op and op["shapeId"] not in shape_texts(xml):
+            texts = shape_texts(xml)
+            grid_ids = op["header"] if op["op"] == "fillGrid" else []
+            grid_ids += [item for row in op.get("cells", []) for item in row if item is not None] if op["op"] == "fillShapes" else []
+            for shape_id in grid_ids:
+                if shape_id not in texts:
+                    problems.append({"op": op["op"], "slide": op["slide"], "object": shape_id, "reason": "文字对象不存在"})
+            if "shapeId" in op and op["shapeId"] not in texts:
                 problems.append({"op": op["op"], "slide": op["slide"], "object": op["shapeId"], "reason": "文字对象不存在"})
             if "pictureId" in op and op["pictureId"] not in object_ids(xml, "pic", "nvPicPr"):
                 problems.append({"op": op["op"], "slide": op["slide"], "object": op["pictureId"], "reason": "图片对象不存在"})

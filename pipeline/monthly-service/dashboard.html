@@ -63,7 +63,7 @@
   <div id="templateReadiness" class="info-strip" role="status" hidden></div><details class="rule-preview"><summary>查看所选模板产出规则</summary><div id="selectedTemplateRules"></div></details>
   <label class="drop-zone" id="dataDrop" for="data"><span class="upload-symbol">↑</span><strong>选择 SteamAuto 数据包</strong><span>点击选择或将 JSON 文件拖到这里</span><input id="data" type="file" accept=".json,application/json"><small id="dataInfo">尚未选择文件</small></label>
   <p id="generationHelp" class="muted">数据包月份须与目标月份一致。按所选模板创建独立、可编辑的新稿。</p>
-  <label id="nativeAuditLabel" hidden>时间窗口审计 JSON<input id="nativeAudit" type="file" accept=".json,application/json"><small>仅已审核的 Steam 原始 PPTX 模板支持；须与目标月数据包和快照一致。</small></label>
+  <label id="nativeAuditLabel" hidden><span id="nativeAuditTitle">时间窗口审计 JSON</span><input id="nativeAudit" type="file" accept=".json,application/json"><small id="nativeAuditHint">仅已审核的 Steam 原始 PPTX 模板支持；须与目标月数据包和快照一致。</small></label>
   <p id="generateError" class="form-error" role="alert"></p>
   <div class="demo-box"><div><strong>先体验一下</strong><p>使用内置的 2026 年 8 月数据与所选模板，不在线取数。</p></div><button class="button" id="demo">生成8月示例</button></div>
   </div><div class="modal-foot"><span>原有月报保持不变</span><button class="button" id="nativeGenerate" hidden>生成可编辑 PPTX 草稿</button><button class="button primary" id="generate">生成月报草稿 →</button></div></dialog>
