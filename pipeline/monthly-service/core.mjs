@@ -45,6 +45,7 @@ export const tools = [
   tool('restore_deleted_project', '把回收站中的月报草稿恢复到项目列表', { projectId: idSchema }, ['projectId']),
   tool('empty_recycle_bin', '永久清空当前回收站；要求完整项目ID清单和明确确认，先创建完整备份，删除独有的历史与素材', { expectedProjectIds:{type:'array',items:idSchema},confirmation:{type:'string',const:'永久清空'} }, ['expectedProjectIds','confirmation']),
   tool('generate_monthly_report', '按所选已发布模板创建独立月报，记录模板版本；数据仍来自目标月数据包', { month: idSchema, templateId:idSchema,templateRevision:{type:'integer',minimum:1}, data: { type: 'object' }, full: { type: 'boolean' }, profile: { type:'string', enum:['data-supported','finished-eight','full'] }, selection: { type:'object', properties:{ movement_appid:{type:'integer'}, indie_appids:{type:'array',maxItems:2,items:{type:'integer'}} }, additionalProperties:false } }, ['month']),
+  tool('generate_native_pptx', '仅对已审核的原始 Steam PPTX 模板，以目标月数据和匹配的时间窗口审计生成可编辑 PPTX 草稿及缺失清单', {month:idSchema,templateId:idSchema,data:{type:'object'},audit:{type:'object'}}, ['month','templateId','data','audit']),
   tool('get_task', '读取生成任务状态和结果', { taskId: idSchema }, ['taskId'], true),
   tool('get_project', '读取项目；默认只返回页面和对象摘要，指定 pageIndex 或 objectIds 获取内容', { projectId: idSchema, pageIndex: { type: 'integer', minimum: 0 }, objectIds: { type: 'array', items: idSchema } }, ['projectId'], true),
   tool('propose_object_patch', '按对象 ID 提交修改方案，暂不修改项目。处理标记需求时传 requestId；content 为对象内部 HTML，style 为 CSS 属性', { projectId: idSchema, baseRevision: { type: 'integer', minimum: 1 }, requestId: idSchema, requirement: { type: 'string' }, changes: { type: 'array', minItems: 1, items: { type: 'object', properties: { id: idSchema, content: { type: 'string' }, style: { type: 'object', additionalProperties: { type: ['string', 'number'] } }, name: { type: 'string' } }, required: ['id'], additionalProperties: false } } }, ['projectId', 'baseRevision', 'changes']),
@@ -271,6 +272,37 @@ export function createCore(config) {
         Object.assign(db.tasks[id], { status: 'succeeded', projectId, links: links(projectId), finishedAt: new Date().toISOString() });
       } catch (error) { Object.assign(db.tasks[id], { status: 'failed', error: error.message }); }
       persist();
+    });
+    return db.tasks[id];
+  }
+  function generateNativePptx(args){
+    const month=args.month,template=db.templates[args.templateId];
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||''))throw new ServiceError('目标月份无效');
+    if(!template||!template.projectId||template.origin!=='pptx'||template.revision<1)throw new ServiceError('请选择已发布的PPTX模板',400);
+    const expected='9e5577353e1f1721383a6c50bee63a5e9dbbee5dd3cb6e4d441655a5bb4621cf';
+    if(template.sourcePptx?.sha256!==expected)throw new ServiceError('此原始PPTX尚无经过审核的原生对象映射，不能生成原生草稿',400);
+    if(template.revision!==1||project(template.projectId).revision!==1)throw new ServiceError('该模板编辑稿已变动，原生对象映射尚未随版式重新审核',409);
+    if(!args.data||!args.audit||args.data.report_month!==month||args.audit.month!==month||!args.data.snapshot_id||args.audit.snapshot_id!==args.data.snapshot_id||!Array.isArray(args.audit.contract_errors)||args.audit.contract_errors.length)throw new ServiceError('目标月数据包与时间窗口审计不匹配，或审计未通过',400);
+    const source=path.join(dir,'template-pptx',expected+'.pptx');
+    if(!fs.existsSync(source)||createHash('sha256').update(fs.readFileSync(source)).digest('hex')!==expected)throw new ServiceError('原始PPTX文件缺失或校验失败',409);
+    const id=randomUUID(),taskDir=path.join(dir,'tasks',id),output=path.join(taskDir,'draft.pptx');
+    fs.mkdirSync(taskDir,{recursive:true});
+    fs.writeFileSync(path.join(taskDir,'data.json'),JSON.stringify(args.data));
+    fs.writeFileSync(path.join(taskDir,'audit.json'),JSON.stringify(args.audit));
+    db.tasks[id]={id,kind:'native-pptx',status:'running',month,template:{id:template.id,title:template.title,revision:template.revision},startedAt:new Date().toISOString()};persist();
+    const script=path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental','steam_native_draft.py');
+    const child=spawn(config.pythonExecutable||(process.platform==='win32'?'python':'python3'),['-B',script,source,path.join(taskDir,'data.json'),path.join(taskDir,'audit.json'),output],{stdio:['ignore','pipe','pipe']});
+    let stderr='';child.stdout.resume();child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});
+    let settled=false;const fail=message=>{if(settled)return;settled=true;Object.assign(db.tasks[id],{status:'failed',error:message,finishedAt:new Date().toISOString()});persist();};
+    child.on('error',error=>fail(error.message));
+    child.on('close',code=>{
+      if(settled)return;
+      try{
+        if(code!==0)throw Error(stderr||`PPTX生成进程退出：${code}`);
+        const issuesPath=path.join(taskDir,'draft.issues.json'),issues=JSON.parse(fs.readFileSync(issuesPath,'utf8'));
+        if(!fs.existsSync(output)||issues.reportMonth!==month||issues.dataSnapshotId!==args.data.snapshot_id||issues.oldMonthText?.length)throw Error('生成结果校验未通过');
+        Object.assign(db.tasks[id],{status:'succeeded',resultStatus:issues.status,sourceIssues:issues.sourceIssues?.length||0,manualSlots:issues.manualSlots?.length||0,pptx:`${config.publicUrl}/api/tasks/${id}/draft.pptx`,issues:`${config.publicUrl}/api/tasks/${id}/issues.json`,finishedAt:new Date().toISOString()});persist();
+      }catch(error){fail(error.message);}
     });
     return db.tasks[id];
   }
@@ -651,6 +683,7 @@ export function createCore(config) {
         return {projectId:current.id,revision:next.revision,restoredFrom:args.targetRevision,...links(current.id)};
       }
       case 'generate_monthly_report': return generate(args);
+      case 'generate_native_pptx': return generateNativePptx(args);
       case 'get_task': if (!Object.hasOwn(db.tasks, args.taskId)) throw new ServiceError('Task not found', 404); return db.tasks[args.taskId];
       case 'get_project': {
         const value = project(args.projectId);

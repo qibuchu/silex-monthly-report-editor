@@ -107,6 +107,14 @@ export function createService(config) {
       }
       if (url.pathname === '/api/import' && req.method === 'POST') return json(res, 200, core.importProject(await body(req)));
       if (url.pathname === '/api/templates/import-pptx' && req.method === 'POST') return json(res, 200, core.importPptxTemplate(await body(req)));
+      const nativeArtifact=url.pathname.match(/^\/api\/tasks\/([a-f0-9-]+)\/(draft\.pptx|issues\.json)$/);
+      if(nativeArtifact&&req.method==='GET'){
+        const [,id,filename]=nativeArtifact,task=core.db.tasks[id];
+        if(!task||task.kind!=='native-pptx'||task.status!=='succeeded')throw Object.assign(Error('原生PPTX草稿尚未生成'),{status:404});
+        const file=path.join(config.dataDir,'tasks',id,filename==='draft.pptx'?filename:'draft.issues.json');
+        res.writeHead(200,{'Content-Type':filename.endsWith('.pptx')?'application/vnd.openxmlformats-officedocument.presentationml.presentation':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="steam-${task.month}-${filename}"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
+        return res.end(fs.readFileSync(file));
+      }
       const templatePptx=url.pathname.match(/^\/api\/templates\/([a-f0-9-]+)\/source\.pptx$/);
       if(templatePptx&&req.method==='POST'){
         const revision=Number(req.headers['x-project-revision']);

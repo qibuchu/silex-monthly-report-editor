@@ -13,6 +13,7 @@ target="$base/releases/$release_id"
 [[ -f $archive && ! -e $target ]] || { echo '发布包不存在或目标版本已存在' >&2; exit 2; }
 previous=$(readlink current)
 [[ $previous =~ ^releases/20[0-9]{6}-[0-9]{2}$ ]] || { echo '当前版本路径异常' >&2; exit 2; }
+cmp -s compose.yaml current/deployment/steam-monthly/compose.yaml || { echo '服务器Compose与当前发布源码不同，停止自动替换' >&2; exit 3; }
 
 mkdir "$target"
 tar -xzf "$archive" -C "$target"
@@ -24,19 +25,35 @@ for rel in pipeline/monthly-service/node_modules work/silex-poc/node_modules; do
   cp -a "current/$rel" "$target/$rel"
 done
 
+# Build the isolated runtime before stopping the live service. Native PPTX
+# generation uses Python's standard library; no Python package is installed.
+sudo docker build --pull=false -t steam-monthly-runtime:python3 "$target/deployment/steam-monthly"
+sudo docker run --rm steam-monthly-runtime:python3 python3 --version
+
 # A recoverable project backup precedes every code switch; state is never copied over.
 sudo docker exec steam-monthly-app node -e 'import("/app/pipeline/monthly-service/maintenance.mjs").then(m=>console.log(m.backupStore("/state/data","/state/backups")))'
+compose_backup="$base/compose.yaml.rollback-$release_id"
+cp compose.yaml "$compose_backup"
+rollback_required=true
+rollback(){
+  if [[ $rollback_required != true ]]; then return; fi
+  trap - ERR
+  sudo docker compose -p steam-monthly -f compose.yaml stop app || true
+  sudo rm -f -- state/data/.service-lock.json
+  cp "$compose_backup" compose.yaml
+  ln -sfn "$previous" current-next; mv -Tf current-next current
+  sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app
+  echo '新版本启动或健康检查失败，已回滚' >&2
+}
+trap rollback ERR
 sudo docker compose -p steam-monthly -f compose.yaml stop app
 # The container was stopped before the new process starts; its PID lock is now stale.
 sudo rm -f -- state/data/.service-lock.json
+cp "$target/deployment/steam-monthly/compose.yaml" compose.yaml
 ln -sfn "releases/$release_id" current-next
 mv -Tf current-next current
 if ! sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app; then
-  sudo docker compose -p steam-monthly -f compose.yaml stop app || true
-  sudo rm -f -- state/data/.service-lock.json
-  ln -sfn "$previous" current-next; mv -Tf current-next current
-  sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app
-  echo '新版本启动失败，已回滚' >&2; exit 1
+  rollback; exit 1
 fi
 healthy=false
 for _ in $(seq 1 24); do
@@ -44,12 +61,11 @@ for _ in $(seq 1 24); do
   sleep 5
 done
 if [[ $healthy != true ]]; then
-  sudo docker compose -p steam-monthly -f compose.yaml stop app
-  sudo rm -f -- state/data/.service-lock.json
-  ln -sfn "$previous" current-next; mv -Tf current-next current
-  sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app
-  echo '健康检查未通过，已回滚' >&2; exit 1
+  rollback; exit 1
 fi
+rollback_required=false
+trap - ERR
+rm -f -- "$compose_backup"
 sudo docker exec steam-monthly-app node -e 'import("/app/pipeline/monthly-service/maintenance.mjs").then(m=>console.log(JSON.stringify({prunedBackups:m.pruneBackups("/state/backups",7)})))'
 sudo docker run --rm -v "$base:/srv" node:24-alpine \
   node /srv/current/deployment/steam-monthly/prune-releases.mjs /srv "$previous"

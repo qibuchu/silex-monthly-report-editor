@@ -1,6 +1,6 @@
 services:
   app:
-    image: node:24-alpine
+    image: steam-monthly-runtime:python3
     container_name: steam-monthly-app
     user: "1000:1000"
     init: true

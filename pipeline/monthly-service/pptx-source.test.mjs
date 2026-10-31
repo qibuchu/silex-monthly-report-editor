@@ -35,6 +35,8 @@ test('uploaded PPTX source is immutable, revision checked, and included in resto
     assert.equal(saved.sourcePptx.sha256,sha256);
     assert.deepEqual(fs.readFileSync(path.join(dataDir,'template-pptx',sha256+'.pptx')),bytes);
     assert.equal(core.putTemplatePptx(created.templateId,bytes,1).sourcePptx.sha256,sha256);
+    core.db.templates[created.templateId].revision=1;
+    assert.rejects(core.call('generate_native_pptx',{month:'2026-08',templateId:created.templateId,data:{report_month:'2026-08',snapshot_id:'sample'},audit:{month:'2026-08',snapshot_id:'sample',contract_errors:[]}}),/尚无经过审核的原生对象映射/);
     assert.throws(()=>core.putTemplatePptx(created.templateId,Buffer.concat([bytes,Buffer.from('changed')]),1),e=>e.status===400);
     const backup=backupStore(dataDir,path.join(root,'backups'));
     assert.ok(backup.files>=2);
