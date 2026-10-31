@@ -772,10 +772,19 @@ export function createCore(config) {
     validate(input.project);
     if(input.project.deck.notes?.template_origin!=='pptx'||!input.project.deck.notes?.pptx_imports?.length)throw new ServiceError('缺少PPTX导入记录');
     const projectId=randomUUID(),id=newTemplateId(),title=input.title.trim();
-    // Deduplicate embedded images once, retaining editable markup and an isolated draft.
-    let serialized=JSON.stringify(input.project);
-    for(const data of new Set(serialized.match(/data:image\/[a-z+]+;base64,[A-Za-z\d+/=]+/g)||[]))serialized=serialized.split(data).join(assets.put(projectId,data).src);
-    const value=JSON.parse(serialized);
+    // The project can exceed 100 MB when PPT pictures are embedded as data URIs.
+    // Replace media in each leaf without serializing and repeatedly copying the
+    // entire deck; the request object is private to this import operation.
+    const value=input.project;
+    const media=/data:image\/[a-z+]+;base64,[A-Za-z\d+/=]+/g;
+    const storeMedia=node=>{
+      if(!node||typeof node!=='object')return;
+      for(const [key,item] of Object.entries(node)){
+        if(typeof item==='string'&&item.includes('data:image/'))node[key]=item.replace(media,data=>assets.put(projectId,data).src);
+        else if(item&&typeof item==='object')storeMedia(item);
+      }
+    };
+    storeMedia(value);
     const recognition=analyzePptxTemplate(value);
     const dataSourceId=input.dataSourceId||(recognition.dataSource?.domain==='微信小游戏'?'minigame-monthly':'steamauto');
     if(!dataSource(dataSourceId))throw new ServiceError('请选择已登记的数据源，或先在数据源库中添加',400);

@@ -37,3 +37,22 @@ test('completed backups retain the latest seven and a failed backup leaves no pa
   assert.ok(fs.existsSync(latest));
  }finally{if(!path.resolve(root).startsWith(here+path.sep))throw Error('Unsafe cleanup');fs.rmSync(root,{recursive:true,force:true});}
 });
+test('unchanged assets share backup storage while changed assets keep older snapshots intact',()=>{
+ const root=fs.mkdtempSync(path.join(here,'.maintenance-dedup-test-'));
+ try{
+  const data=path.join(root,'data'),backups=path.join(root,'backups'),assets=path.join(data,'assets');fs.mkdirSync(assets,{recursive:true});
+  fs.writeFileSync(path.join(data,'store.json'),JSON.stringify({projects:{},tasks:{}}));
+  fs.writeFileSync(path.join(assets,'cover.png'),'first');
+  const first=backupStore(data,backups).directory,second=backupStore(data,backups).directory;
+  const prior=path.join(first,'assets','cover.png'),reused=path.join(second,'assets','cover.png');
+  assert.equal(fs.statSync(prior).ino,fs.statSync(reused).ino);
+  fs.writeFileSync(path.join(assets,'cover.png'),'second');
+  const third=backupStore(data,backups).directory;
+  assert.notEqual(fs.statSync(prior).ino,fs.statSync(path.join(third,'assets','cover.png')).ino);
+  assert.equal(fs.readFileSync(prior,'utf8'),'first');
+  assert.equal(fs.readFileSync(path.join(third,'assets','cover.png'),'utf8'),'second');
+  restoreStore(first,path.join(root,'restore-first'));restoreStore(third,path.join(root,'restore-third'));
+  assert.equal(fs.readFileSync(path.join(root,'restore-first','assets','cover.png'),'utf8'),'first');
+  assert.equal(fs.readFileSync(path.join(root,'restore-third','assets','cover.png'),'utf8'),'second');
+ }finally{if(!path.resolve(root).startsWith(here+path.sep))throw Error('Unsafe cleanup');fs.rmSync(root,{recursive:true,force:true});}
+});
