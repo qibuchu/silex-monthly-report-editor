@@ -1,7 +1,7 @@
 import unittest
 from xml.etree import ElementTree
 
-from pptx_preserve_patch import patch_cell, patch_shape_fragment, patch_table, table_values
+from pptx_preserve_patch import patch_cell, patch_shape_fragment, patch_table, table_values, trim_table_rows
 
 
 XML = (b'<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
@@ -65,6 +65,17 @@ class PreservePatchTests(unittest.TestCase):
         self.assertIn(b'<a:r><a:t>8</a:t></a:r><a:r><a:t>month</a:t></a:r>', result)
         with self.assertRaisesRegex(ValueError, 'crosses styled text runs'):
             patch_shape_fragment(source, 4, '7month', '7month', 'Aug')
+
+    def test_trim_native_table_updates_frame_height_and_preserves_cells(self):
+        source = TABLE_XML.replace(b'<p:graphicFrame>',
+                                   b'<p:graphicFrame><p:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="90"/></p:xfrm>')
+        source = source.replace(b'<a:tr>', b'<a:tr h="30">')
+        result = trim_table_rows(source, 9, 2)
+        self.assertEqual(table_values(result, 9), [['header'], ['CS2']])
+        self.assertIn(b'cy="60"', result)
+        self.assertIn(b'<p:sp><a:t>unchanged</a:t></p:sp>', result)
+        with self.assertRaisesRegex(ValueError, 'Invalid table row count'):
+            trim_table_rows(source, 9, 4)
 
 
 if __name__ == '__main__':

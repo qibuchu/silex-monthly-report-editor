@@ -98,6 +98,34 @@ def patch_table(slide_xml: bytes, table_id: int, header_row: int, expected_heade
     return slide_xml
 
 
+def trim_table_rows(slide_xml: bytes, table_id: int, keep_rows: int):
+    """Remove unused native table rows and set the frame height to their summed heights."""
+    frames = list(re.finditer(rb"<p:graphicFrame\b[^>]*>.*?</p:graphicFrame>", slide_xml, re.DOTALL))
+    matches = [match for match in frames if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(table_id).encode() + rb'"', match.group())]
+    if len(matches) != 1 or b"<a:tbl>" not in matches[0].group():
+        raise ValueError("Native table missing or ambiguous")
+    frame = matches[0]
+    rows = list(re.finditer(rb"<a:tr\b[^>]*>.*?</a:tr>", frame.group(), re.DOTALL))
+    if keep_rows < 2 or keep_rows > len(rows):
+        raise ValueError("Invalid table row count")
+    heights = []
+    for row in rows[:keep_rows]:
+        match = re.search(rb'<a:tr\b[^>]*\bh="(\d+)"', row.group())
+        if not match:
+            raise ValueError("Table row has no height")
+        heights.append(int(match.group(1)))
+    changed = frame.group()
+    for row in reversed(rows[keep_rows:]):
+        changed = changed[:row.start()] + changed[row.end():]
+    xfrm = re.search(rb'<p:xfrm>.*?</p:xfrm>', changed, re.DOTALL)
+    if not xfrm or not re.search(rb'<a:ext\b[^>]*\bcy="\d+"', xfrm.group()):
+        raise ValueError("Table frame has no height")
+    new_xfrm = re.sub(rb'(<a:ext\b[^>]*\bcy=")\d+("[^>]*/>)',
+                      lambda match: match.group(1) + str(sum(heights)).encode() + match.group(2), xfrm.group(), count=1)
+    changed = changed[:xfrm.start()] + new_xfrm + changed[xfrm.end():]
+    return slide_xml[:frame.start()] + changed + slide_xml[frame.end():]
+
+
 def patch_shape_fragment(slide_xml: bytes, shape_id: int, expected_text: str, old_fragment: str, new_fragment: str):
     shapes = list(re.finditer(rb"<p:sp\b[^>]*>.*?</p:sp>", slide_xml, re.DOTALL))
     matches = [match for match in shapes if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(shape_id).encode() + rb'"', match.group())]
@@ -151,7 +179,7 @@ def main():
     if not isinstance(replacements, list) or not replacements:
         raise ValueError("Spec must be a nonempty array")
     with zipfile.ZipFile(args.source) as source:
-        if any(item.get("kind") == "table" for item in replacements):
+        if any(item.get("kind") in ("table", "trimTable") for item in replacements):
             actual = hashlib.sha256(args.source.read_bytes()).hexdigest()
             if not isinstance(spec, dict) or spec.get("sourceSha256") != actual:
                 raise ValueError("PPTX source hash changed; review table mapping before filling")
@@ -166,6 +194,8 @@ def main():
                 changed[name] = patch_table(data, int(item["tableId"]), int(item["headerRow"]),
                                             item["expectedHeader"], item["rows"], item.get("firstDataRow"),
                                             item.get("newHeader"))
+            elif item.get("kind") == "trimTable":
+                changed[name] = trim_table_rows(data, int(item["tableId"]), int(item["keepRows"]))
             elif item.get("kind") == "shapeText":
                 changed[name] = patch_shape_fragment(data, int(item["shapeId"]), item["expectedText"],
                                                      item["oldFragment"], item["newFragment"])
