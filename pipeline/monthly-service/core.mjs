@@ -46,6 +46,7 @@ export const tools = [
   tool('empty_recycle_bin', '永久清空当前回收站；要求完整项目ID清单和明确确认，先创建完整备份，删除独有的历史与素材', { expectedProjectIds:{type:'array',items:idSchema},confirmation:{type:'string',const:'永久清空'} }, ['expectedProjectIds','confirmation']),
   tool('generate_monthly_report', '按所选已发布模板创建独立月报，记录模板版本；数据仍来自目标月数据包', { month: idSchema, templateId:idSchema,templateRevision:{type:'integer',minimum:1}, data: { type: 'object' }, full: { type: 'boolean' }, profile: { type:'string', enum:['data-supported','finished-eight','full'] }, selection: { type:'object', properties:{ movement_appid:{type:'integer'}, indie_appids:{type:'array',maxItems:2,items:{type:'integer'}} }, additionalProperties:false } }, ['month']),
   tool('generate_native_pptx', '仅对已审核的原始 Steam PPTX 模板，以目标月数据和匹配的时间窗口审计生成可编辑 PPTX 草稿及缺失清单', {month:idSchema,templateId:idSchema,data:{type:'object'},audit:{type:'object'}}, ['month','templateId','data','audit']),
+  tool('list_native_drafts', '列出已生成的原生 PPTX 草稿及其问题清单下载链接', {}, [], true),
   tool('get_task', '读取生成任务状态和结果', { taskId: idSchema }, ['taskId'], true),
   tool('get_project', '读取项目；默认只返回页面和对象摘要，指定 pageIndex 或 objectIds 获取内容', { projectId: idSchema, pageIndex: { type: 'integer', minimum: 0 }, objectIds: { type: 'array', items: idSchema } }, ['projectId'], true),
   tool('propose_object_patch', '按对象 ID 提交修改方案，暂不修改项目。处理标记需求时传 requestId；content 为对象内部 HTML，style 为 CSS 属性', { projectId: idSchema, baseRevision: { type: 'integer', minimum: 1 }, requestId: idSchema, requirement: { type: 'string' }, changes: { type: 'array', minItems: 1, items: { type: 'object', properties: { id: idSchema, content: { type: 'string' }, style: { type: 'object', additionalProperties: { type: ['string', 'number'] } }, name: { type: 'string' } }, required: ['id'], additionalProperties: false } } }, ['projectId', 'baseRevision', 'changes']),
@@ -684,6 +685,7 @@ export function createCore(config) {
       }
       case 'generate_monthly_report': return generate(args);
       case 'generate_native_pptx': return generateNativePptx(args);
+      case 'list_native_drafts': return Object.values(db.tasks).filter(task=>task.kind==='native-pptx').sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt))).map(({id,kind,status,month,template,startedAt,finishedAt,resultStatus,sourceIssues,manualSlots,pptx,issues,error})=>({id,kind,status,month,template,startedAt,finishedAt,resultStatus,sourceIssues,manualSlots,pptx,issues,error}));
       case 'get_task': if (!Object.hasOwn(db.tasks, args.taskId)) throw new ServiceError('Task not found', 404); return db.tasks[args.taskId];
       case 'get_project': {
         const value = project(args.projectId);

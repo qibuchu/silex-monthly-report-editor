@@ -23,7 +23,7 @@ function smallPptx(){
 }
 const project={format:'steam-grapesjs-v2',deck:{css:'',notes:{template_origin:'pptx',pptx_imports:[{pages:[]}]},pages:[{name:'封面',width:1280,height:720,objects:[{attributes:{'data-object-id':'title','data-kind':'text'},style:{left:'0px',top:'0px'},content:'<p>模板</p>'}]}]}};
 
-test('uploaded PPTX source is immutable, revision checked, and included in restore',()=>{
+test('uploaded PPTX source is immutable, revision checked, and included in restore',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-pptx-source-'));
   try{
     const dataDir=path.join(root,'data'),core=createCore({dataDir,publicUrl:'http://127.0.0.1:4320'});
@@ -36,7 +36,9 @@ test('uploaded PPTX source is immutable, revision checked, and included in resto
     assert.deepEqual(fs.readFileSync(path.join(dataDir,'template-pptx',sha256+'.pptx')),bytes);
     assert.equal(core.putTemplatePptx(created.templateId,bytes,1).sourcePptx.sha256,sha256);
     core.db.templates[created.templateId].revision=1;
-    assert.rejects(core.call('generate_native_pptx',{month:'2026-08',templateId:created.templateId,data:{report_month:'2026-08',snapshot_id:'sample'},audit:{month:'2026-08',snapshot_id:'sample',contract_errors:[]}}),/尚无经过审核的原生对象映射/);
+    await assert.rejects(core.call('generate_native_pptx',{month:'2026-08',templateId:created.templateId,data:{report_month:'2026-08',snapshot_id:'sample'},audit:{month:'2026-08',snapshot_id:'sample',contract_errors:[]}}),/尚无经过审核的原生对象映射/);
+    core.db.tasks.example={id:'example',kind:'native-pptx',status:'succeeded',month:'2026-08',startedAt:'2026-10-31T00:00:00Z',pptx:'http://127.0.0.1:4320/api/tasks/example/draft.pptx',issues:'http://127.0.0.1:4320/api/tasks/example/issues.json',internalPath:'must-not-leak'};
+    const drafts=await core.call('list_native_drafts');assert.equal(drafts.length,1);assert.equal(drafts[0].pptx,core.db.tasks.example.pptx);assert.ok(!Object.hasOwn(drafts[0],'internalPath'));
     assert.throws(()=>core.putTemplatePptx(created.templateId,Buffer.concat([bytes,Buffer.from('changed')]),1),e=>e.status===400);
     const backup=backupStore(dataDir,path.join(root,'backups'));
     assert.ok(backup.files>=2);
