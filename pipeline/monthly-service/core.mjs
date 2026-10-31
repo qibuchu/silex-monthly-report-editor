@@ -19,6 +19,21 @@ import {validateVisualRules,fillVisualTemplate,recognitionClass,pendingVisualRev
 const require = createRequire(import.meta.url);
 
 export class ServiceError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
+function isPptxArchive(bytes){
+  if(!Buffer.isBuffer(bytes)||bytes.length<22||bytes.readUInt32LE(0)!==0x04034b50)return false;
+  let end=-1;for(let p=bytes.length-22;p>=Math.max(0,bytes.length-65557);p--)if(bytes.readUInt32LE(p)===0x06054b50&&p+22+bytes.readUInt16LE(p+20)===bytes.length){end=p;break;}
+  if(end<0)return false;
+  const count=bytes.readUInt16LE(end+10),size=bytes.readUInt32LE(end+12),offset=bytes.readUInt32LE(end+16);
+  if(!count||offset+size>end)return false;
+  let cursor=offset;const found=new Set();
+  for(let n=0;n<count;n++){
+    if(cursor+46>end||bytes.readUInt32LE(cursor)!==0x02014b50)return false;
+    const nameLength=bytes.readUInt16LE(cursor+28),extraLength=bytes.readUInt16LE(cursor+30),commentLength=bytes.readUInt16LE(cursor+32),next=cursor+46+nameLength+extraLength+commentLength;
+    if(next>end)return false;
+    found.add(bytes.toString('utf8',cursor+46,cursor+46+nameLength));cursor=next;
+  }
+  return cursor===offset+size&&found.has('[Content_Types].xml')&&found.has('ppt/presentation.xml');
+}
 const idSchema = { type: 'string', minLength: 1 };
 function tool(name, description, properties, required = [], readOnly = false) {
   return { name, description, inputSchema: { type: 'object', properties, required, additionalProperties: false }, annotations: { readOnlyHint: readOnly, destructiveHint: !readOnly, openWorldHint: false } };
@@ -734,6 +749,20 @@ export function createCore(config) {
     db.templates[id]={id,title,profile:'full',revision:0,projectId,builtin:false,origin:'pptx',rules,dataSourceId,dataSourceRevision:dataSource(dataSourceId).revision};
     db.templateAi[id]={revision:1,projectRevision:1,mode:aiMode,tasks:createTemplateAiTasks(id,value,aiMode,dataSource(dataSourceId))};persist();
     return {templateId:id,projectId,revision:0,editor:links(projectId).editor,preview:links(projectId).preview,pages:value.deck.pages.length,recognition,ai:aiSummary(id)};
+  }, putTemplatePptx(id, bytes, expectedProjectRevision) {
+    const template=db.templates[id];
+    if(!template||template.origin!=='pptx'||!template.projectId)throw new ServiceError('PPT模板不存在',404);
+    const draft=project(template.projectId);
+    assertEditorsSaved(draft.id);
+    if(draft.revision!==expectedProjectRevision)throw new ServiceError('模板编辑稿已变化，请刷新后重试',409);
+    if(!Buffer.isBuffer(bytes)||bytes.length>100*1024*1024||!isPptxArchive(bytes))throw new ServiceError('请选择100MB以内的有效PPTX文件',400);
+    const sha256=createHash('sha256').update(bytes).digest('hex');
+    if(template.sourcePptx&&template.sourcePptx.sha256!==sha256)throw new ServiceError('已保存的原始PPTX不同，不能直接覆盖',409);
+    const folder=path.join(dir,'template-pptx');fs.mkdirSync(folder,{recursive:true});
+    const file=path.join(folder,sha256+'.pptx');
+    if(!fs.existsSync(file)){const temp=file+'.'+randomUUID()+'.tmp';try{fs.writeFileSync(temp,bytes,{flag:'wx'});fs.renameSync(temp,file);}finally{if(fs.existsSync(temp))fs.unlinkSync(temp);}}
+    template.sourcePptx={sha256,bytes:bytes.length,storedAt:new Date().toISOString()};persist();
+    return {templateId:id,sourcePptx:template.sourcePptx};
   }, importProject(input) {
     const id = randomUUID();
     const value = assets.unpack(id,input?.project || input,input?.assets);

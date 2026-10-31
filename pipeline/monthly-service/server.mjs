@@ -49,6 +49,7 @@ export function createService(config) {
     res.end('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>草稿已移入回收站</title><style>body{font-family:system-ui,"Microsoft YaHei",sans-serif;background:#f7f5f1;color:#133e66;max-width:680px;margin:15vh auto;padding:28px}a{color:#1a6daa}</style><h1>这份草稿已移入回收站</h1><p>内容和历史版本仍保留。请到月报工作台的回收站恢复后再预览或编辑。</p><a href="/#recycle">打开回收站 →</a></html>');
   };
   const body = async req => { let size = 0; const chunks = []; for await (const c of req) { size += c.length; if (size > 180 * 1024 * 1024) throw Object.assign(Error('项目请求超过180MB，请保留页面并检查重复的内嵌字体或素材。'), {status:413}); chunks.push(c); } return chunks.length ? JSON.parse(Buffer.concat(chunks)) : {}; };
+  const pptxBody = async req => { let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>100*1024*1024)throw Object.assign(Error('PPTX文件不能超过100MB'),{status:413});chunks.push(chunk);}return Buffer.concat(chunks);};
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, config.publicUrl);
@@ -106,6 +107,12 @@ export function createService(config) {
       }
       if (url.pathname === '/api/import' && req.method === 'POST') return json(res, 200, core.importProject(await body(req)));
       if (url.pathname === '/api/templates/import-pptx' && req.method === 'POST') return json(res, 200, core.importPptxTemplate(await body(req)));
+      const templatePptx=url.pathname.match(/^\/api\/templates\/([a-f0-9-]+)\/source\.pptx$/);
+      if(templatePptx&&req.method==='POST'){
+        const revision=Number(req.headers['x-project-revision']);
+        if(!Number.isInteger(revision)||revision<1)throw Object.assign(Error('缺少模板编辑稿版本'),{status:400});
+        return json(res,200,core.putTemplatePptx(templatePptx[1],await pptxBody(req),revision));
+      }
       const asset = url.pathname.match(/^\/api\/projects\/([a-f0-9-]+)\/assets(?:\/([^/]+))?$/);
       if(asset){
         if(!asset[2] && req.method==='POST')return json(res,200,core.putAsset(asset[1],await body(req)));

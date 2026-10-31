@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test test.mjs chat.test.mjs assets.test.mjs operations.test.mjs maintenance.test.mjs templates.test.mjs recognition.test.mjs template-sources.test.mjs template-data.test.mjs data-interface.test.mjs ppt-data-regions.test.mjs editing-target.test.mjs visual-template-rules.test.mjs template-ai.test.mjs image-slot.test.mjs wb-batch4.test.mjs data-sentence.test.mjs recycle-bin.test.mjs"
+    "test": "node --test test.mjs chat.test.mjs assets.test.mjs operations.test.mjs maintenance.test.mjs templates.test.mjs recognition.test.mjs template-sources.test.mjs template-data.test.mjs data-interface.test.mjs ppt-data-regions.test.mjs editing-target.test.mjs visual-template-rules.test.mjs template-ai.test.mjs image-slot.test.mjs wb-batch4.test.mjs data-sentence.test.mjs recycle-bin.test.mjs pptx-source.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.0"

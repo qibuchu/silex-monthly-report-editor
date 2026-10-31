@@ -35,14 +35,16 @@ export function backupStore(dataDir,backupRoot){
   const stat=fs.lstatSync(source);if(stat.isSymbolicLink())throw Error('备份不允许符号链接');
   if(stat.isDirectory()){for(const name of fs.readdirSync(source))copy(path.join(source,name),path.posix.join(relative,name));return;}
   const bytes=fs.readFileSync(source),dest=path.join(staged,...relative.split('/'));
-  fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,bytes);
+  fs.mkdirSync(path.dirname(dest),{recursive:true});
+  if(relative.startsWith('template-pptx/')){try{fs.linkSync(source,dest);}catch{fs.writeFileSync(dest,bytes);}}
+  else fs.writeFileSync(dest,bytes);
   files.push({path:relative,size:bytes.length,sha256:hash(bytes)});
  };
  try{
   if(!fs.existsSync(path.join(root,'store.json')))throw Error('缺少store.json，不能生成空备份');
   // These are the authoritative data. In-flight task outputs are excluded;
   // interrupted generation never publishes a project automatically.
-  for(const name of ['store.json','assets','history','conflicts'])if(fs.existsSync(path.join(root,name)))copy(path.join(root,name),name);
+  for(const name of ['store.json','assets','history','conflicts','template-pptx'])if(fs.existsSync(path.join(root,name)))copy(path.join(root,name),name);
   fs.writeFileSync(path.join(staged,'manifest.json'),JSON.stringify({format:'monthly-backup-v1',createdAt:new Date().toISOString(),files},null,2));
   fs.renameSync(staged,target);
  }catch(error){try{fs.rmSync(staged,{recursive:true,force:true});}catch{}throw error;}
