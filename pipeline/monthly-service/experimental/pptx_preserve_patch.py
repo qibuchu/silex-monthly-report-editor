@@ -148,16 +148,21 @@ def patch_shape_fragment(slide_xml: bytes, shape_id: int, expected_text: str, ol
         if left < right:
             affected.append((index, left - offset, right - offset, left - start, right - start))
         offset += len(value)
-    if len(affected) > 1 and len(old_fragment) != len(new_fragment):
-        raise ValueError("Changed-length fragment crosses styled text runs")
     if old_fragment == new_fragment:
         return slide_xml
     changed = shape.group()
-    for index, left, right, replacement_left, replacement_right in reversed(affected):
+    # A longer or shorter value (7月 to 10月) keeps its text in the first styled run.
+    same_length = len(old_fragment) == len(new_fragment)
+    for position, (index, left, right, replacement_left, replacement_right) in reversed(list(enumerate(affected))):
         run = runs[index]
         original = run.group()
         opening = original[:original.find(b">") + 1]
-        fragment_part = new_fragment if len(affected) == 1 else new_fragment[replacement_left:replacement_right]
+        if len(affected) == 1:
+            fragment_part = new_fragment
+        elif same_length:
+            fragment_part = new_fragment[replacement_left:replacement_right]
+        else:
+            fragment_part = new_fragment if position == 0 else ""
         replacement_text = texts[index][:left] + fragment_part + texts[index][right:]
         if replacement_text == texts[index]:
             continue

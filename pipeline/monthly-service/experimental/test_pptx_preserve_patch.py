@@ -65,8 +65,9 @@ class PreservePatchTests(unittest.TestCase):
         source = b'<p:sp><p:cNvPr id="4"/><a:r><a:t>7</a:t></a:r><a:r><a:t>month</a:t></a:r></p:sp>'
         result = patch_shape_fragment(source, 4, '7month', '7month', '8month')
         self.assertIn(b'<a:r><a:t>8</a:t></a:r><a:r><a:t>month</a:t></a:r>', result)
-        with self.assertRaisesRegex(ValueError, 'crosses styled text runs'):
-            patch_shape_fragment(source, 4, '7month', '7month', 'Aug')
+        # A month that grows (7月 to 10月) keeps its text in the first styled run.
+        changed = patch_shape_fragment(source, 4, '7month', '7month', 'Aug')
+        self.assertIn(b'<a:r><a:t>Aug</a:t></a:r><a:r><a:t></a:t></a:r>', changed)
 
     def test_trim_native_table_updates_frame_height_and_preserves_cells(self):
         source = TABLE_XML.replace(b'<p:graphicFrame>',

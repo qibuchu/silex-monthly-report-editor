@@ -36,13 +36,40 @@ test('uploaded PPTX source is immutable, revision checked, and included in resto
     assert.deepEqual(fs.readFileSync(path.join(dataDir,'template-pptx',sha256+'.pptx')),bytes);
     assert.equal(core.putTemplatePptx(created.templateId,bytes,1).sourcePptx.sha256,sha256);
     core.db.templates[created.templateId].revision=1;
-    await assert.rejects(core.call('generate_native_pptx',{month:'2026-08',templateId:created.templateId,data:{report_month:'2026-08',snapshot_id:'sample'},audit:{month:'2026-08',snapshot_id:'sample',contract_errors:[]}}),/尚无经过审核的原生对象映射/);
-    core.db.tasks.example={id:'example',kind:'native-pptx',status:'succeeded',month:'2026-08',startedAt:'2026-10-31T00:00:00Z',pptx:'http://127.0.0.1:4320/api/tasks/example/draft.pptx',issues:'http://127.0.0.1:4320/api/tasks/example/issues.json',internalPath:'must-not-leak'};
-    const drafts=await core.call('list_native_drafts');assert.equal(drafts.length,1);assert.equal(drafts[0].pptx,core.db.tasks.example.pptx);assert.ok(!Object.hasOwn(drafts[0],'internalPath'));
+    await assert.rejects(core.call('generate_native_pptx',{month:'2026-08',templateId:created.templateId,data:{report_month:'2026-08',snapshot_id:'sample'},audit:{month:'2026-08',snapshot_id:'sample',contract_errors:[]}}),/模板发布时还没有原始PPTX/);
+    core.db.tasks.example={id:'example',kind:'native-pptx',status:'succeeded',pages:11,mappingIssues:2,oldMonthText:1,month:'2026-08',startedAt:'2026-10-31T00:00:00Z',pptx:'http://127.0.0.1:4320/api/tasks/example/draft.pptx',issues:'http://127.0.0.1:4320/api/tasks/example/issues.json',internalPath:'must-not-leak'};
+    const drafts=await core.call('list_native_drafts');assert.equal(drafts.length,1);assert.equal(drafts[0].pages,11);assert.equal(drafts[0].mappingIssues,2);assert.equal(drafts[0].oldMonthText,1);assert.equal(drafts[0].pptx,core.db.tasks.example.pptx);assert.ok(!Object.hasOwn(drafts[0],'internalPath'));
     assert.throws(()=>core.putTemplatePptx(created.templateId,Buffer.concat([bytes,Buffer.from('changed')]),1),e=>e.status===400);
     const backup=backupStore(dataDir,path.join(root,'backups'));
     assert.ok(backup.files>=2);
     const restored=path.join(root,'restored');restoreStore(backup.directory,restored);
     assert.deepEqual(fs.readFileSync(path.join(restored,'template-pptx',sha256+'.pptx')),bytes);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('native mapping survives template edits, new PPTX versions and republishing',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-native-mapping-'));
+  try{
+    const dataDir=path.join(root,'data'),core=createCore({dataDir,publicUrl:'http://127.0.0.1:4320',pythonExecutable:process.platform==='win32'?'python':'python3'});
+    const created=core.importPptxTemplate({title:'映射模板',project}),id=created.templateId;
+    const empty=await core.call('get_native_mapping',{templateId:id});
+    assert.equal(empty.revision,0);assert.equal(empty.check.configured,false);
+    const bytes=smallPptx();core.putTemplatePptx(id,bytes,1);
+    const mapping={format:'native-pptx-mapping-v1',ops:[{op:'clearText',slide:1,shapeId:4}]};
+    await assert.rejects(core.call('save_native_mapping',{templateId:id,baseRevision:0,mapping:{format:'other',ops:[]}}),e=>e.status===400);
+    await assert.rejects(core.call('save_native_mapping',{templateId:id,baseRevision:5,mapping}),e=>e.status===409);
+    const saved=await core.call('save_native_mapping',{templateId:id,baseRevision:0,mapping});
+    assert.equal(saved.revision,1);assert.equal(saved.check.ok,false);assert.equal(saved.published,false);
+    assert.equal((await core.call('list_templates')).find(t=>t.id===id).nativeReady,false);
+    const publish=async()=>{const t=await core.call('get_template',{templateId:id});return core.call('publish_template',{templateId:id,baseRevision:t.revision,projectRevision:t.projectRevision,rules:{...t.rules,recognitionReviewed:true}});};
+    assert.equal((await publish()).native,true);
+    const edited=core.project(core.db.templates[id].projectId);core.save(edited.id,edited.revision,edited.project,'human');
+    assert.equal((await publish()).native,true);
+    const published=core.db.templates[id].nativePublished;
+    assert.equal(published.mappingRevision,1);assert.equal(published.templateRevision,2);
+    const sent={month:'2026-08',templateId:id,data:{report_month:'2026-07',snapshot_id:'a'},audit:{month:'2026-08',snapshot_id:'a',contract_errors:[]}};
+    await assert.rejects(core.call('generate_native_pptx',sent),/审计不匹配/);
+    const listed=(await core.call('list_templates')).find(t=>t.id===id);
+    assert.equal(listed.nativeReady,true);assert.ok(!Object.hasOwn(listed,'nativeMapping'));assert.ok(!Object.hasOwn(listed,'nativePublished'));
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });

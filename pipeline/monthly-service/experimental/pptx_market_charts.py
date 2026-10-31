@@ -123,28 +123,35 @@ def patch_workbook(blob: bytes, categories: list[str], columns: dict[str, list[i
     return output.getvalue()
 
 
-def patch_pptx(source: Path, output: Path, months: list[dict]):
+def resolve_chart(archive, slide: int, chart_id: int):
+    """Find a chart's parts from the slide object, so part numbering can change."""
+    slide_xml = archive.read(f"ppt/slides/slide{slide}.xml")
+    frames = [match.group() for match in re.finditer(rb"<p:graphicFrame\b[^>]*>.*?</p:graphicFrame>", slide_xml, re.DOTALL)
+              if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(chart_id).encode() + rb'"', match.group())]
+    relation = re.search(rb'<c:chart\b[^>]*\br:id="([^"]+)"', frames[0]) if len(frames) == 1 else None
+    if not relation:
+        raise ValueError("Native chart missing or ambiguous")
+    def target(rels_part, rel_id=None, kind=None):
+        for item in re.findall(rb"<Relationship\b[^>]*/>", archive.read(rels_part)):
+            found_id = re.search(rb'\bId="([^"]+)"', item).group(1)
+            found_type = re.search(rb'\bType="([^"]+)"', item).group(1)
+            if found_id == rel_id or (kind and found_type.endswith(kind)):
+                return re.search(rb'\bTarget="([^"]+)"', item).group(1).decode()
+        raise ValueError("Chart relationship missing")
+    chart = "ppt/charts/" + target(f"ppt/slides/_rels/slide{slide}.xml.rels", rel_id=relation.group(1)).rsplit("/", 1)[-1]
+    workbook = "ppt/embeddings/" + target(f"ppt/charts/_rels/{chart.rsplit('/', 1)[-1]}.rels", kind=b"/package").rsplit("/", 1)[-1]
+    return chart, workbook
+
+
+def patch_pptx(source: Path, output: Path, charts: list[dict]):
     if source.resolve() == output.resolve():
         raise ValueError("Chart output must differ from source")
-    if len(months) != 3:
-        raise ValueError("Market charts require three months")
-    categories = [str(int(item["month"][-2:])) + "月" for item in months]
-    other = [item["post_unlock"] + item["watching"] + item["unknown"] for item in months]
-    immediate = [item["release_unlock"] for item in months]
-    totals = [item["total"] for item in months]
-    daily = [int(item["daily_avg"] + 0.5) for item in months]
-    if any(left + right != total for left, right, total in zip(other, immediate, totals)):
-        raise ValueError("Market chart components disagree with total")
     with zipfile.ZipFile(source) as archive:
-        parts = {
-            "ppt/charts/chart2.xml": patch_chart(archive.read("ppt/charts/chart2.xml"), categories, [other, immediate]),
-            "ppt/charts/chart3.xml": patch_chart(archive.read("ppt/charts/chart3.xml"), categories, [daily]),
-            "ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx": patch_workbook(
-                archive.read("ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx"), categories,
-                {"B": other, "C": immediate, "E": totals}, ai_auxiliary=True),
-            "ppt/embeddings/Microsoft_Excel_Worksheet2.xlsx": patch_workbook(
-                archive.read("ppt/embeddings/Microsoft_Excel_Worksheet2.xlsx"), categories, {"B": daily}),
-        }
+        parts = {}
+        for chart in charts:
+            parts[chart["part"]] = patch_chart(archive.read(chart["part"]), chart["categories"], chart["series"])
+            parts[chart["workbook"]] = patch_workbook(archive.read(chart["workbook"]), chart["categories"],
+                                                      chart["columns"], ai_auxiliary=chart["blankAuxiliary"])
         output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=output.parent, suffix=".partial", delete=False) as temp:
             path = Path(temp.name)
