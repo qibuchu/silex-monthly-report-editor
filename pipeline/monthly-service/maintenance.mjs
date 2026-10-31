@@ -75,7 +75,7 @@ export function backupStore(dataDir,backupRoot){
   if(!fs.existsSync(path.join(root,'store.json')))throw Error('缺少store.json，不能生成空备份');
   // These are the authoritative data. In-flight task outputs are excluded;
   // interrupted generation never publishes a project automatically.
-  for(const name of ['store.json','assets','history','conflicts','template-pptx'])if(fs.existsSync(path.join(root,name)))copy(path.join(root,name),name);
+  for(const name of ['store.json','assets','history','conflicts','template-pptx','native'])if(fs.existsSync(path.join(root,name)))copy(path.join(root,name),name);
   fs.writeFileSync(path.join(staged,'manifest.json'),JSON.stringify({format:'monthly-backup-v1',createdAt:new Date().toISOString(),files},null,2));
   fs.renameSync(staged,target);
  }catch(error){try{fs.rmSync(staged,{recursive:true,force:true});}catch{}throw error;}

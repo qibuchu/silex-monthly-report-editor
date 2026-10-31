@@ -115,6 +115,12 @@ export function createService(config) {
         res.writeHead(200,{'Content-Type':filename.endsWith('.pptx')?'application/vnd.openxmlformats-officedocument.presentationml.presentation':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="steam-${task.month}-${filename}"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
         return res.end(fs.readFileSync(file));
       }
+      const projectPptx=url.pathname.match(/^\/api\/projects\/([a-f0-9-]+)\/draft\.pptx$/);
+      if(projectPptx&&req.method==='GET'){
+        const draft=core.nativeDraft(projectPptx[1]);
+        res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.presentationml.presentation','Content-Disposition':`attachment; filename="${draft.filename}"`,'Content-Length':fs.statSync(draft.file).size,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
+        return fs.createReadStream(draft.file).pipe(res);
+      }
       const templatePptx=url.pathname.match(/^\/api\/templates\/([a-f0-9-]+)\/source\.pptx$/);
       if(templatePptx&&req.method==='POST'){
         const revision=Number(req.headers['x-project-revision']);
@@ -134,8 +140,8 @@ export function createService(config) {
       if (match) {
         const [, id, action] = match; const value = core.project(id);
         if (!action && req.method === 'GET') return json(res, 200, value);
-        if (!action && req.method === 'PUT') { const input = await body(req); return json(res, 200, { revision: core.save(id, input.baseRevision, input.project, input.author).revision }); }
-        if (action === 'status') return json(res, 200, { revision: value.revision, author: value.author, updatedAt: value.updatedAt, title: value.title, month: value.month });
+        if (!action && req.method === 'PUT') { const input = await body(req); const saved=core.save(id, input.baseRevision, input.project, input.author);return json(res, 200, { revision: saved.revision, native: core.nativeSummary(saved) }); }
+        if (action === 'status') return json(res, 200, { revision: value.revision, author: value.author, updatedAt: value.updatedAt, title: value.title, month: value.month, native: core.nativeSummary(value) });
         if (action === 'editor-context' && req.method === 'POST') return json(res,200,core.updateEditorContext(id,await body(req)));
         if (action === 'silex' && req.method === 'GET') return json(res, 200, core.silex(id));
         if (action === 'ai-requests' && req.method === 'POST') return json(res, 200, core.submitRequest(id, await body(req)));

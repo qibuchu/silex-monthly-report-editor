@@ -12,6 +12,7 @@ import {createTemplateAiTasks,templateAiPrompt,validateTemplateAiDecisions} from
 import {sourceNeeds,describeSources,normalizeSources} from './template-sources.mjs';
 import {jsonSource,validateDataSources,matchTemplateData,fillTemplateData,normalizeMappings} from './template-data.mjs';
 import {renderImportedChart} from './template-chart-render.mjs';
+import {buildNativeDeck,diffDecks} from './native-project.mjs';
 import {fetchDataInterface} from './data-interface.mjs';
 import {matchSourceViews} from './minigame-data-fields.mjs';
 import {backupStore} from './maintenance.mjs';
@@ -184,8 +185,9 @@ export function createCore(config) {
     }
     const history = path.join(dir, 'history', id); fs.mkdirSync(history, { recursive: true });
     fs.writeFileSync(path.join(history, `${current.revision}.json`), JSON.stringify(current));
-    db.projects[id] = { ...current, revision: current.revision + 1, project: value, author, lastChange, stage:current.stage==='final'?'review':current.stage, updatedAt: new Date().toISOString() };
-    persist(); return db.projects[id];
+    const native=current.native?nativeAfterSave(current,value,current.revision+1):undefined;
+    db.projects[id] = { ...current, revision: current.revision + 1, project: value, author, lastChange, stage:current.stage==='final'?'review':current.stage, updatedAt: new Date().toISOString(), ...(native?{native}:{}) };
+    persist();if(native?.pending.length)drainNative(id);return db.projects[id];
   }
   function patch(current, changes) {
     if (!Array.isArray(changes) || !changes.length) throw new ServiceError('Changes required');
@@ -279,6 +281,56 @@ export function createCore(config) {
     return db.tasks[id];
   }
   const nativeScript=path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental','native_draft.py');
+  const writebackScript=path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental','native_writeback.py');
+  const pythonCommand=()=>config.pythonExecutable||(process.platform==='win32'?'python':'python3');
+  const runPython=args=>new Promise((resolve,reject)=>{
+    const child=spawn(pythonCommand(),['-B',...args],{stdio:['ignore','pipe','pipe']}),output=[];let stderr='';
+    child.stdout.on('data',chunk=>output.push(chunk));child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});
+    child.on('error',reject);child.on('close',code=>code===0?resolve(Buffer.concat(output).toString('utf8')):reject(Error(stderr.trim().split('\n').pop()||`Python退出：${code}`)));
+  });
+  const nativeFile=id=>path.join(dir,'native',id,'draft.pptx');
+  const nativeRuns=new Map();
+  function nativeSummary(entry){
+    const native=entry?.native;if(!native)return undefined;
+    return {status:native.lastError?'failed':native.pending.length?'syncing':'synced',syncedRevision:native.syncedRevision,pendingChanges:native.pending.reduce((sum,job)=>sum+job.changes.length,0),rejected:native.rejected,unsupported:native.unsupported.slice(0,20),unsupportedCount:native.unsupported.length,missingObjects:native.missing.length,lastError:native.lastError,pptx:`${config.publicUrl}/api/projects/${entry.id}/draft.pptx`};
+  }
+  // Text the PPTX can take is queued; everything else stays listed until undone.
+  function nativeAfterSave(current,value,revision){
+    const {changes}=diffDecks(current.project.deck,value.deck);
+    const baseline=current.revision===1?current.project:JSON.parse(fs.readFileSync(path.join(dir,'history',current.id,'1.json'),'utf8')).project;
+    const {unsupported}=diffDecks(baseline.deck,value.deck);
+    const pending=[...current.native.pending,...(changes.length?[{revision,changes}]:[])];
+    return {...current.native,pending,unsupported,syncedRevision:pending.length?current.native.syncedRevision:revision};
+  }
+  function drainNative(id){
+    if(nativeRuns.has(id))return nativeRuns.get(id);
+    const run=(async()=>{
+      for(;;){
+        const job=db.projects[id]?.native?.pending?.[0];if(!job)return;
+        const folder=path.dirname(nativeFile(id)),token=randomUUID(),changes=path.join(folder,token+'.json'),temp=path.join(folder,token+'.pptx');
+        try{
+          fs.mkdirSync(folder,{recursive:true});fs.writeFileSync(changes,JSON.stringify(job.changes));
+          const result=JSON.parse(await runPython([writebackScript,'apply',nativeFile(id),changes,temp]));
+          if(result.written)fs.renameSync(temp,nativeFile(id));
+          const latest=db.projects[id];
+          if(latest){const {lastError,...native}=latest.native;latest.native={...native,pending:native.pending.slice(1),syncedRevision:job.revision,lastSyncAt:new Date().toISOString(),rejected:[...native.rejected,...result.rejected.map(item=>({...item,revision:job.revision}))].slice(-50)};}
+          persist();
+        }catch(error){if(db.projects[id])db.projects[id].native={...db.projects[id].native,lastError:error.message};persist();return;}
+        finally{for(const file of [changes,temp])if(fs.existsSync(file))fs.unlinkSync(file);}
+      }
+    })().finally(()=>{nativeRuns.delete(id);const native=db.projects[id]?.native;if(native?.pending.length&&!native.lastError)drainNative(id);});
+    nativeRuns.set(id,run);return run;
+  }
+  async function createNativeProject(task,template,output,snapshotId,continuations){
+    const snapshot=JSON.parse(fs.readFileSync(path.join(dir,'history','template-'+template.id,task.template.revision+'.json'),'utf8'));
+    const extraction=JSON.parse(await runPython([writebackScript,'extract',output]));
+    const built=buildNativeDeck(snapshot.project,extraction,continuations,renderImportedChart);validate(built.project);
+    const id=randomUUID(),folder=path.dirname(nativeFile(id));fs.mkdirSync(folder,{recursive:true});
+    // The task keeps the generated original; write-back replaces this path atomically.
+    try{fs.linkSync(output,nativeFile(id));}catch{fs.copyFileSync(output,nativeFile(id));}
+    db.projects[id]={id,revision:1,month:task.month,title:`${template.title} · ${task.month} PPTX 草稿`,stage:'draft',dataOrigin:{kind:'native-pptx',taskId:task.id,snapshotId},template:task.template,project:built.project,updatedAt:new Date().toISOString(),author:'native-pptx',native:{taskId:task.id,syncedRevision:1,pending:[],rejected:[],unsupported:[],missing:built.missing}};
+    return id;
+  }
   const seedMapping=JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental','steam_monthly_mapping.json'),'utf8'));
   const seedTemplateMapping=t=>{if(!t.nativeMapping&&t.sourcePptx?.sha256===seedMapping.seedSha256){t.nativeMapping=seedMapping;t.nativeMappingRevision=(t.nativeMappingRevision||0)+1;return true;}return false;};
   const snapshotNative=t=>{if(t.origin==='pptx')t.nativePublished={sourcePptx:t.sourcePptx,mapping:t.nativeMapping,mappingRevision:t.nativeMappingRevision||0,templateRevision:t.revision};};
@@ -316,13 +368,15 @@ export function createCore(config) {
     let stderr='';child.stdout.resume();child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});
     let settled=false;const fail=message=>{if(settled)return;settled=true;Object.assign(db.tasks[id],{status:'failed',error:message,finishedAt:new Date().toISOString()});persist();};
     child.on('error',error=>fail(error.message));
-    child.on('close',code=>{
+    child.on('close',async code=>{
       if(settled)return;
       try{
         if(code!==0)throw Error(stderr||`PPTX生成进程退出：${code}`);
         const issuesPath=path.join(taskDir,'draft.issues.json'),issues=JSON.parse(fs.readFileSync(issuesPath,'utf8'));
         if(!fs.existsSync(output)||issues.reportMonth!==month||issues.dataSnapshotId!==args.data.snapshot_id)throw Error('生成结果校验未通过');
-        Object.assign(db.tasks[id],{status:'succeeded',resultStatus:issues.status,sourceIssues:issues.sourceIssues?.length||0,mappingIssues:issues.mappingIssues?.length||0,oldMonthText:issues.oldMonthText?.length||0,pages:issues.pages,manualSlots:issues.manualSlots?.length||0,pptx:`${config.publicUrl}/api/tasks/${id}/draft.pptx`,issues:`${config.publicUrl}/api/tasks/${id}/issues.json`,finishedAt:new Date().toISOString()});persist();
+        let projectId,projectError;
+        try{projectId=await createNativeProject(db.tasks[id],template,output,args.data.snapshot_id,native.mapping.continuations||[]);}catch(error){projectError=error.message;}
+        Object.assign(db.tasks[id],{status:'succeeded',resultStatus:issues.status,projectId,projectError,sourceIssues:issues.sourceIssues?.length||0,mappingIssues:issues.mappingIssues?.length||0,oldMonthText:issues.oldMonthText?.length||0,pages:issues.pages,manualSlots:issues.manualSlots?.length||0,pptx:`${config.publicUrl}/api/tasks/${id}/draft.pptx`,issues:`${config.publicUrl}/api/tasks/${id}/issues.json`,finishedAt:new Date().toISOString()});persist();
       }catch(error){fail(error.message);}
     });
     return db.tasks[id];
@@ -641,11 +695,11 @@ export function createCore(config) {
         persist();
         let removedFiles=0,retainedAssets=0;const cleanupErrors=[];
         const removeDirectory=(root,id)=>{const target=path.resolve(root,id);if(!target.startsWith(path.resolve(root)+path.sep)||!fs.existsSync(target))return;try{if(fs.lstatSync(target).isSymbolicLink())throw Error('符号链接目录不允许自动删除');removedFiles+=fs.readdirSync(target).length;fs.rmSync(target,{recursive:true,force:true});}catch(error){cleanupErrors.push(`${id}: ${error.message}`);}};
-        for(const id of ids){removeDirectory(historyRoot,id);if(assetRefs.has(id))retainedAssets++;else removeDirectory(path.join(dir,'assets'),id);}
+        for(const id of ids){removeDirectory(historyRoot,id);removeDirectory(path.join(dir,'native'),id);if(assetRefs.has(id))retainedAssets++;else removeDirectory(path.join(dir,'assets'),id);}
         for(const id of taskIds)if(/^[-a-f\d]{36}$/i.test(id))removeDirectory(path.join(dir,'tasks'),id);
         return {deleted:ids.length,backupDirectory:backup.directory,removedFiles,retainedAssets,cleanupErrors};
       }
-      case 'list_projects': return Object.values(db.projects).map(({ project: value, ...meta }) => ({ ...meta, pageCount: value.deck.pages.length }));
+      case 'list_projects': return Object.values(db.projects).map(({ project: value, native, ...meta }) => ({ ...meta, pageCount: value.deck.pages.length, ...(native?{native:nativeSummary({id:meta.id,native})}:{}) }));
       case 'get_editing_target': {
         if(!/^[a-zA-Z0-9_-]{16,100}$/.test(args.editingTargetId||''))throw new ServiceError('AI连接标识格式不正确');
         const selected=Object.hasOwn(db.editingTargets,args.editingTargetId)?db.editingTargets[args.editingTargetId]:null;
@@ -683,7 +737,7 @@ export function createCore(config) {
         const current=project(args.projectId);
         assertEditorsSaved(current.id);
         const next=save(current.id,args.baseRevision,patch(current,args.changes),'ai-chat',{requirement:args.requirement,objectIds:args.changes.map(c=>c.id)});
-        return { projectId:current.id, revision:next.revision, previousRevision:args.baseRevision, ...links(current.id) };
+        return { projectId:current.id, revision:next.revision, previousRevision:args.baseRevision, ...links(current.id), ...(next.native?{native:nativeSummary(next)}:{}) };
       }
       case 'apply_structure_patch': {
         if(typeof args.requirement!=='string'||!args.requirement.trim())throw new ServiceError('请提供本次聊天修改需求');
@@ -701,7 +755,7 @@ export function createCore(config) {
         if(!fs.existsSync(file)) throw new ServiceError('历史版本不存在',404);
         const previous=JSON.parse(fs.readFileSync(file,'utf8'));
         const next=save(current.id,args.baseRevision,previous.project,'ai-restore');
-        return {projectId:current.id,revision:next.revision,restoredFrom:args.targetRevision,...links(current.id)};
+        return {projectId:current.id,revision:next.revision,restoredFrom:args.targetRevision,...links(current.id),...(next.native?{native:nativeSummary(next)}:{})};
       }
       case 'generate_monthly_report': return generate(args);
       case 'generate_native_pptx': return generateNativePptx(args);
@@ -717,7 +771,7 @@ export function createCore(config) {
         t.nativeMapping=args.mapping;t.nativeMappingRevision=args.baseRevision+1;persist();
         return {templateId:t.id,revision:t.nativeMappingRevision,check,published:false};
       }
-      case 'list_native_drafts': return Object.values(db.tasks).filter(task=>task.kind==='native-pptx').sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt))).map(({id,kind,status,month,template,startedAt,finishedAt,resultStatus,sourceIssues,manualSlots,pptx,issues,error,pages,mappingIssues,oldMonthText})=>({id,kind,status,month,template,startedAt,finishedAt,resultStatus,sourceIssues,manualSlots,pptx,issues,error,pages,mappingIssues,oldMonthText}));
+      case 'list_native_drafts': return Object.values(db.tasks).filter(task=>task.kind==='native-pptx').sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt))).map(({id,kind,status,month,template,startedAt,finishedAt,resultStatus,sourceIssues,manualSlots,pptx,issues,error,pages,mappingIssues,oldMonthText,projectId,projectError})=>({projectId,projectError,id,kind,status,month,template,startedAt,finishedAt,resultStatus,sourceIssues,manualSlots,pptx,issues,error,pages,mappingIssues,oldMonthText}));
       case 'get_task': if (!Object.hasOwn(db.tasks, args.taskId)) throw new ServiceError('Task not found', 404); return db.tasks[args.taskId];
       case 'get_project': {
         const value = project(args.projectId);
@@ -777,13 +831,18 @@ export function createCore(config) {
       }
       case 'get_preview_link': project(args.projectId); return links(args.projectId);
       case 'list_versions': { const current = project(args.projectId); const history = path.join(dir, 'history', current.id); return { currentRevision: current.revision, revisions: fs.existsSync(history) ? fs.readdirSync(history).map(f => Number(f.replace('.json', ''))).sort((a,b) => b-a) : [] }; }
-      case 'export_project': { const current = project(args.projectId); return { revision: current.revision, html: `${config.publicUrl}/api/projects/${current.id}/export.html`, editableJson: `${config.publicUrl}/api/projects/${current.id}/export.json` }; }
+      case 'export_project': { const current = project(args.projectId); return { revision: current.revision, html: `${config.publicUrl}/api/projects/${current.id}/export.html`, editableJson: `${config.publicUrl}/api/projects/${current.id}/export.json`, ...(current.native?{pptx:nativeSummary(current).pptx,native:nativeSummary(current)}:{}) }; }
       case 'list_ai_requests': return Object.values(db.requests).filter(request => (!args.projectId || request.projectId === args.projectId) && (args.status === 'all' || (args.status ? request.status === args.status : ['pending', 'proposed'].includes(request.status))));
       case 'get_ai_request': if (!Object.hasOwn(db.requests, args.requestId)) throw new ServiceError('Request not found', 404); return db.requests[args.requestId];
       default: throw new ServiceError('Unknown tool', 404);
     }
   }
-  return { call, project, save, db, putAsset(id,input) { project(id); return assets.put(id,input.data); }, getAsset(id,file) { return assets.get(id,file); }, archive(id) {
+  for(const entry of Object.values(db.projects))if(entry.native?.pending?.length)setImmediate(()=>drainNative(entry.id));
+  return { call, project, save, db, nativeSummary, nativeDraft(id){
+    const current=project(id);if(!current.native)throw new ServiceError('这份草稿没有对应的 PPTX',404);
+    if(current.native.pending.length)throw new ServiceError(current.native.lastError?'PPTX 写回失败：'+current.native.lastError:'PPTX 正在写回，请稍后再下载',409);
+    return {file:nativeFile(id),filename:`steam-${current.month}-v${current.revision}.pptx`};
+  }, nativeSettled(id){return Promise.resolve(nativeRuns.get(id));}, putAsset(id,input) { project(id); return assets.put(id,input.data); }, getAsset(id,file) { return assets.get(id,file); }, archive(id) {
     const result=assets.pack(project(id));
     return { ...result.value, assets:result.assets };
   }, updateEditorContext(id, input) {

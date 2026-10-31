@@ -90,6 +90,7 @@ def build(original: Path, data_file: Path, audit_file: Path, output: Path, mappi
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser()
     subcommands = parser.add_subparsers(dest="command", required=True)
     generate = subcommands.add_parser("generate")
