@@ -50,6 +50,7 @@ if [[ $healthy != true ]]; then
   sudo docker compose -p steam-monthly -f compose.yaml up -d --force-recreate app
   echo '健康检查未通过，已回滚' >&2; exit 1
 fi
+sudo docker exec steam-monthly-app node -e 'import("/app/pipeline/monthly-service/maintenance.mjs").then(m=>console.log(JSON.stringify({prunedBackups:m.pruneBackups("/state/backups",7)})))'
 sudo docker run --rm -v "$base:/srv" node:24-alpine \
   node /srv/current/deployment/steam-monthly/prune-releases.mjs /srv "$previous"
 echo "发布完成：$release_id；回滚版本：$previous"
