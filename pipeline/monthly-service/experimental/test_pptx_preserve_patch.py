@@ -1,7 +1,9 @@
 import unittest
 from xml.etree import ElementTree
 
-from pptx_preserve_patch import patch_cell, patch_shape_fragment, patch_table, table_values, trim_table_rows
+from pptx_preserve_patch import (patch_cell, patch_shape_fragment, patch_table, table_values,
+                                 trim_table_rows, replace_shape_text, replace_picture_with_slot,
+                                 replace_chart_with_slot)
 
 
 XML = (b'<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
@@ -76,6 +78,30 @@ class PreservePatchTests(unittest.TestCase):
         self.assertIn(b'<p:sp><a:t>unchanged</a:t></p:sp>', result)
         with self.assertRaisesRegex(ValueError, 'Invalid table row count'):
             trim_table_rows(source, 9, 4)
+
+    def test_manual_text_slot_removes_old_bullet_and_keeps_shape(self):
+        source = b'<p:sp><p:cNvPr id="7"/><a:p><a:pPr><a:buChar char="-"/></a:pPr><a:r><a:t>old month</a:t></a:r></a:p></p:sp>'
+        result = replace_shape_text(source, 7, 'old month', '')
+        self.assertIn(b'<p:cNvPr id="7"', result)
+        self.assertNotIn(b'old month', result)
+        self.assertNotIn(b'a:buChar', result)
+
+    def test_picture_and_chart_become_editable_visual_slots(self):
+        picture = (b'<p:pic><p:nvPicPr><p:cNvPr id="8"/></p:nvPicPr><p:spPr>'
+                   b'<a:xfrm><a:off x="1" y="2"/><a:ext cx="3" cy="4"/></a:xfrm>'
+                   b'</p:spPr></p:pic>')
+        result = replace_picture_with_slot(picture, 8)
+        self.assertIn(b'<p:sp>', result)
+        self.assertNotIn(b'<p:pic>', result)
+        self.assertIn('图片待补'.encode(), result)
+        chart = (b'<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="12"/></p:nvGraphicFramePr>'
+                 b'<p:xfrm><a:off x="1" y="2"/><a:ext cx="3" cy="4"/></p:xfrm>'
+                 b'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"/>'
+                 b'</p:graphicFrame>')
+        result = replace_chart_with_slot(chart, 12)
+        self.assertIn(b'<p:sp>', result)
+        self.assertNotIn(b'<p:graphicFrame>', result)
+        self.assertIn('图表待补'.encode(), result)
 
 
 if __name__ == '__main__':

@@ -166,6 +166,69 @@ def patch_shape_fragment(slide_xml: bytes, shape_id: int, expected_text: str, ol
     return slide_xml[:shape.start()] + changed + slide_xml[shape.end():]
 
 
+def replace_shape_text(slide_xml: bytes, shape_id: int, expected_text: str, value: str):
+    """Replace a reviewed text shape while retaining its geometry and first-run style."""
+    shapes = list(re.finditer(rb"<p:sp\b[^>]*>.*?</p:sp>", slide_xml, re.DOTALL))
+    matches = [match for match in shapes if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(shape_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError("Native text shape missing or ambiguous")
+    shape = matches[0]
+    runs = list(re.finditer(rb"<a:t(?:\s[^>]*)?>.*?</a:t>", shape.group(), re.DOTALL))
+    old = "".join(html.unescape(re.sub(rb"<[^>]+>", b"", run.group()).decode("utf-8")) for run in runs)
+    if not runs or old != expected_text:
+        raise ValueError("Text shape changed; review manual slot mapping")
+    changed = shape.group()
+    for index, run in reversed(list(enumerate(runs))):
+        opening = run.group()[:run.group().find(b">") + 1]
+        replacement = opening + (html.escape(value, quote=False).encode("utf-8") if index == 0 else b"") + b"</a:t>"
+        changed = changed[:run.start()] + replacement + changed[run.end():]
+    if not value:
+        changed = re.sub(rb'<a:bu(?:Char|AutoNum|Blip)\b[^>]*/>', b'', changed)
+    return slide_xml[:shape.start()] + changed + slide_xml[shape.end():]
+
+
+def replace_picture_with_slot(slide_xml: bytes, picture_id: int):
+    """Keep the picture rectangle as an editable shape, without carrying old imagery."""
+    pictures = list(re.finditer(rb"<p:pic\b[^>]*>.*?</p:pic>", slide_xml, re.DOTALL))
+    matches = [match for match in pictures if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(picture_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError("Picture object missing or ambiguous")
+    picture = matches[0]
+    transform = re.search(rb'<a:xfrm\b[^>]*>.*?</a:xfrm>', picture.group(), re.DOTALL)
+    if not transform:
+        raise ValueError("Picture has no editable transform")
+    slot = make_visual_slot(picture_id, transform.group(), "Image slot", "图片待补")
+    return slide_xml[:picture.start()] + slot + slide_xml[picture.end():]
+
+
+def make_visual_slot(object_id: int, transform: bytes, name: str, label: str):
+    ident = str(object_id).encode()
+    return (b'<p:sp><p:nvSpPr><p:cNvPr id="' + ident + b'" name="' + name.encode("utf-8") + b' ' + ident +
+            b'"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>' + transform +
+            b'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+            b'<a:solidFill><a:srgbClr val="F0F0F0"/></a:solidFill>'
+            b'<a:ln w="12700"><a:solidFill><a:srgbClr val="C8CDD3"/></a:solidFill></a:ln>'
+            b'</p:spPr><p:txBody><a:bodyPr anchor="ctr"/><a:lstStyle/><a:p>'
+            b'<a:pPr algn="ctr"/><a:r><a:rPr lang="zh-CN" sz="1400">'
+            b'<a:solidFill><a:srgbClr val="8A96A5"/></a:solidFill></a:rPr>'
+            b'<a:t>' + label.encode("utf-8") + b'</a:t></a:r>'
+            b'</a:p></p:txBody></p:sp>')
+
+
+def replace_chart_with_slot(slide_xml: bytes, chart_id: int):
+    frames = list(re.finditer(rb"<p:graphicFrame\b[^>]*>.*?</p:graphicFrame>", slide_xml, re.DOTALL))
+    matches = [match for match in frames if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(chart_id).encode() + rb'"', match.group())]
+    if len(matches) != 1 or b"/chart" not in matches[0].group():
+        raise ValueError("Native chart missing or ambiguous")
+    frame = matches[0]
+    transform = re.search(rb'<p:xfrm\b[^>]*>.*?</p:xfrm>', frame.group(), re.DOTALL)
+    if not transform:
+        raise ValueError("Chart has no transform")
+    slot = make_visual_slot(chart_id, transform.group().replace(b"<p:xfrm", b"<a:xfrm").replace(b"</p:xfrm>", b"</a:xfrm>"),
+                            "Chart slot", "图表待补")
+    return slide_xml[:frame.start()] + slot + slide_xml[frame.end():]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("source", type=Path)
@@ -199,6 +262,12 @@ def main():
             elif item.get("kind") == "shapeText":
                 changed[name] = patch_shape_fragment(data, int(item["shapeId"]), item["expectedText"],
                                                      item["oldFragment"], item["newFragment"])
+            elif item.get("kind") == "shapeReplace":
+                changed[name] = replace_shape_text(data, int(item["shapeId"]), item["expectedText"], item["value"])
+            elif item.get("kind") == "pictureSlot":
+                changed[name] = replace_picture_with_slot(data, int(item["pictureId"]))
+            elif item.get("kind") == "chartSlot":
+                changed[name] = replace_chart_with_slot(data, int(item["chartId"]))
             else:
                 changed[name] = patch_cell(data, int(item["tableId"]), int(item["row"]),
                                            int(item["column"]), str(item["expected"]), str(item["value"]))

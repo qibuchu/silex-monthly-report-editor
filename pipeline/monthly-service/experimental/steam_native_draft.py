@@ -15,6 +15,7 @@ import zipfile
 from pathlib import Path
 
 from steam_head_to_spec import make_spec as head_spec
+from steam_manual_slots import make_spec as manual_spec
 from steam_release_to_spec import make_spec as release_spec, presentation_order, shape_texts
 
 
@@ -22,13 +23,13 @@ HERE = Path(__file__).resolve().parent
 EXPECTED_TEMPLATE_SHA = "9e5577353e1f1721383a6c50bee63a5e9dbbee5dd3cb6e4d441655a5bb4621cf"
 PLAN = [{"sourceSlide": 5, "newSlide": 10}, {"sourceSlide": 9, "newSlide": 11}]
 UNFILLED_PAGES = {
-    1: "封面图片与导语仍取自原稿",
-    2: "右侧头部活动原因仍取自原稿",
-    3: "头部异动专题仍取自原稿",
+    1: "封面导语已留空，封面装饰图仍需核对",
+    2: "右侧头部活动原因与图标已留为可编辑空槽",
+    3: "头部异动专题文字与图片已留为可编辑空槽",
     4: "大盘总览尚未按目标月数据填入",
-    6: "热门新游专题仍取自原稿",
-    7: "亮眼独游专题仍取自原稿",
-    8: "亮眼独游专题仍取自原稿",
+    6: "热门新游专题文字与图片已留为可编辑空槽",
+    7: "亮眼独游专题文字与图片已留为可编辑空槽",
+    8: "亮眼独游专题文字与图片已留为可编辑空槽",
 }
 
 
@@ -54,11 +55,12 @@ def build(original: Path, data_file: Path, audit_file: Path, output: Path):
         binding["templateSha256"] = hashlib.sha256(cloned.read_bytes()).hexdigest()
         head = head_spec(cloned, binding, data, audit)
         releases = release_spec(cloned, data, audit)
+        manual = manual_spec(cloned, data["report_month"])
         if head["sourceSha256"] != releases["sourceSha256"] or head["dataSnapshotId"] != releases["dataSnapshotId"]:
             raise ValueError("Head and release specifications disagree")
         merged = {"sourceSha256": head["sourceSha256"], "reportMonth": head["reportMonth"],
                   "dataSnapshotId": head["dataSnapshotId"],
-                  "replacements": head["replacements"] + releases["replacements"]}
+                  "replacements": head["replacements"] + releases["replacements"] + manual["replacements"]}
         merged_file.write_text(json.dumps(merged, ensure_ascii=False), encoding="utf-8")
         run_script("pptx_preserve_patch.py", cloned, merged_file, output)
     with zipfile.ZipFile(output) as archive:
@@ -82,9 +84,10 @@ def build(original: Path, data_file: Path, audit_file: Path, output: Path):
                     all(item.get("review_rate_all") is not None
                         for item in (data.get("market") or {}).get("review_trend") or []),
                 "sourceIssues": head["issues"] + releases["issues"],
+                "manualSlots": manual["slots"],
                 "unfilledOriginalPages": [{"sourceSlide": slide, "reason": reason} for slide, reason in UNFILLED_PAGES.items()],
                 "oldMonthText": stale,
-                "warning": "仅数据表局部验证；旧月份专题和大盘不可作为本月内容，禁止交付为完整月报。"}
+                "warning": "数据表与研究空槽局部验证；大盘等未填内容不可作为本月内容，禁止交付为完整月报。"}
     issues_path = output.with_suffix(".issues.json")
     issues_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     return manifest, issues_path
