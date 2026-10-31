@@ -3,6 +3,7 @@
 import copy
 import html
 import io
+import math
 import os
 import re
 import tempfile
@@ -32,6 +33,46 @@ def patch_points(section: bytes, values: list[str]):
     return section
 
 
+NUMBER = re.compile(rb"^[+-]?[\d,]+(?:\.\d+)?%?$")
+
+
+def drop_static_labels(series: bytes):
+    """Typed-over numbers on data labels would keep last month's value."""
+    def fix(match):
+        label = match.group()
+        rich = re.search(rb"<c:tx><c:rich>.*?</c:rich></c:tx>", label, re.DOTALL)
+        if not rich:
+            return label
+        text = b"".join(re.findall(rb"<a:t>(.*?)</a:t>", rich.group(), re.DOTALL)).strip()
+        return label[:rich.start()] + label[rich.end():] if NUMBER.match(text) else label
+    return re.sub(rb"<c:dLbl>.*?</c:dLbl>", fix, series, flags=re.DOTALL)
+
+
+def fit_axis(xml: bytes, series: list[list[int]]):
+    """Raise a fixed axis maximum that the new values would exceed."""
+    axes = list(re.finditer(rb"<c:valAx>.*?</c:valAx>", xml, re.DOTALL))
+    if len(axes) != 1 or not series:
+        return xml
+    axis = axes[0].group()
+    fixed = re.search(rb'(<c:max val=")([^"]+)(")', axis)
+    if not fixed:
+        return xml
+    grouping = re.search(rb'<c:grouping val="(\w+)"', xml)
+    if grouping and grouping.group(1) == b"percentStacked":
+        return xml
+    stacked = grouping is not None and grouping.group(1) == b"stacked"
+    columns = list(zip(*series))
+    needed = max(sum(column) if stacked else max(column) for column in columns)
+    if float(fixed.group(2)) >= needed:
+        return xml
+    unit = re.search(rb'<c:majorUnit val="([^"]+)"', axis)
+    step = float(unit.group(1)) if unit else 10 ** math.floor(math.log10(needed)) / 2
+    top = math.ceil(needed * 1.05 / step) * step
+    value = (str(int(top)) if top == int(top) else str(top)).encode()
+    axis = axis[:fixed.start()] + fixed.group(1) + value + fixed.group(3) + axis[fixed.end():]
+    return xml[:axes[0].start()] + axis + xml[axes[0].end():]
+
+
 def patch_chart(xml: bytes, categories: list[str], series: list[list[int]]):
     matches = list(re.finditer(rb'<c:ser>.*?</c:ser>', xml, re.DOTALL))
     if len(matches) != len(series):
@@ -42,8 +83,114 @@ def patch_chart(xml: bytes, categories: list[str], series: list[list[int]]):
         data = match.group()
         data = replace_section(data, b'cat', lambda section: patch_points(section, categories))
         data = replace_section(data, b'val', lambda section: patch_points(section, [str(value) for value in values]))
+        data = drop_static_labels(data)
         xml = xml[:match.start()] + data + xml[match.end():]
+    return fit_axis(xml, series)
+
+
+SLOT_TITLE = "图表标题待补"
+
+
+def empty_caches(xml: bytes):
+    def clear(cache):
+        changed = re.sub(rb"<c:pt\b[^>]*>.*?</c:pt>", b"", cache.group(), flags=re.DOTALL)
+        return re.sub(rb'(<c:ptCount val=")\d+("/>)', rb"\g<1>0\2", changed)
+    return re.sub(rb"<c:(?:num|str|multiLvlStr)Cache>.*?</c:(?:num|str|multiLvlStr)Cache>", clear, xml, flags=re.DOTALL)
+
+
+def rename_sheets(xml: bytes, names: dict):
+    for old, new in names.items():
+        for quoted in (b"'" + old.replace(b"'", b"''") + b"'!", old + b"!"):
+            xml = xml.replace(quoted, new + b"!")
     return xml
+
+
+def blank_chart_xml(xml: bytes, names: dict):
+    """Keep the chart and its styling, but none of last month's data or wording."""
+    title = re.search(rb"<c:title>.*?</c:title>", xml, re.DOTALL)
+    if title:
+        texts = list(re.finditer(rb"(<a:t>)(.*?)(</a:t>)", title.group(), re.DOTALL))
+        changed = title.group()
+        for index, text in reversed(list(enumerate(texts))):
+            value = SLOT_TITLE.encode("utf-8") if index == 0 else b""
+            changed = changed[:text.start()] + text.group(1) + value + text.group(3) + changed[text.end():]
+        xml = xml[:title.start()] + changed + xml[title.end():]
+    matches = list(re.finditer(rb"<c:ser>.*?</c:ser>", xml, re.DOTALL))
+    for index, match in reversed(list(enumerate(matches))):
+        data = match.group()
+        name = re.search(rb"<c:tx>.*?</c:tx>", data, re.DOTALL)
+        if name:
+            label = f"系列{index + 1}".encode("utf-8")
+            updated = re.sub(rb"(<c:v>).*?(</c:v>)", lambda part: part.group(1) + label + part.group(2), name.group(), count=1, flags=re.DOTALL)
+            data = data[:name.start()] + updated + data[name.end():]
+        data = re.sub(rb"<c:dLbl>.*?</c:dLbl>", b"", data, flags=re.DOTALL)
+        # The series name cache was just set above; only categories and values are cleared.
+        data = re.sub(rb"<c:(cat|val|xVal|yVal)>.*?</c:\1>", lambda part: empty_caches(part.group()), data, flags=re.DOTALL)
+        xml = xml[:match.start()] + data + xml[match.end():]
+    return rename_sheets(xml, names)
+
+
+def series_name_cells(xml: bytes):
+    cells = []
+    for index, match in enumerate(re.finditer(rb"<c:ser>.*?</c:ser>", xml, re.DOTALL)):
+        name = re.search(rb"<c:tx>.*?<c:f>(.*?)</c:f>", match.group(), re.DOTALL)
+        if name:
+            reference = html.unescape(name.group(1).decode("utf-8"))
+            sheet, cell = reference.rsplit("!", 1)
+            cells.append((sheet.strip("'").replace("''", "'"), cell.replace("$", ""), f"系列{index + 1}"))
+    return cells
+
+
+def blank_workbook(blob: bytes, chart_xml: bytes):
+    """Clear the embedded workbook so Edit Data starts from an empty sheet."""
+    source = zipfile.ZipFile(io.BytesIO(blob))
+    parts = {name: source.read(name) for name in source.namelist()}
+    workbook = parts["xl/workbook.xml"]
+    sheets = re.findall(rb'<sheet\b[^>]*\bname="([^"]*)"[^>]*\br:id="([^"]+)"', workbook)
+    names = {html.unescape(old.decode("utf-8")).encode("utf-8"): ("数据" if len(sheets) == 1 else f"数据{index + 1}").encode("utf-8")
+             for index, (old, _) in enumerate(sheets)}
+    for old, new in names.items():
+        workbook = workbook.replace(b'name="' + html.escape(old.decode("utf-8")).encode("utf-8") + b'"', b'name="' + new + b'"', 1)
+    workbook = re.sub(rb"<externalReferences>.*?</externalReferences>", b"", workbook, flags=re.DOTALL)
+    parts["xl/workbook.xml"] = workbook
+    rels = parts["xl/_rels/workbook.xml.rels"]
+    targets = {rid: target for rid, target in re.findall(rb'<Relationship\b[^>]*\bId="([^"]+)"[^>]*\bTarget="([^"]+)"', rels)}
+    for name in [name for name in parts if name.startswith("xl/externalLinks/") or name == "xl/calcChain.xml"]:
+        del parts[name]
+    parts["xl/_rels/workbook.xml.rels"] = re.sub(rb'<Relationship\b[^>]*\bTarget="(?:externalLinks/[^"]*|calcChain\.xml)"[^>]*/>', b"", rels)
+    parts["[Content_Types].xml"] = re.sub(rb'<Override\b[^>]*\bPartName="/xl/(?:externalLinks/[^"]*|calcChain\.xml)"[^>]*/>', b"", parts["[Content_Types].xml"])
+    paths = {}
+    for (old, rid), new in zip(sheets, names.values()):
+        paths[new] = "xl/" + targets[rid].decode("utf-8").lstrip("/").removeprefix("xl/")
+    strings = []
+    for sheet in paths.values():
+        parts[sheet] = re.sub(rb'<c\b([^>]*?)(?:/>|>.*?</c>)', lambda cell: b"<c" + re.sub(rb'\s+t="[^"]*"', b"", cell.group(1)) + b"/>",
+                              parts[sheet], flags=re.DOTALL)
+    renamed = {old.decode("utf-8"): new.decode("utf-8") for old, new in names.items()}
+    for sheet, cell, label in series_name_cells(chart_xml):
+        path = paths.get(renamed.get(sheet, sheet).encode("utf-8"))
+        if not path:
+            continue
+        pattern = rb'<c\b(?=[^>]*\br="' + cell.encode() + rb'")([^>]*?)/>'
+        if re.search(pattern, parts[path]):
+            parts[path] = re.sub(pattern, lambda found: b"<c" + found.group(1) + b' t="s"><v>' + str(len(strings)).encode() + b"</v></c>", parts[path], count=1)
+            strings.append(label)
+    if "xl/sharedStrings.xml" in parts:
+        items = "".join(f"<si><t>{html.escape(value)}</t></si>" for value in strings).encode("utf-8")
+        parts["xl/sharedStrings.xml"] = (b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'
+                                         + str(len(strings)).encode() + b'" uniqueCount="' + str(len(strings)).encode() + b'">' + items + b"</sst>")
+    for name in [name for name in parts if re.fullmatch(r"xl/charts/chart\d+\.xml", name)]:
+        parts[name] = blank_chart_xml(parts[name], names)
+    if "docProps/app.xml" in parts:
+        for old, new in names.items():
+            parts["docProps/app.xml"] = parts["docProps/app.xml"].replace(b">" + html.escape(old.decode("utf-8")).encode("utf-8") + b"<", b">" + new + b"<")
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:
+        for info in source.infolist():
+            if info.filename in parts:
+                target.writestr(copy.copy(info), parts[info.filename])
+    source.close()
+    return output.getvalue(), names
 
 
 def patch_cell(sheet: bytes, reference: str, value: int | None):
@@ -143,11 +290,15 @@ def resolve_chart(archive, slide: int, chart_id: int):
     return chart, workbook
 
 
-def patch_pptx(source: Path, output: Path, charts: list[dict]):
+def patch_pptx(source: Path, output: Path, charts: list[dict], blanks: list[dict] = ()):
     if source.resolve() == output.resolve():
         raise ValueError("Chart output must differ from source")
     with zipfile.ZipFile(source) as archive:
         parts = {}
+        for blank in blanks:
+            chart_xml = archive.read(blank["part"])
+            parts[blank["workbook"]], names = blank_workbook(archive.read(blank["workbook"]), chart_xml)
+            parts[blank["part"]] = blank_chart_xml(chart_xml, names)
         for chart in charts:
             parts[chart["part"]] = patch_chart(archive.read(chart["part"]), chart["categories"], chart["series"])
             parts[chart["workbook"]] = patch_workbook(archive.read(chart["workbook"]), chart["categories"],

@@ -99,6 +99,13 @@ def tier_rows(data, tier):
     return [tier_row(game, month, issues) for game in games], issues
 
 
+def head_highlight_ranks(data):
+    """Ranks of the head games the upstream package selected for the highlight panel."""
+    return {str(item.get("rank")) for item in (data.get("head") or {}).get("highlights") or [] if item.get("rank") is not None}
+
+
+HIGHLIGHT_SOURCES = {"head.highlights": head_highlight_ranks}
+
 TABLE_SOURCES = {"head.top20": head_rows,
                  "new_releases.gold": lambda data: tier_rows(data, "gold"),
                  "new_releases.silver": lambda data: tier_rows(data, "silver"),

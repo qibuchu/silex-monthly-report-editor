@@ -64,8 +64,8 @@ def build(original: Path, data_file: Path, audit_file: Path, output: Path, mappi
                            check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as error:
             raise ValueError((error.stderr or "").strip().splitlines()[-1]) from error
-        if compiled["charts"]:
-            patch_charts(slides_only, output, compiled["charts"])
+        if compiled["charts"] or compiled["blankCharts"]:
+            patch_charts(slides_only, output, compiled["charts"], compiled["blankCharts"])
         else:
             shutil.copyfile(slides_only, output)
     with zipfile.ZipFile(output) as archive:

@@ -51,7 +51,10 @@ def chart_data(archive, slide, chart_id):
         name = item.find(C + "tx")
         series.append({"name": "".join(point.text or "" for point in name.iter(C + "v")) if name is not None else "",
                        "values": [float(value) for value in points(item.find(C + "val"))]})
-    return {"categories": categories, "series": series}
+    title = root.find(C + "chart/" + C + "title")
+    heading = "".join(text.text or "" for text in title.iter(A + "t")) if title is not None else ""
+    empty = not categories and all(not item["values"] for item in series)
+    return {"categories": categories, "series": series, "title": heading, "placeholder": empty}
 
 
 def extract(source: Path):
@@ -72,8 +75,10 @@ def extract(source: Path):
                                            for cell in row.findall(A + "tc")] for row in table.findall(A + "tr")]
                 elif frame.find(".//" + C + "chart") is not None:
                     charts[identifier] = chart_data(archive, slide, int(identifier))
-            pictures = [picture.find(P + "nvPicPr/" + P + "cNvPr").get("id") for picture in root.iter(P + "pic")]
-            slides[str(slide)] = {"shapes": shapes, "tables": tables, "charts": charts, "pictures": pictures}
+            markers = [picture.find(P + "nvPicPr/" + P + "cNvPr") for picture in root.iter(P + "pic")]
+            pictures = [marker.get("id") for marker in markers]
+            placeholders = [marker.get("id") for marker in markers if marker.get("descr") == "图片待补"]
+            slides[str(slide)] = {"shapes": shapes, "tables": tables, "charts": charts, "pictures": pictures, "placeholders": placeholders}
     return {"order": order, "slides": slides}
 
 

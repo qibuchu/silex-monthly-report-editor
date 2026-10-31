@@ -70,6 +70,10 @@ test('buildNativeDeck mirrors the PPTX: text, trimmed rows, slots, charts and co
   assert.deepEqual(JSON.parse(pages[0].objects[3].attributes['data-pptx-chart']).series[0].values,[5]);
   assert.doesNotMatch(pages[0].objects[4].content,/旧游戏趋势|旧<\/text>/);assert.match(pages[0].objects[4].content,/图表待补/);
   assert.deepEqual(built.missing,[]);
+  const placeholders={order:[5],slides:{5:{shapes:{4:[['8','月金榜']]},tables:{6:[[[['表头']]],[[['新1']]]]},charts:{8:{categories:[],series:[{name:'系列1',values:[]}],title:'图表标题待补',placeholder:true}},pictures:['3'],placeholders:['3']}}};
+  const rebuilt=buildNativeDeck(template,placeholders,[],()=>{throw Error('placeholder charts are not drawn');}).project.deck.pages[0];
+  assert.match(rebuilt.objects[2].content,/图片待补/);assert.equal(rebuilt.objects[2].attributes.src,undefined);
+  assert.match(rebuilt.objects[3].content,/图表待补/);assert.equal(rebuilt.objects[3].attributes['data-pptx-chart'],undefined);
   assert.equal(template.deck.pages[0].objects[0].content.includes('8'),false);
 });
 

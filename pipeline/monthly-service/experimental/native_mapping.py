@@ -10,7 +10,7 @@ import re
 import zipfile
 from xml.etree import ElementTree
 
-from native_sources import MARKET_ISSUES, TABLE_SOURCES, check_contract, market_values, month_context
+from native_sources import HIGHLIGHT_SOURCES, MARKET_ISSUES, TABLE_SOURCES, check_contract, market_values, month_context
 from pptx_market_charts import resolve_chart
 from pptx_preserve_patch import table_values
 
@@ -83,7 +83,7 @@ def uses_market(mapping):
 class Compiler:
     def __init__(self, archive, data):
         self.archive, self.data = archive, data
-        self.replacements, self.slots, self.source_issues, self.mapping_issues, self.charts = [], [], [], [], []
+        self.replacements, self.slots, self.source_issues, self.mapping_issues, self.charts, self.blank_charts = [], [], [], [], [], []
         self.table_rows, self.context, self.series = {}, month_context(data["report_month"]), {}
         self.page_order = presentation_order(archive)
 
@@ -165,6 +165,17 @@ class Compiler:
             value = self.text(op, title["value"])
             if value is not None:
                 self.cell(op, table, title["row"], title["column"], re.sub(title["find"], value, old, count=1))
+        highlight = op.get("highlight")
+        if highlight:
+            source = highlight.get("source")
+            if source and source not in HIGHLIGHT_SOURCES:
+                self.problem(op, f"未知高亮数据 {source}")
+            else:
+                keys = HIGHLIGHT_SOURCES[source](self.data) if source else set()
+                column = int(highlight.get("keyColumn", 0))
+                self.replacements.append({"kind": "tableFills", "slide": op["slide"], "tableId": op["tableId"],
+                                          "firstRow": header_row + 1, "color": highlight.get("color", "FAF3E3"),
+                                          "flags": [row[column] in keys for row in portion]})
         if op.get("trim"):
             self.replacements.append({"kind": "trimTable", "slide": op["slide"], "tableId": op["tableId"],
                                       "keepRows": max(2, header_row + 1 + len(portion))})
@@ -246,11 +257,12 @@ class Compiler:
         self.slots.append({"slide": op["slide"], "objectId": op["pictureId"], "type": "image"})
 
     def do_chartSlot(self, op):
-        xml = self.slide(op["slide"])
-        if xml is None or op["chartId"] not in object_ids(xml, "graphicFrame", "nvGraphicFramePr"):
+        try:
+            chart, workbook = resolve_chart(self.archive, op["slide"], op["chartId"])
+        except (KeyError, ValueError):
             self.problem(op, "图表对象不存在")
             return
-        self.replacements.append({"kind": "chartSlot", "slide": op["slide"], "chartId": op["chartId"]})
+        self.blank_charts.append({"part": chart, "workbook": workbook})
         self.slots.append({"slide": op["slide"], "objectId": op["chartId"], "type": "chart"})
 
     def do_hideFill(self, op):
@@ -301,7 +313,7 @@ def compile_mapping(mapping, template, data, audit):
             getattr(compiler, "do_" + op["op"])(op)
         if uses_market(mapping):
             compiler.source_issues.extend(MARKET_ISSUES)
-    return {"replacements": compiler.replacements, "slots": compiler.slots, "charts": compiler.charts,
+    return {"replacements": compiler.replacements, "slots": compiler.slots, "charts": compiler.charts, "blankCharts": compiler.blank_charts,
             "sourceIssues": compiler.source_issues, "mappingIssues": compiler.mapping_issues}
 
 

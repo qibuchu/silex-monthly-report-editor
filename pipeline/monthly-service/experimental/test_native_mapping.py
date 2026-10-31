@@ -125,6 +125,19 @@ class CompileTests(Base):
         self.assertEqual(result['replacements'], [])
         self.assertEqual(len(result['mappingIssues']), 2)
 
+    def test_highlight_marks_selected_head_rows_and_clears_others(self):
+        pptx(self.template, {1: slide(table(9, [['排名', '游戏名', '涨幅', '环比'], ['1', 'a', 'b', 'c'], ['2', 'd', 'e', 'f'], ['3', 'g', 'h', 'i']]))})
+        self.data['head']['highlights'] = [{'rank': 2, 'name': 'G2'}]
+        result = self.compiled({'op': 'fillTable', 'slide': 1, 'tableId': 9, 'headerRow': 0, 'source': 'head.top20',
+                                'highlight': {'source': 'head.highlights', 'color': 'FAF3E3'}})
+        fills = [item for item in result['replacements'] if item['kind'] == 'tableFills']
+        self.assertEqual(fills[0]['flags'], [False, True, False])
+        self.assertEqual(fills[0]['firstRow'], 1)
+        cleared = self.compiled({'op': 'fillTable', 'slide': 1, 'tableId': 9, 'headerRow': 0, 'source': 'head.top20', 'highlight': {'color': 'FAF3E3'}})
+        self.assertEqual([item for item in cleared['replacements'] if item['kind'] == 'tableFills'][0]['flags'], [False, False, False])
+        unknown = self.compiled({'op': 'fillTable', 'slide': 1, 'tableId': 9, 'headerRow': 0, 'source': 'head.top20', 'highlight': {'source': 'nope'}})
+        self.assertEqual(len(unknown['mappingIssues']), 1)
+
     def test_page_numbers_follow_presentation_order(self):
         pptx(self.template, {1: slide(shape(2, '01 / 09')), 2: slide(shape(2, '02 / 09'))})
         result = self.compiled({'op': 'pageNumbers', 'find': r'^\d{2} / \d{2}$'})

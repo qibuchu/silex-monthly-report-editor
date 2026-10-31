@@ -241,46 +241,123 @@ def replace_shape_runs(slide_xml: bytes, shape_id: int, expected_runs: list[str]
     return slide_xml[:shape.start()] + settle_blank_paragraphs(changed) + slide_xml[shape.end():]
 
 
-def replace_picture_with_slot(slide_xml: bytes, picture_id: int):
-    """Keep the picture rectangle as an editable shape, without carrying old imagery."""
+SLOT_MEDIA = "ppt/media/monthly-image-slot.png"
+SLOT_LABEL = "图片待补"
+IMAGE_REL = b"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+
+
+def slot_png(size=200):
+    """A light grey picture glyph. It stretches to any frame, so it carries no text."""
+    import struct
+    import zlib
+    background, mark = (240, 240, 240), (200, 205, 211)
+    rows = []
+    for y in range(size):
+        row = bytearray(b"\x00")
+        for x in range(size):
+            border = x < 3 or y < 3 or x >= size - 3 or y >= size - 3
+            sun = (x - 0.66 * size) ** 2 + (y - 0.33 * size) ** 2 < (0.09 * size) ** 2
+            base = 0.78 * size
+            left = y > base - (0.32 * size - abs(x - 0.38 * size)) and y < base and abs(x - 0.38 * size) < 0.32 * size
+            right = y > base - (0.2 * size - abs(x - 0.68 * size)) and y < base and abs(x - 0.68 * size) < 0.2 * size
+            row += bytes(mark if border or sun or left or right else background)
+        rows.append(bytes(row))
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+    header = struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + chunk(b"IEND", b"")
+
+
+def picture_to_slot(slide_xml: bytes, rels_xml: bytes, picture_id: int):
+    """Swap the image inside a picture for a placeholder.
+
+    The picture frame, position, size, crop and effects stay, so the person
+    filling the draft can right-click it and use Change Picture.
+    """
     pictures = list(re.finditer(rb"<p:pic\b[^>]*>.*?</p:pic>", slide_xml, re.DOTALL))
     matches = [match for match in pictures if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(picture_id).encode() + rb'"', match.group())]
     if len(matches) != 1:
         raise ValueError("Picture object missing or ambiguous")
-    picture = matches[0]
-    transform = re.search(rb'<a:xfrm\b[^>]*>.*?</a:xfrm>', picture.group(), re.DOTALL)
-    if not transform:
-        raise ValueError("Picture has no editable transform")
-    slot = make_visual_slot(picture_id, transform.group(), "Image slot", "图片待补")
-    return slide_xml[:picture.start()] + slot + slide_xml[picture.end():]
+    picture = matches[0].group()
+    embed = re.search(rb'(<a:blip\b[^>]*\br:embed=")([^"]+)(")', picture)
+    if not embed:
+        raise ValueError("Picture has no embedded image")
+    relations = re.findall(rb"<Relationship\b[^>]*/>", rels_xml)
+    slot_id = next((re.search(rb'\bId="([^"]+)"', item).group(1) for item in relations
+                    if re.search(rb'\bTarget="\.\./media/monthly-image-slot\.png"', item)), None)
+    if slot_id is None:
+        numbers = [int(value) for value in re.findall(rb'\bId="rId(\d+)"', rels_xml)]
+        slot_id = b"rId" + str(max(numbers, default=0) + 1).encode()
+        entry = b'<Relationship Id="' + slot_id + b'" Type="' + IMAGE_REL + b'" Target="../media/monthly-image-slot.png"/>'
+        rels_xml = rels_xml.replace(b"</Relationships>", entry + b"</Relationships>", 1)
+    old_id = embed.group(2)
+    picture = picture[:embed.start()] + embed.group(1) + slot_id + embed.group(3) + picture[embed.end():]
+    picture = re.sub(rb'<asvg:svgBlip\b[^>]*/>', b"", picture)
+    marker = re.search(rb"<p:cNvPr\b[^>]*?(/?>)", picture)
+    tag = re.sub(rb'\sdescr="[^"]*"', b"", marker.group()[:-len(marker.group(1))])
+    picture = picture[:marker.start()] + tag + b' descr="' + SLOT_LABEL.encode("utf-8") + b'"' + marker.group(1) + picture[marker.end():]
+    slide_xml = slide_xml[:matches[0].start()] + picture + slide_xml[matches[0].end():]
+    if old_id != slot_id and not re.search(rb'r:(?:embed|link|id)="' + re.escape(old_id) + rb'"', slide_xml):
+        rels_xml = re.sub(rb'<Relationship\b[^>]*\bId="' + re.escape(old_id) + rb'"[^>]*/>', b"", rels_xml)
+    return slide_xml, rels_xml
 
 
-def make_visual_slot(object_id: int, transform: bytes, name: str, label: str):
-    ident = str(object_id).encode()
-    return (b'<p:sp><p:nvSpPr><p:cNvPr id="' + ident + b'" name="' + name.encode("utf-8") + b' ' + ident +
-            b'"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>' + transform +
-            b'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
-            b'<a:solidFill><a:srgbClr val="F0F0F0"/></a:solidFill>'
-            b'<a:ln w="12700"><a:solidFill><a:srgbClr val="C8CDD3"/></a:solidFill></a:ln>'
-            b'</p:spPr><p:txBody><a:bodyPr anchor="ctr"/><a:lstStyle/><a:p>'
-            b'<a:pPr algn="ctr"/><a:r><a:rPr lang="zh-CN" sz="1400">'
-            b'<a:solidFill><a:srgbClr val="8A96A5"/></a:solidFill></a:rPr>'
-            b'<a:t>' + label.encode("utf-8") + b'</a:t></a:r>'
-            b'</a:p></p:txBody></p:sp>')
+def table_fill_span(cell: bytes):
+    """Locate the cell background, the fill that follows the border lines."""
+    properties = re.search(rb"<a:tcPr\b[^>]*?(/>|>.*?</a:tcPr>)", cell, re.DOTALL)
+    if not properties:
+        return None
+    inner_start = cell.find(b">", properties.start()) + 1
+    if properties.group(1) == b"/>":
+        return properties, None
+    inner_end = properties.end() - len(b"</a:tcPr>")
+    inner = cell[inner_start:inner_end]
+    last = 0
+    for border in re.finditer(rb"<a:ln(L|R|T|B|TlToBr|BlToTr)\b[^>]*?(?:/>|>.*?</a:ln\1>)", inner, re.DOTALL):
+        last = border.end()
+    fill = re.compile(rb"<a:noFill/>|<a:solidFill>.*?</a:solidFill>|<a:gradFill\b.*?</a:gradFill>|<a:pattFill\b.*?</a:pattFill>", re.DOTALL).match(inner, last)
+    if fill:
+        return properties, (inner_start + fill.start(), inner_start + fill.end())
+    return properties, (inner_start + last, inner_start + last)
 
 
-def replace_chart_with_slot(slide_xml: bytes, chart_id: int):
+def set_row_fills(slide_xml: bytes, table_id: int, first_row: int, flags: list, color: str):
+    """Mark selected data rows with the highlight colour and reset the others."""
     frames = list(re.finditer(rb"<p:graphicFrame\b[^>]*>.*?</p:graphicFrame>", slide_xml, re.DOTALL))
-    matches = [match for match in frames if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(chart_id).encode() + rb'"', match.group())]
-    if len(matches) != 1 or b"/chart" not in matches[0].group():
-        raise ValueError("Native chart missing or ambiguous")
-    frame = matches[0]
-    transform = re.search(rb'<p:xfrm\b[^>]*>.*?</p:xfrm>', frame.group(), re.DOTALL)
-    if not transform:
-        raise ValueError("Chart has no transform")
-    slot = make_visual_slot(chart_id, transform.group().replace(b"<p:xfrm", b"<a:xfrm").replace(b"</p:xfrm>", b"</a:xfrm>"),
-                            "Chart slot", "图表待补")
-    return slide_xml[:frame.start()] + slot + slide_xml[frame.end():]
+    matches = [match for match in frames if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(table_id).encode() + rb'"', match.group())]
+    if len(matches) != 1 or b"<a:tbl>" not in matches[0].group():
+        raise ValueError(f"Native table id {table_id} missing or ambiguous")
+    frame = matches[0].group()
+    rows = list(re.finditer(rb"<a:tr\b[^>]*>.*?</a:tr>", frame, re.DOTALL))
+    if first_row + len(flags) > len(rows):
+        raise ValueError("Highlight rows exceed the table")
+    highlight = b'<a:solidFill><a:srgbClr val="' + color.upper().encode() + b'"/></a:solidFill>'
+    normal = None
+    for row in rows[first_row:first_row + len(flags)]:
+        for cell in re.finditer(rb"<a:tc\b[^>]*>.*?</a:tc>", row.group(), re.DOTALL):
+            span = table_fill_span(cell.group())
+            if span and span[1] and span[1][0] != span[1][1]:
+                fill = cell.group()[span[1][0]:span[1][1]]
+                if color.upper().encode() not in fill.upper():
+                    normal = normal or fill
+    normal = normal or b"<a:noFill/>"
+    for index in reversed(range(len(flags))):
+        row = rows[first_row + index]
+        updated = row.group()
+        for cell in reversed(list(re.finditer(rb"<a:tc\b[^>]*>.*?</a:tc>", updated, re.DOTALL))):
+            text = cell.group()
+            span = table_fill_span(text)
+            value = highlight if flags[index] else normal
+            if span is None:
+                text = text.replace(b"</a:tc>", b"<a:tcPr>" + value + b"</a:tcPr></a:tc>", 1)
+            elif span[1] is None:
+                properties = span[0]
+                text = text[:properties.start()] + properties.group()[:-2] + b">" + value + b"</a:tcPr>" + text[properties.end():]
+            else:
+                text = text[:span[1][0]] + value + text[span[1][1]:]
+            updated = updated[:cell.start()] + text + updated[cell.end():]
+        frame = frame[:row.start()] + updated + frame[row.end():]
+    return slide_xml[:matches[0].start()] + frame + slide_xml[matches[0].end():]
 
 
 def hide_shape_fill(slide_xml: bytes, shape_id: int, expected_color: str):
@@ -317,7 +394,7 @@ def main():
             actual = hashlib.sha256(args.source.read_bytes()).hexdigest()
             if not isinstance(spec, dict) or spec.get("sourceSha256") != actual:
                 raise ValueError("PPTX source hash changed; review table mapping before filling")
-        changed = {}
+        changed, added = {}, {}
         for item in replacements:
             slide = int(item["slide"])
             name = f"ppt/slides/slide{slide}.xml"
@@ -338,15 +415,24 @@ def main():
             elif item.get("kind") == "shapeRuns":
                 changed[name] = replace_shape_runs(data, int(item["shapeId"]), item["expectedRuns"], item["values"])
             elif item.get("kind") == "pictureSlot":
-                changed[name] = replace_picture_with_slot(data, int(item["pictureId"]))
-            elif item.get("kind") == "chartSlot":
-                changed[name] = replace_chart_with_slot(data, int(item["chartId"]))
+                rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
+                changed[name], changed[rels] = picture_to_slot(data, changed.get(rels, source.read(rels)), int(item["pictureId"]))
+                ElementTree.fromstring(changed[rels])
+                added[SLOT_MEDIA] = slot_png()
+            elif item.get("kind") == "tableFills":
+                changed[name] = set_row_fills(data, int(item["tableId"]), int(item["firstRow"]), item["flags"], item["color"])
             elif item.get("kind") == "hideShapeFill":
                 changed[name] = hide_shape_fill(data, int(item["shapeId"]), item["expectedColor"])
             else:
                 changed[name] = patch_cell(data, int(item["tableId"]), int(item["row"]),
                                            int(item["column"]), str(item["expected"]), str(item["value"]))
             ElementTree.fromstring(changed[name])
+        added = {name: data for name, data in added.items() if name not in source.namelist()}
+        if added:
+            types = changed.get("[Content_Types].xml", source.read("[Content_Types].xml"))
+            if not re.search(rb'<Default\b[^>]*\bExtension="png"', types, re.IGNORECASE):
+                types = types.replace(b"</Types>", b'<Default Extension="png" ContentType="image/png"/></Types>', 1)
+                changed["[Content_Types].xml"] = types
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=args.output.parent, suffix=".partial", delete=False) as temp:
             temp_path = Path(temp.name)
@@ -355,6 +441,8 @@ def main():
                 output.comment = source.comment
                 for info in source.infolist():
                     output.writestr(copy.copy(info), changed.get(info.filename, source.read(info.filename)))
+                for name, data in added.items():
+                    output.writestr(name, data, compress_type=zipfile.ZIP_DEFLATED)
             with zipfile.ZipFile(temp_path) as after:
                 modified = [name for name in source.namelist()
                             if hashlib.sha256(source.read(name)).digest() != hashlib.sha256(after.read(name)).digest()]

@@ -218,6 +218,8 @@ const withChartAttribute = (tag, chart) => {
   const value = JSON.stringify(chart).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   return tag.replace(pattern, () => ` data-pptx-chart="${value}"`);
 };
+// Older drafts turned slots into shapes; newer ones keep the picture with a placeholder image.
+const isImageSlot = (native, number) => Boolean(native) && (number in native.shapes || (native.placeholders || []).includes(number));
 const px = value => Number(String(value ?? '').match(/[\d.]+/)?.[0]) || 0;
 
 function syncObject(object, extraction, render, report) {
@@ -244,6 +246,9 @@ function syncObject(object, extraction, render, report) {
         edits.push(...paragraphEdits(cell.paragraphs, rows[cell.row][cell.column] || []));
       }
       if (trimmed.length && id === rootId && object.style) object.style = { ...object.style, height: `${owner.rows.slice(0, rows.length).reduce((sum, row) => sum + row.height, 0)}px` };
+    } else if (kind === 'chart' && id !== rootId && native.charts[number]?.placeholder && owner.innerStart !== undefined) {
+      edits.push({ start: owner.outerStart, end: owner.innerStart, value: withChartAttribute(owner.openTag, null) });
+      edits.push({ start: owner.innerStart, end: owner.innerEnd, value: slot('图表待补') });
     } else if (kind === 'chart' && id !== rootId && number in native.charts && owner.innerStart !== undefined) {
       const raw = attribute(owner.openTag, 'data-pptx-chart');
       const style = attribute(owner.openTag, 'style') || '';
@@ -261,7 +266,7 @@ function syncObject(object, extraction, render, report) {
     const id = attribute(tag, 'data-object-id')?.match(/slide-(\d+)-image-(\d+)$/);
     if (!id || id[0] === rootId.match(/slide-\d+-image-\d+$/)?.[0]) return tag;
     const native = extraction.slides[id[1]];
-    if (!native || !(id[2] in native.shapes)) return tag;
+    if (!isImageSlot(native, id[2])) return tag;
     const style = attribute(tag, 'style') || '';
     return `<div data-object-id="${attribute(tag, 'data-object-id')}" style="${escapeText(style)}">${slot('图片待补')}</div>`;
   });
@@ -269,10 +274,13 @@ function syncObject(object, extraction, render, report) {
   const top = rootId.match(/slide-(\d+)-(image|chart)-(\d+)$/);
   const native = top && extraction.slides[top[1]];
   if (!native) return;
-  if (top[2] === 'image' && top[3] in native.shapes) {
+  if (top[2] === 'image' && isImageSlot(native, top[3])) {
     object.content = slot('图片待补');
     delete object.attributes.src;
     delete object.attributes.alt;
+  } else if (top[2] === 'chart' && native.charts[top[3]]?.placeholder) {
+    object.content = slot('图表待补');
+    delete object.attributes['data-pptx-chart'];
   } else if (top[2] === 'chart' && top[3] in native.charts && object.attributes['data-pptx-chart']) {
     const { chart, svg } = syncChart(JSON.parse(object.attributes['data-pptx-chart']), native.charts[top[3]], render, px(object.style?.width), px(object.style?.height));
     object.attributes['data-pptx-chart'] = JSON.stringify(chart);
