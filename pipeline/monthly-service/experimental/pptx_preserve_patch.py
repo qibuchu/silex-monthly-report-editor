@@ -187,6 +187,25 @@ def replace_shape_text(slide_xml: bytes, shape_id: int, expected_text: str, valu
     return slide_xml[:shape.start()] + changed + slide_xml[shape.end():]
 
 
+def replace_shape_runs(slide_xml: bytes, shape_id: int, expected_runs: list[str], values: list[str]):
+    """Replace each styled run independently, preserving KPI label and number styles."""
+    shapes = list(re.finditer(rb"<p:sp\b[^>]*>.*?</p:sp>", slide_xml, re.DOTALL))
+    matches = [match for match in shapes if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(shape_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError("Native text shape missing or ambiguous")
+    shape = matches[0]
+    runs = list(re.finditer(rb"<a:t(?:\s[^>]*)?>.*?</a:t>", shape.group(), re.DOTALL))
+    old = [html.unescape(re.sub(rb"<[^>]+>", b"", run.group()).decode("utf-8")) for run in runs]
+    if old != expected_runs or len(values) != len(old):
+        raise ValueError("Styled shape runs changed; review KPI binding")
+    changed = shape.group()
+    for run, value in reversed(list(zip(runs, values))):
+        opening = run.group()[:run.group().find(b">") + 1]
+        replacement = opening + html.escape(str(value), quote=False).encode("utf-8") + b"</a:t>"
+        changed = changed[:run.start()] + replacement + changed[run.end():]
+    return slide_xml[:shape.start()] + changed + slide_xml[shape.end():]
+
+
 def replace_picture_with_slot(slide_xml: bytes, picture_id: int):
     """Keep the picture rectangle as an editable shape, without carrying old imagery."""
     pictures = list(re.finditer(rb"<p:pic\b[^>]*>.*?</p:pic>", slide_xml, re.DOTALL))
@@ -229,6 +248,23 @@ def replace_chart_with_slot(slide_xml: bytes, chart_id: int):
     return slide_xml[:frame.start()] + slot + slide_xml[frame.end():]
 
 
+def hide_shape_fill(slide_xml: bytes, shape_id: int, expected_color: str):
+    shapes = list(re.finditer(rb"<p:sp\b[^>]*>.*?</p:sp>", slide_xml, re.DOTALL))
+    matches = [match for match in shapes if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(shape_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError("Filled shape missing or ambiguous")
+    shape = matches[0]
+    properties = re.search(rb'<p:spPr>.*?</p:spPr>', shape.group(), re.DOTALL)
+    if not properties:
+        raise ValueError("Shape has no visual properties")
+    pattern = rb'<a:solidFill><a:srgbClr val="' + expected_color.encode() + rb'"/></a:solidFill>'
+    changed, count = re.subn(pattern, b'<a:noFill/>', properties.group(), count=1)
+    if count != 1:
+        raise ValueError("Reviewed fill color changed")
+    new_shape = shape.group()[:properties.start()] + changed + shape.group()[properties.end():]
+    return slide_xml[:shape.start()] + new_shape + slide_xml[shape.end():]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("source", type=Path)
@@ -264,10 +300,14 @@ def main():
                                                      item["oldFragment"], item["newFragment"])
             elif item.get("kind") == "shapeReplace":
                 changed[name] = replace_shape_text(data, int(item["shapeId"]), item["expectedText"], item["value"])
+            elif item.get("kind") == "shapeRuns":
+                changed[name] = replace_shape_runs(data, int(item["shapeId"]), item["expectedRuns"], item["values"])
             elif item.get("kind") == "pictureSlot":
                 changed[name] = replace_picture_with_slot(data, int(item["pictureId"]))
             elif item.get("kind") == "chartSlot":
                 changed[name] = replace_chart_with_slot(data, int(item["chartId"]))
+            elif item.get("kind") == "hideShapeFill":
+                changed[name] = hide_shape_fill(data, int(item["shapeId"]), item["expectedColor"])
             else:
                 changed[name] = patch_cell(data, int(item["tableId"]), int(item["row"]),
                                            int(item["column"]), str(item["expected"]), str(item["value"]))

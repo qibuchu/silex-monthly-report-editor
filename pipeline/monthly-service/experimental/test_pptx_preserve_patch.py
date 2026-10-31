@@ -3,7 +3,7 @@ from xml.etree import ElementTree
 
 from pptx_preserve_patch import (patch_cell, patch_shape_fragment, patch_table, table_values,
                                  trim_table_rows, replace_shape_text, replace_picture_with_slot,
-                                 replace_chart_with_slot)
+                                 replace_chart_with_slot, replace_shape_runs, hide_shape_fill)
 
 
 XML = (b'<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
@@ -102,6 +102,19 @@ class PreservePatchTests(unittest.TestCase):
         self.assertIn(b'<p:sp>', result)
         self.assertNotIn(b'<p:graphicFrame>', result)
         self.assertIn('图表待补'.encode(), result)
+
+    def test_market_kpi_runs_keep_styles_and_missing_ai_bar_is_hidden(self):
+        source = (b'<p:sp><p:cNvPr id="70"/><p:spPr><a:solidFill>'
+                  b'<a:srgbClr val="E6CD97"/></a:solidFill></p:spPr>'
+                  b'<a:r><a:rPr sz="1000"/><a:t>7</a:t></a:r>'
+                  b'<a:r><a:rPr sz="2000"/><a:t>2635</a:t></a:r></p:sp>')
+        result = replace_shape_runs(source, 70, ['7', '2635'], ['8', '2849'])
+        self.assertIn(b'<a:rPr sz="1000"/><a:t>8</a:t>', result)
+        self.assertIn(b'<a:rPr sz="2000"/><a:t>2849</a:t>', result)
+        result = hide_shape_fill(result, 70, 'E6CD97')
+        self.assertIn(b'<p:spPr><a:noFill/></p:spPr>', result)
+        with self.assertRaisesRegex(ValueError, 'fill color changed'):
+            hide_shape_fill(result, 70, 'E6CD97')
 
 
 if __name__ == '__main__':
