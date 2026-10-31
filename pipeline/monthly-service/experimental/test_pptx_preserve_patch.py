@@ -1,7 +1,7 @@
 import unittest
 from xml.etree import ElementTree
 
-from pptx_preserve_patch import patch_cell
+from pptx_preserve_patch import patch_cell, patch_table, table_values
 
 
 XML = (b'<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
@@ -10,6 +10,9 @@ XML = (b'<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/200
        b'<a:tbl><a:tr><a:tc><a:t>header</a:t></a:tc></a:tr>'
        b'<a:tr><a:tc><a:r><a:t>CS</a:t></a:r><a:r><a:t>2</a:t></a:r></a:tc></a:tr>'
        b'</a:tbl></p:graphicFrame><p:sp><a:t>unchanged</a:t></p:sp></p:spTree>')
+
+TABLE_XML = XML.replace(b'<a:tbl>', b'<a:graphic><a:graphicData><a:tbl>')\
+               .replace(b'</a:tbl>', b'<a:tr><a:tc><a:t>old</a:t></a:tc></a:tr></a:tbl></a:graphicData></a:graphic>')
 
 
 class PreservePatchTests(unittest.TestCase):
@@ -27,9 +30,23 @@ class PreservePatchTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Expected cell'):
             patch_cell(XML, 9, 1, 0, 'APEX', 'new')
 
+    def test_same_value_preserves_original_run_markup_byte_for_byte(self):
+        self.assertEqual(patch_cell(XML, 9, 1, 0, 'CS2', 'CS2'), XML)
+
     def test_rejects_missing_table(self):
         with self.assertRaisesRegex(ValueError, 'missing or ambiguous'):
             patch_cell(XML, 8, 1, 0, 'CS2', 'new')
+
+    def test_fills_native_table_and_clears_remaining_old_rows(self):
+        result = patch_table(TABLE_XML, 9, 0, ['header'], [['新游戏']])
+        self.assertEqual(table_values(result, 9), [['header'], ['新游戏'], ['']])
+        self.assertIn(b'<p:sp><a:t>unchanged</a:t></p:sp>', result)
+
+    def test_refuses_overflow_or_changed_header(self):
+        with self.assertRaisesRegex(ValueError, 'continuation page'):
+            patch_table(TABLE_XML, 9, 0, ['header'], [['a'], ['b'], ['c']])
+        with self.assertRaisesRegex(ValueError, 'header changed'):
+            patch_table(TABLE_XML, 9, 0, ['other'], [['a']])
 
 
 if __name__ == '__main__':
