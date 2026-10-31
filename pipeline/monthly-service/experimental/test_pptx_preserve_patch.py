@@ -80,12 +80,19 @@ class PreservePatchTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Invalid table row count'):
             trim_table_rows(source, 9, 4)
 
-    def test_manual_text_slot_removes_old_bullet_and_keeps_shape(self):
-        source = b'<p:sp><p:cNvPr id="7"/><a:p><a:pPr><a:buChar char="-"/></a:pPr><a:r><a:t>old month</a:t></a:r></a:p></p:sp>'
-        result = replace_shape_text(source, 7, 'old month', '')
+    def test_manual_text_slot_keeps_each_paragraph_ready_to_fill(self):
+        source = (b'<p:sp><p:cNvPr id="7"/><a:p><a:pPr algn="ctr"><a:buChar char="-"/></a:pPr><a:r><a:rPr sz="1500" b="1"><a:solidFill/></a:rPr>'
+                  b'<a:t>old</a:t></a:r><a:r><a:rPr sz="900"/><a:t> month</a:t></a:r></a:p><a:p><a:r><a:rPr sz="1200"/><a:t>body</a:t></a:r></a:p></p:sp>')
+        result = replace_shape_text(source, 7, 'old monthbody', '')
         self.assertIn(b'<p:cNvPr id="7"', result)
-        self.assertNotIn(b'old month', result)
-        self.assertNotIn(b'a:buChar', result)
+        self.assertNotIn(b'<a:r>', result)
+        self.assertNotIn(b'<a:t>', result)
+        self.assertIn(b'<a:p><a:pPr algn="ctr"><a:buChar char="-"/></a:pPr><a:endParaRPr sz="1500" b="1"><a:solidFill/></a:endParaRPr></a:p>', result)
+        self.assertIn(b'<a:p><a:endParaRPr sz="1200"/></a:p>', result)
+
+    def test_cleared_cell_keeps_font_for_manual_filling(self):
+        result = patch_cell(b'<p:graphicFrame><p:cNvPr id="9"/><a:tbl><a:tr><a:tc><a:txBody><a:p><a:r><a:rPr sz="1200"/><a:t>old</a:t></a:r></a:p></a:txBody></a:tc></a:tr></a:tbl></p:graphicFrame>', 9, 0, 0, 'old', '')
+        self.assertIn(b'<a:p><a:endParaRPr sz="1200"/></a:p>', result)
 
     def test_picture_and_chart_become_editable_visual_slots(self):
         picture = (b'<p:pic><p:nvPicPr><p:cNvPr id="8"/></p:nvPicPr><p:spPr>'

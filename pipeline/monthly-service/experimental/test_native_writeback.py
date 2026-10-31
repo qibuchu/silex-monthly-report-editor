@@ -98,6 +98,17 @@ class WritebackTests(unittest.TestCase):
         self.assertEqual([item['id'] for item in result['rejected']], ['a', 'b', 'c', 'd'])
         self.assertFalse(self.output.exists())
 
+    def test_clearing_keeps_style_and_filling_restores_it(self):
+        clear = {'kind': 'text', 'slide': 1, 'shapeId': 4, 'before': [['8', '月'], ['要点']], 'paragraphs': [[], []]}
+        apply(self.source, [clear], self.output)
+        self.assertEqual(extract(self.output)['slides']['1']['shapes']['4'], [[], []])
+        self.assertIn('<a:endParaRPr b="1"/>', self.written())
+        refilled = Path(self.tmp.name) / 'refilled.pptx'
+        fill = {'kind': 'text', 'slide': 1, 'shapeId': 4, 'before': [[], []], 'paragraphs': [['九月'], []]}
+        apply(self.output, [fill], refilled)
+        with zipfile.ZipFile(refilled) as archive:
+            self.assertIn(f'{BOLD}<a:t>九月</a:t>', archive.read('ppt/slides/slide1.xml').decode('utf-8'))
+
     def test_line_break_is_written(self):
         changed = set_paragraph(f'<a:p>{run("甲")}</a:p>'.encode(), ['甲', '\n', '乙']).decode('utf-8')
         self.assertIn('<a:br/>', changed)

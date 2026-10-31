@@ -21,6 +21,37 @@ def scoped_sub(data: bytes, pattern: bytes, index: int, replacement):
     return data[:match.start()] + replacement(match.group()) + data[match.end():]
 
 
+PARAGRAPH = rb"<a:p\s*/>|<a:p(?:\s[^>]*)?>.*?</a:p>"
+RUN = rb"<a:r(?:\s[^>]*)?>.*?</a:r>"
+
+
+def blank_paragraph(paragraph: bytes):
+    """Empty a paragraph but keep its formatting for whoever fills it in.
+
+    PowerPoint drops runs without text on load, and their formatting with them.
+    An empty paragraph keeps its style only on the end-of-paragraph marker.
+    """
+    run = re.search(RUN, paragraph, re.DOTALL)
+    if not run:
+        return paragraph
+    head = re.match(rb"<a:p(?:\s[^>]*)?>(?:<a:pPr\b[^>]*/>|<a:pPr\b[^>]*>.*?</a:pPr>)?", paragraph, re.DOTALL).group()
+    properties = re.search(rb"<a:rPr\b([^>]*?)(/>|>(.*?)</a:rPr>)", run.group(), re.DOTALL)
+    existing = re.search(rb"<a:endParaRPr\b[^>]*/>|<a:endParaRPr\b[^>]*>.*?</a:endParaRPr>", paragraph, re.DOTALL)
+    if properties:
+        inner = properties.group(3)
+        end = b"<a:endParaRPr" + properties.group(1) + (b"/>" if inner is None else b">" + inner + b"</a:endParaRPr>")
+    else:
+        end = existing.group() if existing else b""
+    return head + end + b"</a:p>"
+
+
+def settle_blank_paragraphs(xml: bytes):
+    def settle(match):
+        texts = re.findall(rb"<a:t(?:\s[^>]*)?>(.*?)</a:t>", match.group(), re.DOTALL)
+        return match.group() if any(texts) else blank_paragraph(match.group())
+    return re.sub(PARAGRAPH, settle, xml, flags=re.DOTALL)
+
+
 def patch_cell(slide_xml: bytes, table_id: int, row: int, column: int, expected: str | None, value: str):
     frames = list(re.finditer(rb"<p:graphicFrame\b[^>]*>.*?</p:graphicFrame>", slide_xml, re.DOTALL))
     matches = [m for m in frames if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(table_id).encode() + rb'"', m.group())]
@@ -45,7 +76,7 @@ def patch_cell(slide_xml: bytes, table_id: int, row: int, column: int, expected:
                     original = match.group()
                     opening = original[:original.find(b">") + 1]
                     data = data[:start] + opening + (encoded if i == 0 else b"") + b"</a:t>" + data[end:]
-                return data
+                return settle_blank_paragraphs(data)
             return scoped_sub(data, rb"<a:tc\b[^>]*>.*?</a:tc>", column, patch_column)
         return scoped_sub(data, rb"<a:tr\b[^>]*>.*?</a:tr>", row, patch_row)
 
@@ -187,9 +218,8 @@ def replace_shape_text(slide_xml: bytes, shape_id: int, expected_text: str, valu
         opening = run.group()[:run.group().find(b">") + 1]
         replacement = opening + (html.escape(value, quote=False).encode("utf-8") if index == 0 else b"") + b"</a:t>"
         changed = changed[:run.start()] + replacement + changed[run.end():]
-    if not value:
-        changed = re.sub(rb'<a:bu(?:Char|AutoNum|Blip)\b[^>]*/>', b'', changed)
-    return slide_xml[:shape.start()] + changed + slide_xml[shape.end():]
+    # Bullets stay: PowerPoint hides them on empty lines and restores them when filled.
+    return slide_xml[:shape.start()] + settle_blank_paragraphs(changed) + slide_xml[shape.end():]
 
 
 def replace_shape_runs(slide_xml: bytes, shape_id: int, expected_runs: list[str], values: list[str]):
@@ -208,7 +238,7 @@ def replace_shape_runs(slide_xml: bytes, shape_id: int, expected_runs: list[str]
         opening = run.group()[:run.group().find(b">") + 1]
         replacement = opening + html.escape(str(value), quote=False).encode("utf-8") + b"</a:t>"
         changed = changed[:run.start()] + replacement + changed[run.end():]
-    return slide_xml[:shape.start()] + changed + slide_xml[shape.end():]
+    return slide_xml[:shape.start()] + settle_blank_paragraphs(changed) + slide_xml[shape.end():]
 
 
 def replace_picture_with_slot(slide_xml: bytes, picture_id: int):

@@ -14,6 +14,7 @@ from xml.etree import ElementTree
 
 from native_mapping import NS, presentation_order
 from pptx_market_charts import resolve_chart
+from pptx_preserve_patch import blank_paragraph
 
 
 P = "{" + NS["p"] + "}"
@@ -118,6 +119,8 @@ def set_paragraph(paragraph: bytes, tokens: list):
     if re.search(rb"<a:bu(?:Char|AutoNum|Blip)\b", paragraph):
         tokens = strip_bullet(tokens)
     tokens = [] if not "".join(tokens).strip("\n") else tokens
+    if not tokens:
+        return blank_paragraph(paragraph)
     texts = [token for token in tokens if token != "\n"]
     runs = list(re.finditer(RUN, paragraph, re.DOTALL))
     breaks = len(re.findall(rb"<a:br\b", paragraph))
