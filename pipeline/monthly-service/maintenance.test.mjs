@@ -23,3 +23,17 @@ test('storage lock and hashed backup restore protect live data and reject damage
   assert.equal(fs.existsSync(path.join(root,'damaged')),false);
  }finally{if(!path.resolve(root).startsWith(here+path.sep))throw Error('Unsafe cleanup');fs.rmSync(root,{recursive:true,force:true});}
 });
+test('completed backups retain the latest seven and a failed backup leaves no partial copy',()=>{
+ const root=fs.mkdtempSync(path.join(here,'.maintenance-retention-test-'));
+ try{
+  const data=path.join(root,'data'),backups=path.join(root,'backups');fs.mkdirSync(data);
+  assert.throws(()=>backupStore(data,backups),/缺少store.json/);
+  assert.deepEqual(fs.readdirSync(backups),[]);
+  fs.writeFileSync(path.join(data,'store.json'),JSON.stringify({projects:{},tasks:{}}));
+  let latest;
+  for(let i=0;i<9;i++)latest=backupStore(data,backups).directory;
+  const completed=fs.readdirSync(backups).filter(name=>!name.endsWith('.partial'));
+  assert.equal(completed.length,7);
+  assert.ok(fs.existsSync(latest));
+ }finally{if(!path.resolve(root).startsWith(here+path.sep))throw Error('Unsafe cleanup');fs.rmSync(root,{recursive:true,force:true});}
+});

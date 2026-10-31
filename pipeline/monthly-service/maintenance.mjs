@@ -38,12 +38,29 @@ export function backupStore(dataDir,backupRoot){
   fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,bytes);
   files.push({path:relative,size:bytes.length,sha256:hash(bytes)});
  };
- if(!fs.existsSync(path.join(root,'store.json')))throw Error('缺少store.json，不能生成空备份');
- // These are the authoritative data. In-flight task outputs are excluded;
- // interrupted generation never publishes a project automatically.
- for(const name of ['store.json','assets','history','conflicts'])if(fs.existsSync(path.join(root,name)))copy(path.join(root,name),name);
- fs.writeFileSync(path.join(staged,'manifest.json'),JSON.stringify({format:'monthly-backup-v1',createdAt:new Date().toISOString(),files},null,2));
- fs.renameSync(staged,target);return {directory:target,files:files.length,bytes:files.reduce((sum,f)=>sum+f.size,0)};
+ try{
+  if(!fs.existsSync(path.join(root,'store.json')))throw Error('缺少store.json，不能生成空备份');
+  // These are the authoritative data. In-flight task outputs are excluded;
+  // interrupted generation never publishes a project automatically.
+  for(const name of ['store.json','assets','history','conflicts'])if(fs.existsSync(path.join(root,name)))copy(path.join(root,name),name);
+  fs.writeFileSync(path.join(staged,'manifest.json'),JSON.stringify({format:'monthly-backup-v1',createdAt:new Date().toISOString(),files},null,2));
+  fs.renameSync(staged,target);
+ }catch(error){try{fs.rmSync(staged,{recursive:true,force:true});}catch{}throw error;}
+ let pruned=[],pruneError;
+ try{pruned=pruneBackups(base,7);}catch(error){pruneError=error.message;}
+ return {directory:target,files:files.length,bytes:files.reduce((sum,f)=>sum+f.size,0),pruned,...(pruneError?{pruneError}:{})};
+}
+export function pruneBackups(backupRoot,keep=7){
+ if(!Number.isInteger(keep)||keep<1)throw Error('至少保留一份完整备份');
+ const base=path.resolve(backupRoot),pattern=/^20\d\d-\d\d-\d\dT\d\d-\d\d-\d\d-\d{3}Z-[a-f\d]{8}$/;
+ const entries=fs.readdirSync(base,{withFileTypes:true}).filter(e=>e.isDirectory()&&pattern.test(e.name)&&fs.existsSync(path.join(base,e.name,'manifest.json'))).map(e=>e.name).sort().reverse();
+ const removed=[];
+ for(const name of entries.slice(keep)){
+  const target=path.join(base,name);
+  if(fs.realpathSync(target)!==target||!target.startsWith(base+path.sep))throw Error('备份目录路径异常，停止清理');
+  fs.rmSync(target,{recursive:true});removed.push(name);
+ }
+ return removed;
 }
 export function restoreStore(backupDirectory,dataDir){
  const source=path.resolve(backupDirectory),dest=path.resolve(dataDir);
