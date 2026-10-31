@@ -9,23 +9,39 @@ function hashFile(file){
  finally{fs.closeSync(fd);}
  return digest.digest('hex');
 }
+// Locks held by this process. A lock naming our own PID that is not listed here
+// was left by an earlier process: container restarts restart the PID sequence.
+const heldLocks=new Set();
+// Linux process start time (/proc/<pid>/stat field 22); null where unavailable.
+export function processStartTime(pid){
+ try{
+  const stat=fs.readFileSync(`/proc/${pid}/stat`,'utf8');
+  return stat.slice(stat.lastIndexOf(')')+2).split(' ')[19]||null;
+ }catch{return null;}
+}
 export function acquireStoreLock(dataDir){
  fs.mkdirSync(dataDir,{recursive:true});
  const file=path.join(dataDir,'.service-lock.json'),identity=randomUUID();
- const create=()=>{const fd=fs.openSync(file,'wx');try{fs.writeFileSync(fd,JSON.stringify({pid:process.pid,identity}));}finally{fs.closeSync(fd);}};
+ const create=()=>{const fd=fs.openSync(file,'wx');try{fs.writeFileSync(fd,JSON.stringify({pid:process.pid,identity,startTime:processStartTime(process.pid)}));heldLocks.add(identity);}finally{fs.closeSync(fd);}};
+ const replace=()=>{fs.unlinkSync(file);create();return release;};
  try{create();}catch(error){
   if(error.code!=='EEXIST')throw error;
   let previous;try{previous=JSON.parse(fs.readFileSync(file,'utf8'));}catch{throw Error('存储锁损坏，请先确认没有服务运行，再人工检查锁文件');}
   if(!Number.isInteger(previous.pid)||previous.pid<1)throw Error('无效存储锁');
+  if(previous.pid===process.pid&&!heldLocks.has(previous.identity))return replace();
   try{process.kill(previous.pid,0);}catch(cause){
    if(cause.code!=='ESRCH')throw Error('无法确认存储锁进程状态，拒绝并行启动');
    // Only remove a lock whose owning process no longer exists.
-   fs.unlinkSync(file);create();return release;
+   return replace();
   }
+  // The PID is alive but belongs to a different process if its start time changed.
+  const current=processStartTime(previous.pid);
+  if(previous.startTime&&current&&previous.startTime!==current)return replace();
   throw Error(`数据目录已由进程 ${previous.pid} 使用，禁止多实例同时写入`);
  }
  return release;
  function release(){
+  heldLocks.delete(identity);
   if(fs.existsSync(file)&&JSON.parse(fs.readFileSync(file,'utf8')).identity===identity)fs.unlinkSync(file);
  }
 }

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {acquireStoreLock,backupStore,restoreStore} from './maintenance.mjs';
+import {spawn} from 'node:child_process';
+import {acquireStoreLock,backupStore,processStartTime,restoreStore} from './maintenance.mjs';
 const here=path.dirname(fileURLToPath(import.meta.url));
 test('storage lock and hashed backup restore protect live data and reject damaged or unsafe archives',()=>{
  const root=fs.mkdtempSync(path.join(here,'.maintenance-test-'));
@@ -22,6 +23,29 @@ test('storage lock and hashed backup restore protect live data and reject damage
   assert.throws(()=>restoreStore(backup.directory,path.join(root,'damaged')),/校验失败/);
   assert.equal(fs.existsSync(path.join(root,'damaged')),false);
  }finally{if(!path.resolve(root).startsWith(here+path.sep))throw Error('Unsafe cleanup');fs.rmSync(root,{recursive:true,force:true});}
+});
+test('a stale lock is replaced when its PID was reused, while a live owner still blocks startup',()=>{
+ const root=fs.mkdtempSync(path.join(here,'.maintenance-lock-test-'));
+ const writeLock=(data,lock)=>fs.writeFileSync(path.join(data,'.service-lock.json'),JSON.stringify(lock));
+ const child=spawn(process.execPath,['-e','setTimeout(()=>{},60000)'],{stdio:'ignore'});
+ try{
+  const data=path.join(root,'data');fs.mkdirSync(data);
+  // After a container restart the service can receive the same PID as its dead predecessor.
+  writeLock(data,{pid:process.pid,identity:'left-by-previous-process'});
+  acquireStoreLock(data)();
+  assert.equal(fs.existsSync(path.join(data,'.service-lock.json')),false);
+  // A sibling process may also take over the recorded PID: only the start time tells them apart.
+  const live=processStartTime(child.pid);
+  if(live){
+   writeLock(data,{pid:child.pid,identity:'pid-reused-by-sibling',startTime:String(Number(live)+1)});
+   acquireStoreLock(data)();
+   writeLock(data,{pid:child.pid,identity:'genuine-owner',startTime:live});
+   assert.throws(()=>acquireStoreLock(data),/禁止多实例/);
+  }
+  // Locks written before start times were recorded stay conservative.
+  writeLock(data,{pid:child.pid,identity:'legacy-owner'});
+  assert.throws(()=>acquireStoreLock(data),/禁止多实例/);
+ }finally{child.kill();if(!path.resolve(root).startsWith(here+path.sep))throw Error('Unsafe cleanup');fs.rmSync(root,{recursive:true,force:true});}
 });
 test('completed backups retain the latest seven and a failed backup leaves no partial copy',()=>{
  const root=fs.mkdtempSync(path.join(here,'.maintenance-retention-test-'));
