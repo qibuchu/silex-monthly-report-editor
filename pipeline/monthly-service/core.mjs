@@ -338,7 +338,7 @@ export function createCore(config) {
     db.projects[id]={id,revision:1,month:task.month,title:`${template.title} · ${task.month} PPTX 草稿`,stage:'draft',dataOrigin:{kind:'native-pptx',taskId:task.id,snapshotId},template:task.template,project:built.project,updatedAt:new Date().toISOString(),author:'native-pptx',native:{taskId:task.id,syncedRevision:1,pending:[],rejected:[],unsupported:[],missing:built.missing}};
     return id;
   }
-  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json','minigame_monthly_template_v4.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
+  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json','minigame_monthly_template_v4.json','mobile_monthly_mapping.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
   const seedTemplateMapping=t=>{const seed=!t.nativeMapping&&seedMappings.find(item=>item.seedSha256===t.sourcePptx?.sha256);if(seed){t.nativeMapping=seed;t.nativeMappingRevision=(t.nativeMappingRevision||0)+1;return true;}return false;};
   const snapshotNative=t=>{if(t.origin==='pptx')t.nativePublished={sourcePptx:t.sourcePptx,mapping:t.nativeMapping,mappingRevision:t.nativeMappingRevision||0,templateRevision:t.revision};};
   function checkNativeMapping(t,mapping=t.nativeMapping){
@@ -375,7 +375,10 @@ export function createCore(config) {
       error:'目标月数据包与时间窗口审计不匹配，或审计未通过'},
     'minigame-monthly':{extras:['previous'],snapshot:args=>`${args.data.snapshot.id}@${args.data.snapshot.revision??0}`,
       check:(args,month)=>!!(args.data&&args.data.month===month&&args.data.snapshot?.id!=null&&args.data.coverage?.calendar_complete===true&&(!args.previous||args.previous.month===previousMonthOf(month))),
-      error:'小游戏月报导出与目标月份不符、月份未结束，或上月导出月份不对'}
+      error:'小游戏月报导出与目标月份不符、月份未结束，或上月导出月份不对'},
+    'mobile-monthly':{extras:[],snapshot:args=>['cn','global'].map(m=>`${m}:${args.data[m].meta.snapshot.id}@${args.data[m].meta.snapshot.version}`).join('|'),
+      check:(args,month)=>!!(args.data&&args.data.month===month&&['cn','global'].every(m=>{const p=args.data[m],meta=p?.meta;return meta?.month===month&&meta?.market===m&&meta?.ranking_metric==='revenue'&&meta?.snapshot?.id!=null&&meta?.snapshot?.frozen_at&&Array.isArray(p.data)&&p.data.length>=20;})),
+      error:'手游月报国区或海外快照缺失、时间窗口不符，或榜单不足20条'}
   };
   function generateNativePptx(args){
     const month=args.month,template=db.templates[args.templateId];
@@ -443,6 +446,29 @@ export function createCore(config) {
     if(text.length>30*1024*1024)throw new ServiceError('小游戏数据接口返回内容过大',502);
     try{return JSON.parse(text);}catch{throw new ServiceError('小游戏数据接口返回的不是 JSON',502);}
   }
+  async function fetchMobileMonthly(month,sourceId){
+    const registered=dataSource(sourceId);
+    if(registered?.kind!=='api'||!String(registered.reference||'').includes('/mobile-monthly'))throw new ServiceError('手游数据源未登记或接口地址不匹配',400);
+    const headers=db.dataSourceSecrets[sourceId]?unseal(db.dataSourceSecrets[sourceId]):{};
+    const result={month};
+    for(const market of ['cn','global']){
+      const rows=[];let meta;
+      for(let page=1;page<=20;page++){
+        const url=new URL(registered.reference.replaceAll('{month}',encodeURIComponent(month)));
+        url.searchParams.set('market',market);url.searchParams.set('ranking_metric','revenue');url.searchParams.set('page',String(page));url.searchParams.set('size','100');
+        let response;
+        try{response=(await fetchDataInterface({url:url.toString(),headers})).json;}
+        catch(error){throw new ServiceError(error.message,error.status||502);}
+        if(!meta)meta=response?.meta;
+        if(response?.meta?.month!==month||response?.meta?.market!==market||response?.meta?.snapshot?.id!==meta?.snapshot?.id)throw new ServiceError(`${market} 数据月份或快照版本在分页过程中变化`,409);
+        rows.push(...(response?.data||[]));
+        if(rows.length>=(meta?.total||0))break;
+      }
+      if(!meta?.snapshot?.id||!meta.snapshot.frozen_at||rows.length<20)throw new ServiceError(`${market} ${month} 无完整固化快照或不足20条`,400);
+      result[market]={data:rows,meta};
+    }
+    return result;
+  }
   async function generatePpt(args){
     const t=db.pptTemplates[args.templateId];
     if(!t)throw new ServiceError('PPT模板不存在',404);
@@ -454,6 +480,7 @@ export function createCore(config) {
       data=await fetchMinigameExport(args.month);fetched.current=true;
       if(!previous){try{previous=await fetchMinigameExport(previousMonthOfPpt(args.month));fetched.previous=true;}catch(error){fetched.previousError=error.message;}}
     }
+    if(!data&&source==='mobile-monthly'){data=await fetchMobileMonthly(args.month,t.dataSourceId);fetched.current=true;}
     if(!data)throw new ServiceError('这个模板的数据源不能自动取数，请上传当月数据包',400);
     if(source==='minigame-monthly'&&data.month===args.month&&data.coverage?.calendar_complete!==true)throw new ServiceError(`${args.month} 还没有完整的月度数据（月份未结束或数据未齐），暂不能生成`,400);
     if(source==='minigame-monthly'&&data.month===args.month&&data.snapshot?.id==null)throw new ServiceError(`${args.month} 的小游戏数据还没有固化快照（接口当前是预览数据，之后可能还会变），请先在小游戏数据库固化该月快照再生成`,400);
@@ -1000,7 +1027,8 @@ export function createCore(config) {
   }, createPptTemplate(bytes,{title,dataSourceId}={}) {
     title=String(title||'').trim();
     if(!title||title.length>120)throw new ServiceError('请填写120字以内的模板名称',400);
-    if(!['minigame-monthly','steamauto'].includes(dataSourceId))throw new ServiceError('请选择数据源',400);
+    const chosen=dataSource(dataSourceId);
+    if(!['minigame-monthly','steamauto'].includes(dataSourceId)&&!(chosen?.kind==='api'&&String(chosen.reference||'').includes('/mobile-monthly')))throw new ServiceError('请选择数据源',400);
     if(!Buffer.isBuffer(bytes)||bytes.length>100*1024*1024||!isPptxArchive(bytes))throw new ServiceError('请选择100MB以内的有效PPTX文件',400);
     const sha256=createHash('sha256').update(bytes).digest('hex');
     const folder=path.join(dir,'template-pptx');fs.mkdirSync(folder,{recursive:true});

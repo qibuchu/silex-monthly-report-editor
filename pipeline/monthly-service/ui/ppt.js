@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sourceNames = { 'minigame-monthly': '小游戏月报接口', steamauto: 'SteamAuto 月报数据' };
-const state = { templates: [], busy: false };
+const state = { templates: [], busy: false, mobileSourceIds: new Set() };
 
 async function call(name, args = {}) {
   const response = await fetch('/api/call', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, arguments: args }) });
@@ -39,6 +39,13 @@ function templateCard(t) {
 }
 
 async function loadTemplates() {
+  const sources = await call('list_data_sources');
+  state.mobileSourceIds = new Set(sources.filter(s => s.kind === 'api' && String(s.reference || '').includes('/mobile-monthly')).map(s => s.id));
+  $('upSource').querySelectorAll('option[data-mobile]').forEach(option => option.remove());
+  for (const source of sources.filter(s => state.mobileSourceIds.has(s.id))) {
+    const option = new Option(source.name, source.id); option.dataset.mobile = '1'; $('upSource').add(option);
+    sourceNames[source.id] = source.name;
+  }
   state.templates = await call('list_ppt_templates');
   $('templates').innerHTML = state.templates.map(templateCard).join('') || '<div class="empty">还没有 PPT 模板，请在下方上传。</div>';
   const ready = state.templates.filter(t => t.ready);
@@ -52,7 +59,7 @@ async function loadTemplates() {
 
 function refreshInputs() {
   const t = state.templates.find(item => item.id === $('genTemplate').value);
-  const manual = Boolean(t) && t.dataSourceId !== 'minigame-monthly';
+  const manual = Boolean(t) && t.dataSourceId !== 'minigame-monthly' && !state.mobileSourceIds.has(t.dataSourceId);
   $('dataLabel').hidden = !manual; $('auditLabel').hidden = !manual;
   $('generate').disabled = !t || state.busy;
 }
@@ -88,12 +95,12 @@ async function generate() {
   state.busy = true; refreshInputs();
   try {
     const args = { templateId, month };
-    if (t.dataSourceId !== 'minigame-monthly') {
+    if (t.dataSourceId !== 'minigame-monthly' && !state.mobileSourceIds.has(t.dataSourceId)) {
       args.data = await readJson($('genData'), '当月数据包');
       args.audit = await readJson($('genAudit'), '时间窗口审计');
       if (!args.data || !args.audit) throw Error('Steam 模板需要上传当月数据包和时间窗口审计');
     }
-    show('genStatus', t.dataSourceId === 'minigame-monthly' ? '正在从小游戏接口取数并生成…' : '正在生成…');
+    show('genStatus', t.dataSourceId === 'minigame-monthly' ? '正在从小游戏接口取数并生成…' : state.mobileSourceIds.has(t.dataSourceId) ? '正在从手游接口取国区及海外月榜并生成…' : '正在生成…');
     let task = await call('generate_ppt', args);
     while (task.status === 'running') { await new Promise(r => setTimeout(r, 1500)); task = await call('get_task', { taskId: task.id }); }
     if (task.status !== 'succeeded') throw Error(String(task.error || '生成失败').trim().split('\n').pop());

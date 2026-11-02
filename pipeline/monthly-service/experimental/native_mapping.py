@@ -14,6 +14,7 @@ from xml.etree import ElementTree
 
 from native_sources import STEAM, month_context
 from native_sources_minigame import MINIGAME
+from native_sources_mobile import MOBILE
 from pptx_market_charts import resolve_chart
 from pptx_preserve_patch import table_values
 
@@ -25,7 +26,7 @@ NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
 OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
        "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength"}
-SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME}
+SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME, "mobile-monthly": MOBILE}
 PX = 9525  # EMU per 1/96 inch; slide coordinates in mappings use this unit.
 
 

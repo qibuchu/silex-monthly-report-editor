@@ -285,8 +285,15 @@ def resolve_chart(archive, slide: int, chart_id: int):
             if found_id == rel_id or (kind and found_type.endswith(kind)):
                 return re.search(rb'\bTarget="([^"]+)"', item).group(1).decode()
         raise ValueError("Chart relationship missing")
-    chart = "ppt/charts/" + target(f"ppt/slides/_rels/slide{slide}.xml.rels", rel_id=relation.group(1)).rsplit("/", 1)[-1]
-    workbook = "ppt/embeddings/" + target(f"ppt/charts/_rels/{chart.rsplit('/', 1)[-1]}.rels", kind=b"/package").rsplit("/", 1)[-1]
+    import posixpath
+    chart = posixpath.normpath(posixpath.join("ppt/slides", target(f"ppt/slides/_rels/slide{slide}.xml.rels", rel_id=relation.group(1))))
+    chart_rels = posixpath.join(posixpath.dirname(chart), "_rels", posixpath.basename(chart) + ".rels")
+    workbook = None
+    if chart_rels in archive.namelist():
+        try:
+            workbook = posixpath.normpath(posixpath.join(posixpath.dirname(chart), target(chart_rels, kind=b"/package")))
+        except ValueError:
+            pass
     return chart, workbook
 
 
@@ -297,7 +304,10 @@ def patch_pptx(source: Path, output: Path, charts: list[dict], blanks: list[dict
         parts = {}
         for blank in blanks:
             chart_xml = archive.read(blank["part"])
-            parts[blank["workbook"]], names = blank_workbook(archive.read(blank["workbook"]), chart_xml)
+            if blank["workbook"]:
+                parts[blank["workbook"]], names = blank_workbook(archive.read(blank["workbook"]), chart_xml)
+            else:
+                names = {}
             parts[blank["part"]] = blank_chart_xml(chart_xml, names)
         for chart in charts:
             parts[chart["part"]] = patch_chart(archive.read(chart["part"]), chart["categories"], chart["series"])
