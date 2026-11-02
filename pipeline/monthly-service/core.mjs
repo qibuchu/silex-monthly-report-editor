@@ -49,6 +49,11 @@ export const tools = [
   tool('generate_native_pptx', '按已发布模板的原始 PPTX 和对象映射，以目标月数据生成可编辑 PPTX 草稿及问题清单。Steam 模板需附匹配的时间窗口审计 audit；小游戏模板传 minigame-db 月报导出 data，可附上月导出 previous 以计算名次环比', {month:idSchema,templateId:idSchema,data:{type:'object'},audit:{type:'object'},previous:{type:'object'}}, ['month','templateId','data']),
   tool('get_native_mapping', '读取模板的 PPTX 对象映射、版本及与当前原始 PPTX 的核对结果', {templateId:idSchema}, ['templateId'], true),
   tool('save_native_mapping', '保存模板的 PPTX 对象映射草稿，发布模板后生效；须带刚读取的映射版本。对象已不存在时返回问题清单，不阻止保存', {templateId:idSchema,baseRevision:{type:'integer',minimum:0},mapping:{type:'object'}}, ['templateId','baseRevision','mapping']),
+  tool('list_ppt_templates', '列出 PPT 模板（只保存原始 PPTX 与填数规则，不转网页版）及发布状态', {}, [], true),
+  tool('publish_ppt_template', '发布 PPT 模板当前的原始 PPTX 与填数规则；需在 PowerPoint 中核对原稿后再发布', {templateId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['templateId','baseRevision']),
+  tool('delete_ppt_template', '从 PPT 模板列表移除模板（原始 PPTX 文件与已生成的 PPT 保留）', {templateId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['templateId','baseRevision']),
+  tool('generate_ppt', '用已发布的 PPT 模板生成目标月可编辑 PPTX 和问题清单。小游戏模板自动从小游戏接口取当月和上月数据；Steam 模板需传 data 与 audit', {templateId:idSchema,month:idSchema,data:{type:'object'},audit:{type:'object'},previous:{type:'object'}}, ['templateId','month']),
+  tool('list_ppt_drafts', '列出由 PPT 模板生成的 PPTX 及下载、问题清单链接', {}, [], true),
   tool('list_native_drafts', '列出已生成的原生 PPTX 草稿及其问题清单下载链接', {}, [], true),
   tool('get_task', '读取生成任务状态和结果', { taskId: idSchema }, ['taskId'], true),
   tool('get_project', '读取项目；默认只返回页面和对象摘要，指定 pageIndex 或 objectIds 获取内容', { projectId: idSchema, pageIndex: { type: 'integer', minimum: 0 }, objectIds: { type: 'array', items: idSchema } }, ['projectId'], true),
@@ -133,6 +138,7 @@ export function createCore(config) {
   const db = fs.existsSync(dbPath) ? JSON.parse(fs.readFileSync(dbPath)) : { projects: {}, tasks: {}, proposals: {} };
   db.requests ||= {};
   db.templates ||= {};
+  db.pptTemplates ||= {};
   db.deletedTemplates ||= {};
   db.deletedProjects ||= {};
   db.templateSources ||= {};
@@ -362,7 +368,13 @@ export function createCore(config) {
     const month=args.month,template=db.templates[args.templateId];
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||''))throw new ServiceError('目标月份无效');
     if(!template||!template.projectId||template.origin!=='pptx'||template.revision<1)throw new ServiceError('请选择已发布的PPTX模板',400);
-    const native=template.nativePublished;
+    return startNative(args,template.nativePublished,{template:{id:template.id,title:template.title,revision:template.revision}},
+      (task,output,snapshotId,issues,native)=>createNativeProject(task,template,output,snapshotId,native.mapping.continuations||[],issues.removedObjects||[]));
+  }
+  // Shared by HTML-backed templates and PPT-only templates: PPTX + mapping + month data -> PPTX.
+  function startNative(args,native,owner,afterSuccess,extra={}){
+    const month=args.month;
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||''))throw new ServiceError('目标月份无效');
     if(!native?.sourcePptx)throw new ServiceError('此模板发布时还没有原始PPTX，请上传后重新发布',400);
     if(!native.mapping)throw new ServiceError('此模板尚未配置PPTX对象映射，请配置后重新发布',400);
     const sourceName=native.mapping.dataSource||'steam-monthly',dataSource=nativeSources[sourceName];
@@ -377,7 +389,7 @@ export function createCore(config) {
     const extraArgs=[];
     for(const name of dataSource.extras)if(args[name]){fs.writeFileSync(path.join(taskDir,`${name}.json`),JSON.stringify(args[name]));extraArgs.push(`--${name}`,path.join(taskDir,`${name}.json`));}
     fs.writeFileSync(path.join(taskDir,'mapping.json'),JSON.stringify(native.mapping));
-    db.tasks[id]={id,kind:'native-pptx',status:'running',month,dataSource:sourceName,template:{id:template.id,title:template.title,revision:template.revision},startedAt:new Date().toISOString()};persist();
+    db.tasks[id]={id,kind:'native-pptx',status:'running',month,dataSource:sourceName,...owner,...extra,startedAt:new Date().toISOString()};persist();
     const script=nativeScript;
     const child=spawn(config.pythonExecutable||(process.platform==='win32'?'python':'python3'),['-B',script,'generate',source,path.join(taskDir,'data.json'),output,path.join(taskDir,'mapping.json'),...extraArgs],{stdio:['ignore','pipe','pipe']});
     let stderr='';child.stdout.resume();child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});
@@ -390,12 +402,50 @@ export function createCore(config) {
         const issuesPath=path.join(taskDir,'draft.issues.json'),issues=JSON.parse(fs.readFileSync(issuesPath,'utf8'));
         if(!fs.existsSync(output)||issues.reportMonth!==month||issues.dataSnapshotId!==snapshotId)throw Error('生成结果校验未通过');
         let projectId,projectError;
-        try{projectId=await createNativeProject(db.tasks[id],template,output,snapshotId,native.mapping.continuations||[],issues.removedObjects||[]);}catch(error){projectError=error.message;}
+        if(afterSuccess)try{projectId=await afterSuccess(db.tasks[id],output,snapshotId,issues,native);}catch(error){projectError=error.message;}
         Object.assign(db.tasks[id],{status:'succeeded',resultStatus:issues.status,projectId,projectError,sourceIssues:issues.sourceIssues?.length||0,mappingIssues:issues.mappingIssues?.length||0,oldMonthText:issues.oldMonthText?.length||0,pages:issues.pages,manualSlots:issues.manualSlots?.length||0,pptx:`${config.publicUrl}/api/tasks/${id}/draft.pptx`,issues:`${config.publicUrl}/api/tasks/${id}/issues.json`,finishedAt:new Date().toISOString()});persist();
       }catch(error){fail(error.message);}
     });
     return db.tasks[id];
   }
+  // ---- PPT-only templates: the PPTX is the template; nothing is converted to the web editor. ----
+  const pptMonth=/^\d{4}-(0[1-9]|1[0-2])$/;
+  const previousMonthOfPpt=month=>{const [y,m]=month.split('-').map(Number);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;};
+  function pptTemplateView(t){
+    const mapping=t.mapping;
+    return {id:t.id,title:t.title,dataSourceId:t.dataSourceId,revision:t.revision,createdAt:t.createdAt,publishedAt:t.publishedAt||null,
+      sourcePptx:t.sourcePptx,source:`${config.publicUrl}/api/ppt-templates/${t.id}/source.pptx`,
+      mappingConfigured:Boolean(mapping),mappingDataSource:mapping?.dataSource||null,mappingSourceMonth:mapping?.sourceMonth||null,
+      mappingOperations:mapping?.ops?.length||0,mappingCheck:t.mappingCheck||null,pageNotes:mapping?.pageNotes||{},
+      ready:Boolean(t.published?.mapping&&t.published?.sourcePptx),publishedSourceMonth:t.published?.mapping?.sourceMonth||null,
+      draftChanged:Boolean(t.published&&(t.published.sourcePptx.sha256!==t.sourcePptx.sha256||t.published.mappingRevision!==t.mappingRevision))};
+  }
+  async function fetchMinigameExport(month){
+    const reference=config.minigameExportUrl||builtinDataSources.find(s=>s.id==='minigame-monthly').reference;
+    const url=reference.replace('{month}',encodeURIComponent(month));
+    let response;
+    try{response=await fetch(url,{signal:AbortSignal.timeout(90000)});}catch(error){throw new ServiceError(`无法连接小游戏数据接口：${error.cause?.code||error.message}`,502);}
+    const text=await response.text();
+    if(!response.ok)throw new ServiceError(`小游戏数据接口返回 ${response.status}`,502);
+    if(text.length>30*1024*1024)throw new ServiceError('小游戏数据接口返回内容过大',502);
+    try{return JSON.parse(text);}catch{throw new ServiceError('小游戏数据接口返回的不是 JSON',502);}
+  }
+  async function generatePpt(args){
+    const t=db.pptTemplates[args.templateId];
+    if(!t)throw new ServiceError('PPT模板不存在',404);
+    if(!t.published)throw new ServiceError('请先发布这个PPT模板',400);
+    if(!pptMonth.test(args.month||''))throw new ServiceError('目标月份无效');
+    const native=t.published,source=native.mapping.dataSource||'steam-monthly';
+    let {data,previous,audit}=args;const fetched={};
+    if(!data&&source==='minigame-monthly'){
+      data=await fetchMinigameExport(args.month);fetched.current=true;
+      if(!previous){try{previous=await fetchMinigameExport(previousMonthOfPpt(args.month));fetched.previous=true;}catch(error){fetched.previousError=error.message;}}
+    }
+    if(!data)throw new ServiceError('这个模板的数据源不能自动取数，请上传当月数据包',400);
+    if(source==='minigame-monthly'&&data.month===args.month&&data.coverage?.calendar_complete!==true)throw new ServiceError(`${args.month} 还没有完整的月度数据（月份未结束或数据未齐），暂不能生成`,400);
+    return startNative({month:args.month,data,previous,audit},native,{pptTemplate:{id:t.id,title:t.title,revision:t.revision}},null,{dataFetched:fetched});
+  }
+
   async function call(name, args = {}) {
     switch (name) {
       case 'get_template_ai_task': {
@@ -774,6 +824,26 @@ export function createCore(config) {
       }
       case 'generate_monthly_report': return generate(args);
       case 'generate_native_pptx': return generateNativePptx(args);
+      case 'list_ppt_templates': return Object.values(db.pptTemplates).filter(t=>!t.deletedAt).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).map(pptTemplateView);
+      case 'publish_ppt_template': {
+        const t=db.pptTemplates[args.templateId];if(!t||t.deletedAt)throw new ServiceError('PPT模板不存在',404);
+        if(t.revision!==args.baseRevision)throw new ServiceError('模板已变化，请刷新后再发布',409);
+        if(!t.mapping)throw new ServiceError('这个PPT还没有填数规则，暂不能发布',400);
+        t.mappingCheck=checkNativeMapping(t,t.mapping);
+        if(!t.mappingCheck.ok)throw new ServiceError('填数规则与PPT对不上：'+t.mappingCheck.problems.slice(0,3).map(p=>p.reason+(p.object?`（对象${p.object}）`:'')).join('；'),400);
+        t.revision+=1;t.publishedAt=new Date().toISOString();
+        t.published={sourcePptx:t.sourcePptx,mapping:t.mapping,mappingRevision:t.mappingRevision,revision:t.revision};persist();
+        return pptTemplateView(t);
+      }
+      case 'delete_ppt_template': {
+        const t=db.pptTemplates[args.templateId];if(!t||t.deletedAt)throw new ServiceError('PPT模板不存在',404);
+        if(t.revision!==args.baseRevision)throw new ServiceError('模板已变化，请刷新后重试',409);
+        if(Object.values(db.tasks).some(task=>task.status==='running'&&task.pptTemplate?.id===t.id))throw new ServiceError('有PPT正在用这个模板生成，请稍后再删',409);
+        t.deletedAt=new Date().toISOString();persist();return {templateId:t.id,deleted:true};
+      }
+      case 'generate_ppt': return generatePpt(args);
+      case 'list_ppt_drafts': return Object.values(db.tasks).filter(task=>task.kind==='native-pptx'&&task.pptTemplate).sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt))).slice(0,100)
+        .map(({id,status,month,pptTemplate,startedAt,finishedAt,error,pages,sourceIssues,mappingIssues,manualSlots,oldMonthText,pptx,issues,dataFetched})=>({id,status,month,template:pptTemplate,startedAt,finishedAt,error,pages,sourceIssues,mappingIssues,manualSlots,oldMonthText,pptx,issues,dataFetched}));
       case 'get_native_mapping': {
         const t=db.templates[args.templateId];if(!t||t.origin!=='pptx')throw new ServiceError('PPT模板不存在',404);
         return {templateId:t.id,revision:t.nativeMappingRevision||0,mapping:t.nativeMapping||null,publishedRevision:t.nativePublished?.mappingRevision??null,check:checkNativeMapping(t)};
@@ -913,6 +983,22 @@ export function createCore(config) {
     template.sourcePptx={sha256,bytes:bytes.length,storedAt:new Date().toISOString()};seedTemplateMapping(template);persist();
     let mappingCheck;try{mappingCheck=checkNativeMapping(template);}catch(error){mappingCheck={ok:false,configured:true,problems:[{reason:error.message}]};}
     return {templateId:id,sourcePptx:template.sourcePptx,mappingCheck};
+  }, createPptTemplate(bytes,{title,dataSourceId}={}) {
+    title=String(title||'').trim();
+    if(!title||title.length>120)throw new ServiceError('请填写120字以内的模板名称',400);
+    if(!['minigame-monthly','steamauto'].includes(dataSourceId))throw new ServiceError('请选择数据源',400);
+    if(!Buffer.isBuffer(bytes)||bytes.length>100*1024*1024||!isPptxArchive(bytes))throw new ServiceError('请选择100MB以内的有效PPTX文件',400);
+    const sha256=createHash('sha256').update(bytes).digest('hex');
+    const folder=path.join(dir,'template-pptx');fs.mkdirSync(folder,{recursive:true});
+    const file=path.join(folder,sha256+'.pptx');
+    if(!fs.existsSync(file)){const temp=file+'.'+randomUUID()+'.tmp';try{fs.writeFileSync(temp,bytes,{flag:'wx'});fs.renameSync(temp,file);}finally{if(fs.existsSync(temp))fs.unlinkSync(temp);}}
+    const id=randomUUID(),seed=seedMappings.find(item=>item.seedSha256===sha256);
+    const t={id,title,dataSourceId,revision:0,createdAt:new Date().toISOString(),sourcePptx:{sha256,bytes:bytes.length,storedAt:new Date().toISOString()},mapping:seed||null,mappingRevision:seed?1:0};
+    if(seed){try{t.mappingCheck=checkNativeMapping(t,t.mapping);}catch(error){t.mappingCheck={ok:false,configured:true,problems:[{reason:error.message}]};}}
+    db.pptTemplates[id]=t;persist();return pptTemplateView(t);
+  }, pptTemplateSource(id) {
+    const t=db.pptTemplates[id];if(!t||t.deletedAt)throw new ServiceError('PPT模板不存在',404);
+    return {file:path.join(dir,'template-pptx',t.sourcePptx.sha256+'.pptx'),filename:t.title+'.pptx'};
   }, importProject(input) {
     const id = randomUUID();
     const value = assets.unpack(id,input?.project || input,input?.assets);

@@ -55,7 +55,7 @@ export function createService(config) {
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, config.publicUrl);
-      if(req.method==='GET'&&['/ui/dashboard.css','/ui/dashboard.js','/ui/template-data.js','/ui/source-library.js','/ui/pptx-reader.js','/ui/monthly-data-reader.js','/ui/visual-rules.css','/ui/visual-rules.js'].includes(url.pathname)){
+      if(req.method==='GET'&&['/ui/dashboard.css','/ui/dashboard.js','/ui/template-data.js','/ui/source-library.js','/ui/pptx-reader.js','/ui/monthly-data-reader.js','/ui/visual-rules.css','/ui/visual-rules.js','/ui/ppt.js'].includes(url.pathname)){
         res.writeHead(200,{'Content-Type':url.pathname.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
         return res.end(fs.readFileSync(path.join(here,'ui',path.basename(url.pathname))));
       }
@@ -85,6 +85,9 @@ export function createService(config) {
       if (url.pathname === '/') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(fs.readFileSync(path.join(here, 'dashboard.html')));
       }
+      if(url.pathname==='/ppt'&&req.method==='GET'){
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});return res.end(fs.readFileSync(path.join(here,'ppt.html')));
+      }
       if(url.pathname==='/visual-rules'&&req.method==='GET'){
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});return res.end(fs.readFileSync(path.join(here,'visual-rules.html')));
       }
@@ -109,12 +112,22 @@ export function createService(config) {
       }
       if (url.pathname === '/api/import' && req.method === 'POST') return json(res, 200, core.importProject(await body(req)));
       if (url.pathname === '/api/templates/import-pptx' && req.method === 'POST') return json(res, 200, core.importPptxTemplate(await body(req)));
+      if (url.pathname === '/api/ppt-templates' && req.method === 'POST') {
+        const title=decodeURIComponent(String(req.headers['x-template-title']||'')),dataSourceId=String(req.headers['x-data-source']||'');
+        return json(res, 200, core.createPptTemplate(await pptxBody(req),{title,dataSourceId}));
+      }
+      const pptSource=url.pathname.match(/^\/api\/ppt-templates\/([a-f0-9-]+)\/source\.pptx$/);
+      if(pptSource&&req.method==='GET'){
+        const {file,filename}=core.pptTemplateSource(pptSource[1]);
+        res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.presentationml.presentation','Content-Disposition':`attachment; filename="template.pptx"; filename*=UTF-8''${encodeURIComponent(filename)}`,'Content-Length':fs.statSync(file).size,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
+        return fs.createReadStream(file).pipe(res);
+      }
       const nativeArtifact=url.pathname.match(/^\/api\/tasks\/([a-f0-9-]+)\/(draft\.pptx|issues\.json)$/);
       if(nativeArtifact&&req.method==='GET'){
         const [,id,filename]=nativeArtifact,task=core.db.tasks[id];
         if(!task||task.kind!=='native-pptx'||task.status!=='succeeded')throw Object.assign(Error('原生PPTX草稿尚未生成'),{status:404});
         const file=path.join(config.dataDir,'tasks',id,filename==='draft.pptx'?filename:'draft.issues.json');
-        res.writeHead(200,{'Content-Type':filename.endsWith('.pptx')?'application/vnd.openxmlformats-officedocument.presentationml.presentation':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="steam-${task.month}-${filename}"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
+        res.writeHead(200,{'Content-Type':filename.endsWith('.pptx')?'application/vnd.openxmlformats-officedocument.presentationml.presentation':'application/json; charset=utf-8','Content-Disposition':task.pptTemplate?`attachment; filename="${task.month}-${filename}"; filename*=UTF-8''${encodeURIComponent(`${task.pptTemplate.title}-${task.month}${filename.endsWith('.pptx')?'.pptx':'-问题清单.json'}`)}`:`attachment; filename="steam-${task.month}-${filename}"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
         return res.end(fs.readFileSync(file));
       }
       const projectPptx=url.pathname.match(/^\/api\/projects\/([a-f0-9-]+)\/draft\.pptx$/);
