@@ -89,6 +89,18 @@ test('a chart drawn from data replaces the template picture in the web view',()=
   assert.equal(stored.length,2);
 });
 
+test('objects the mapping removed from the PPTX leave the web view',()=>{
+  const keep={attributes:{'data-object-id':'pptx-x-slide-3-shape-5'},content:'<p>榜单观察</p>',style:{}};
+  const line={attributes:{'data-object-id':'pptx-x-slide-3-shape-453'},content:'',style:{}};
+  const picture={attributes:{'data-object-id':'pptx-x-slide-3-image-2'},content:'<img src="a.png">',style:{}};
+  const other={attributes:{'data-object-id':'pptx-x-slide-6-shape-453'},content:'',style:{}};
+  const template={format:'steam-grapesjs-v2',deck:{css:'',pages:[{name:'畅销',objects:[keep,line,picture]},{name:'畅玩',objects:[other]}]}};
+  const extraction={order:[3,6],slides:{3:{shapes:{5:[['榜单观察']]},tables:{},charts:{},pictures:[],placeholders:[]},6:{shapes:{453:[]},tables:{},charts:{},pictures:[],placeholders:[]}}};
+  const pages=buildNativeDeck(template,extraction,[],()=>'',undefined,[{slide:3,objectId:453},{slide:3,objectId:2}]).project.deck.pages;
+  assert.deepEqual(pages[0].objects.map(o=>o.attributes['data-object-id']),['pptx-x-slide-3-shape-5']);
+  assert.equal(pages[1].objects.length,1);
+});
+
 test('saving a linked project queues write-back, reports problems and blocks stale downloads',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-native-project-'));
   try{

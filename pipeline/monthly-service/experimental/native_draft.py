@@ -82,7 +82,7 @@ def build(original: Path, data_file: Path, output: Path, mapping_file: Path, ext
                     all(item.get("review_rate_all") is not None
                         for item in (data.get("market") or {}).get("review_trend") or []),
                 "sourceIssues": compiled["sourceIssues"], "mappingIssues": compiled["mappingIssues"],
-                "manualSlots": compiled["slots"],
+                "manualSlots": compiled["slots"], "removedObjects": compiled["removed"],
                 "unfilledOriginalPages": [{"sourceSlide": int(slide), "reason": reason}
                                           for slide, reason in (mapping.get("pageNotes") or {}).items()],
                 "oldMonthText": scan_old_month(output, mapping, contract),

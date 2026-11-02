@@ -301,7 +301,7 @@ function syncObject(object, extraction, render, report, storeImage) {
 const slideOf = page => Number(page.objects.map(object => object.attributes?.['data-object-id']?.match(/slide-(\d+)-/)?.[1]).find(Boolean));
 
 // Builds the editing view for a generated PPTX from the template's published deck.
-export function buildNativeDeck(templateProject, extraction, continuations, render, storeImage) {
+export function buildNativeDeck(templateProject, extraction, continuations, render, storeImage, removed = []) {
   const project = structuredClone(templateProject);
   delete project.silexState;
   project.current = 0;
@@ -315,6 +315,12 @@ export function buildNativeDeck(templateProject, extraction, continuations, rend
     pages.set(newSlide, copy);
   }
   project.deck.pages = extraction.order.map(slide => pages.get(slide)).filter(Boolean);
+  // Objects the mapping deleted from the PPTX leave the editing view too.
+  const gone = new Set(removed.map(item => `slide-${item.slide}-${item.objectId}`));
+  for (const page of project.deck.pages) page.objects = page.objects.filter(object => {
+    const match = object.attributes?.['data-object-id']?.match(/slide-(\d+)-(?:shape|image|chart|table)-(\d+)$/);
+    return !match || !gone.has(`slide-${match[1]}-${match[2]}`);
+  });
   project.deck.pages.forEach((page, index) => { page.index = index; });
   for (const page of project.deck.pages) for (const object of page.objects) syncObject(object, extraction, render, report, storeImage);
   return { project, missing: [...new Set(report.missing)] };

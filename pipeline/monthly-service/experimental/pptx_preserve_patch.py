@@ -385,6 +385,25 @@ def picture_to_chart(slide_xml: bytes, rels_xml: bytes, picture_id: int, chart_t
     return slide_xml, rels_xml
 
 
+def remove_object(slide_xml: bytes, rels_xml: bytes, object_id: int):
+    """Delete a shape, picture or connector; drop a picture's relationship once nothing uses it."""
+    marker = rb'<p:cNvPr\b[^>]*\bid="' + str(object_id).encode() + rb'"'
+    # One pattern per tag: a combined pattern lets a lazy <p:sp> match swallow the picture after it.
+    found = [match for tag in (rb"sp", rb"pic", rb"cxnSp")
+             for match in re.finditer(rb"<p:" + tag + rb"\b[^>]*>.*?</p:" + tag + rb">", slide_xml, re.DOTALL)
+             if re.search(marker, match.group())]
+    # A group's members are matched by their own tags; a match that contains another object is not one shape.
+    found = [match for match in found if len(re.findall(rb"<p:cNvPr\b", match.group())) == 1]
+    if len(found) != 1:
+        raise ValueError(f"Object {object_id} missing or ambiguous")
+    used = re.findall(rb'r:(?:embed|link|id)="([^"]+)"', found[0].group())
+    slide_xml = slide_xml[:found[0].start()] + slide_xml[found[0].end():]
+    for old_id in used:
+        if not re.search(rb'r:(?:embed|link|id)="' + re.escape(old_id) + rb'"', slide_xml):
+            rels_xml = re.sub(rb'<Relationship\b[^>]*\bId="' + re.escape(old_id) + rb'"[^>]*/>', b"", rels_xml)
+    return slide_xml, rels_xml
+
+
 def free_number(names, pattern):
     used = {int(match.group(1)) for name in names if (match := re.fullmatch(pattern, name))}
     return next(number for number in range(1, len(used) + 2) if number not in used)
@@ -552,6 +571,10 @@ def main():
                 ElementTree.fromstring(item["svg"])
                 added[f"ppt/media/{stem}.png"] = base64.b64decode(item["png"])
                 added[f"ppt/media/{stem}.svg"] = item["svg"].encode("utf-8")
+            elif item.get("kind") == "removeObject":
+                rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
+                changed[name], changed[rels] = remove_object(data, changed.get(rels, source.read(rels)), int(item["objectId"]))
+                ElementTree.fromstring(changed[rels])
             elif item.get("kind") == "chartFrame":
                 rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
                 names = set(source.namelist()) | set(added)

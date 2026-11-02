@@ -321,11 +321,11 @@ export function createCore(config) {
     })().finally(()=>{nativeRuns.delete(id);const native=db.projects[id]?.native;if(native?.pending.length&&!native.lastError)drainNative(id);});
     nativeRuns.set(id,run);return run;
   }
-  async function createNativeProject(task,template,output,snapshotId,continuations){
+  async function createNativeProject(task,template,output,snapshotId,continuations,removed=[]){
     const snapshot=JSON.parse(fs.readFileSync(path.join(dir,'history','template-'+template.id,task.template.revision+'.json'),'utf8'));
     const extraction=JSON.parse(await runPython([writebackScript,'extract',output]));
     const id=randomUUID();
-    const built=buildNativeDeck(snapshot.project,extraction,continuations,renderImportedChart,data=>assets.put(id,data).src);validate(built.project);
+    const built=buildNativeDeck(snapshot.project,extraction,continuations,renderImportedChart,data=>assets.put(id,data).src,removed);validate(built.project);
     const folder=path.dirname(nativeFile(id));fs.mkdirSync(folder,{recursive:true});
     // The task keeps the generated original; write-back replaces this path atomically.
     try{fs.linkSync(output,nativeFile(id));}catch{fs.copyFileSync(output,nativeFile(id));}
@@ -390,7 +390,7 @@ export function createCore(config) {
         const issuesPath=path.join(taskDir,'draft.issues.json'),issues=JSON.parse(fs.readFileSync(issuesPath,'utf8'));
         if(!fs.existsSync(output)||issues.reportMonth!==month||issues.dataSnapshotId!==snapshotId)throw Error('生成结果校验未通过');
         let projectId,projectError;
-        try{projectId=await createNativeProject(db.tasks[id],template,output,snapshotId,native.mapping.continuations||[]);}catch(error){projectError=error.message;}
+        try{projectId=await createNativeProject(db.tasks[id],template,output,snapshotId,native.mapping.continuations||[],issues.removedObjects||[]);}catch(error){projectError=error.message;}
         Object.assign(db.tasks[id],{status:'succeeded',resultStatus:issues.status,projectId,projectError,sourceIssues:issues.sourceIssues?.length||0,mappingIssues:issues.mappingIssues?.length||0,oldMonthText:issues.oldMonthText?.length||0,pages:issues.pages,manualSlots:issues.manualSlots?.length||0,pptx:`${config.publicUrl}/api/tasks/${id}/draft.pptx`,issues:`${config.publicUrl}/api/tasks/${id}/issues.json`,finishedAt:new Date().toISOString()});persist();
       }catch(error){fail(error.message);}
     });

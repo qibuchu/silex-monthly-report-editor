@@ -110,6 +110,35 @@ class TextBoxGridTests(unittest.TestCase):
         self.assertIn("映射预期 20 行", reasons)
 
 
+class RemoveTests(unittest.TestCase):
+    def test_remove_picture_after_shape_and_its_unused_relationship(self):
+        from pptx_preserve_patch import remove_object
+        picture = ('<p:pic><p:nvPicPr><p:cNvPr id="2" name="p"/></p:nvPicPr><p:blipFill><a:blip r:embed="rId3"/></p:blipFill></p:pic>')
+        xml = slide(box(1, 0, 0, "a"), picture, box(3, 0, 20, "b")).encode()
+        rels = (b'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                b'<Relationship Id="rId3" Target="../media/x.png"/><Relationship Id="rId9" Target="../media/y.png"/></Relationships>')
+        out, out_rels = remove_object(xml, rels, 2)
+        self.assertNotIn(b"<p:pic>", out)
+        self.assertIn(b'id="1"', out)
+        self.assertIn(b'id="3"', out)
+        self.assertNotIn(b"rId3", out_rels)
+        self.assertIn(b"rId9", out_rels)
+        with self.assertRaises(ValueError):
+            remove_object(out, out_rels, 2)
+
+    def test_removed_objects_are_not_turned_into_slots(self):
+        with tempfile.TemporaryDirectory() as folder:
+            template = Path(folder) / "t.pptx"
+            pptx(template, {1: slide(box(10, 900, 200, "旧观察"), box(11, 900, 230, "7月"))})
+            mapping = {"format": "native-pptx-mapping-v1", "dataSource": "minigame-monthly",
+                       "ops": [{"op": "removeObjects", "slide": 1, "ids": [11, 99]},
+                               {"op": "clearRegion", "slide": 1, "box": [800, 150, 1260, 680]}]}
+            compiled = compile_mapping(mapping, template, export("2026-09", "2026-08"), {})
+            self.assertEqual(compiled["removed"], [{"slide": 1, "objectId": 11}])
+            self.assertEqual([slot["objectId"] for slot in compiled["slots"]], [10])
+            self.assertEqual([issue["reason"] for issue in compiled["mappingIssues"]], ["要删除的对象不存在"])
+
+
 class PatchTests(unittest.TestCase):
     def test_line_breaks_compare_like_an_xml_parser(self):
         self.assertEqual(run_text(b"<a:t>a\r\nb &amp; c</a:t>"), "a\nb & c")

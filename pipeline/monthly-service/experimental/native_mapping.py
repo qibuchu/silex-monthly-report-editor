@@ -24,7 +24,7 @@ NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
-       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart"}
+       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME}
 PX = 9525  # EMU per 1/96 inch; slide coordinates in mappings use this unit.
 
@@ -124,6 +124,7 @@ class Compiler:
         self.archive, self.data, self.source, self.extras = archive, data, source, extras or {}
         self.replacements, self.slots, self.source_issues, self.mapping_issues, self.charts, self.blank_charts = [], [], [], [], [], []
         self.table_rows, self.context, self.series = {}, month_context(month), {}
+        self.removed = []
         self.page_order = presentation_order(archive)
 
     def problem(self, op, reason):
@@ -332,6 +333,20 @@ class Compiler:
                                   "name": op.get("name") or "数据图表", "chart": chart,
                                   "workbook": base64.b64encode(book).decode("ascii")})
 
+    def do_removeObjects(self, op):
+        """Delete objects the template should not carry into drafts (decoration tied to one month)."""
+        boxes = self.boxes(op)
+        if boxes is None:
+            return
+        for object_id in op["ids"]:
+            if object_id not in boxes:
+                self.problem({**op, "shapeId": object_id}, "要删除的对象不存在")
+                continue
+            if (op["slide"], object_id) in self.removed:
+                continue
+            self.removed.append((op["slide"], object_id))
+            self.replacements.append({"kind": "removeObject", "slide": op["slide"], "objectId": object_id})
+
     def do_chartSlot(self, op):
         try:
             chart, workbook = resolve_chart(self.archive, op["slide"], op["chartId"])
@@ -485,7 +500,7 @@ class Compiler:
         found = 0
         for box in sorted(boxes.values(), key=lambda item: item["z"]):
             inside = left <= box["x"] and top <= box["y"] and box["x"] + box["cx"] <= right and box["y"] + box["cy"] <= bottom
-            if not inside or box["id"] in keep:
+            if not inside or box["id"] in keep or (op["slide"], box["id"]) in self.removed:
                 continue
             if box["kind"] == "pic" and op.get("images", True):
                 found += 1
@@ -523,7 +538,8 @@ def compile_mapping(mapping, template, data, extras=None):
             compiler.source_issues.extend(source["marketIssues"])
     return {"replacements": compiler.replacements, "slots": compiler.slots, "charts": compiler.charts, "blankCharts": compiler.blank_charts,
             "sourceIssues": compiler.source_issues, "mappingIssues": compiler.mapping_issues, "contract": contract,
-            "warning": source["warning"], "dataSource": source_name}
+            "warning": source["warning"], "dataSource": source_name,
+            "removed": [{"slide": slide, "objectId": object_id} for slide, object_id in compiler.removed]}
 
 
 def check_mapping(mapping, template):
@@ -548,6 +564,10 @@ def check_mapping(mapping, template):
                 continue
             xml = archive.read(name)
             texts = shape_texts(xml)
+            if op["op"] == "removeObjects":
+                present = set(texts) | object_ids(xml, "pic", "nvPicPr") | object_ids(xml, "cxnSp", "nvCxnSpPr")
+                problems.extend({"op": op["op"], "slide": op["slide"], "object": object_id, "reason": "要删除的对象不存在"}
+                                for object_id in op["ids"] if object_id not in present)
             grid_ids = op["header"] if op["op"] == "fillGrid" else []
             grid_ids += [item for row in op.get("cells", []) for item in row if item is not None] if op["op"] == "fillShapes" else []
             for shape_id in grid_ids:
