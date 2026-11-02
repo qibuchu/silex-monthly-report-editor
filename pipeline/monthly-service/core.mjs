@@ -360,8 +360,9 @@ export function createCore(config) {
       if(t.deletedAt||!t.mapping?.seedSha256)continue;
       const seed=seedMappings.find(item=>item.seedSha256===t.mapping.seedSha256&&item.seedSha256===t.sourcePptx?.sha256);
       if(!seed||JSON.stringify(seed)===JSON.stringify(t.mapping))continue;
-      t.mapping=seed;t.mappingRevision=(t.mappingRevision||0)+1;
-      try{t.mappingCheck=checkNativeMapping(t,t.mapping);}catch(error){t.mappingCheck={ok:false,configured:true,problems:[{reason:error.message}]};}
+      // No Python check here: startup is when the service holds the most memory (the whole store is
+      // parsed), and a child process counts against the same container limit. Publishing checks again.
+      t.mapping=seed;t.mappingRevision=(t.mappingRevision||0)+1;t.mappingCheck=null;
       changed=true;
     }
     if(changed)persist();};
