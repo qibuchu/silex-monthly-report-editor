@@ -4,9 +4,9 @@
   "sourceMonth": "2026-08",
   "seedSha256": "91a8ee1bf75d656f3a34e21ad621c1f0635957a6d662f6348c2ccbd3116d728e",
   "pageNotes": {
-    "2": "右侧买量趋势图按 charts.ads_trend 生成（近三个月素材量堆叠柱 + 在投游戏数折线）。左侧 KPI 进度条长度未随数据更新。",
+    "2": "右侧买量趋势图按 charts.ads_trend 生成 PowerPoint 原生图表（近三个月素材量堆叠柱 + 在投游戏数折线）。左侧 KPI 进度条长度未随数据更新。",
     "3": "MAU（万）、MAU环比接口无数据，需人工填写；重点游戏金色标记需人工标注。原稿表格下方还压着一套旧榜单文本框（被卡片遮住），建议在模板中删除。",
-    "5": "TOP50 品类分布图是图片，已改为图片空位；接口 iaa.top50 有品类数量，建议模板改为原生图表。",
+    "5": "TOP50 品类分布图按 iaa.top50 生成 PowerPoint 原生条形图（前 10 个品类，括号内为较上月变化）。",
     "6": "同第 3 页：MAU 两列人工填写，重点游戏标记人工标注，下层旧榜单建议删除。"
   },
   "ops": [
@@ -18,7 +18,7 @@
     {"op": "clearText", "slide": 2, "shapeId": 113},
     {"op": "replaceFragment", "slide": 2, "shapeId": 123, "find": "\\d{1,2}—\\d{1,2}月", "value": "{twoMonthsAgoNumber}—{monthNumber}月"},
     {"op": "replaceFragment", "slide": 2, "shapeId": 21, "find": "\\d{4}年\\d{1,2}—\\d{1,2}月", "value": "{year}年{twoMonthsAgoNumber}—{monthNumber}月"},
-    {"op": "imageChart", "slide": 2, "pictureId": 121, "source": "minigame.adsTrend"},
+    {"op": "nativeChart", "slide": 2, "pictureId": 121, "source": "minigame.adsTrend", "name": "素材量与在投游戏数"},
     {"op": "clearText", "slide": 2, "shapeId": 31},
     {"op": "clearText", "slide": 2, "shapeId": 125},
     {"op": "setRuns", "slide": 2, "shapeId": 129, "values": ["{douyinInfoFlowGrowth}", "{douyinTalentGrowth}"]},
@@ -52,7 +52,7 @@
 
     {"op": "replaceFragment", "slide": 5, "shapeId": 392, "find": "\\d{1,2}月", "value": "{monthNumber}月"},
     {"op": "clearText", "slide": 5, "shapeId": 381},
-    {"op": "imageSlot", "slide": 5, "pictureId": 6},
+    {"op": "nativeChart", "slide": 5, "pictureId": 6, "source": "minigame.categoryTop", "name": "TOP50品类数量"},
     {"op": "clearRegion", "slide": 5, "box": [690, 220, 1240, 640], "keep": [13, 15, 19]},
 
     {"op": "replaceFragment", "slide": 6, "shapeId": 407, "find": "\\d{1,2}月", "value": "{monthNumber}月"},

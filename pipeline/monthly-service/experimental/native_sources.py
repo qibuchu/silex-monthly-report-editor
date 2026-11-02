@@ -159,5 +159,5 @@ def steam_contract(data, extras):
 
 
 STEAM = {"contract": steam_contract, "tables": TABLE_SOURCES, "highlights": HIGHLIGHT_SOURCES,
-         "values": None, "market": market_values, "marketIssues": MARKET_ISSUES, "images": {},
+         "values": None, "market": market_values, "marketIssues": MARKET_ISSUES, "images": {}, "charts": {},
          "warning": "历史评测、AI披露和研究文案仍待补；生成结果尚未完成数据与视觉验收。"}

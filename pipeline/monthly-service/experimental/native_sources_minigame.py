@@ -9,6 +9,7 @@ import re
 from decimal import Decimal, ROUND_HALF_UP
 
 from chart_images import ads_trend
+from native_charts import ads_trend_chart, category_chart
 from native_sources import previous_month
 
 
@@ -159,7 +160,7 @@ def values(data, extras):
     return text, issues
 
 
-def ads_trend_image(data, extras, width, height):
+def ads_trend_months(data):
     """Three months ending at the report month; months the export marks incomplete stay empty."""
     month = data["month"]
     window = [previous_month(previous_month(month)), previous_month(month), month]
@@ -184,8 +185,43 @@ def ads_trend_image(data, extras, width, height):
             if entry[name + "Games"] is None:
                 issues.append({"field": f"charts.ads_trend.{key}.{name}_games", "reason": "missing"})
         months.append(entry)
+    return months, issues
+
+
+def ads_trend_image(data, extras, width, height):
+    months, issues = ads_trend_months(data)
     svg, png = ads_trend(months, width, height)
     return svg, png, issues
+
+
+def ads_trend_native(data, extras):
+    months, issues = ads_trend_months(data)
+    chart, book = ads_trend_chart(months)
+    return chart, book, issues
+
+
+def category_top_native(data, extras, limit=10):
+    """IAA Top50 genre counts: the largest `limit` genres, change against last month in brackets."""
+    month = data["month"]
+    top = (data.get("iaa") or {}).get("top50") or {}
+    issues, rows = [], []
+    if (top.get("currentDate"), top.get("previousDate")) != (month_bounds(month)[1], month_bounds(previous_month(month))[1]):
+        issues.append({"field": "iaa.top50", "reason": "window_mismatch",
+                       "currentDate": top.get("currentDate"), "previousDate": top.get("previousDate")})
+    else:
+        ranked = [row for row in top.get("rows") or [] if (row.get("current_count") or 0) > 0 and row.get("genre")]
+        ranked.sort(key=lambda row: -row["current_count"])  # stable: keeps the export's order for ties
+        for row in ranked[:limit]:
+            delta = row.get("delta")
+            change = "-" if delta == 0 else f"{delta:+d}" if isinstance(delta, int) else "?"
+            if not isinstance(delta, int):
+                issues.append({"field": "iaa.top50", "genre": row["genre"], "reason": "delta_missing"})
+            rows.append((row["genre"], row["current_count"], f"{row['current_count']} ({change})"))
+        if not rows:
+            issues.append({"field": "iaa.top50", "reason": "no_rows"})
+    previous = int(previous_month(month)[-2:])
+    chart, book = category_chart(rows, f"{int(month[-2:])}月TOP50品类数量", f"注：括号中为较{previous}月榜单变化，数据来源于ADXray")
+    return chart, book, issues
 
 
 MINIGAME = {"contract": contract,
@@ -195,4 +231,5 @@ MINIGAME = {"contract": contract,
                        "minigame.featured.most_played": featured_rows("most_played")},
             "highlights": {}, "values": values, "market": None, "marketIssues": [],
             "images": {"minigame.adsTrend": ads_trend_image},
-            "warning": "MAU、榜单观察、品类分析、新游介绍和图片需人工或AI补齐；买量趋势图已按数据生成，品类分布图在原稿中是图片，已改为待补空位。"}
+            "charts": {"minigame.adsTrend": ads_trend_native, "minigame.categoryTop": category_top_native},
+            "warning": "MAU、榜单观察、品类分析、新游介绍和图片需人工或AI补齐；买量趋势图和品类分布图已按数据生成为 PowerPoint 原生图表。"}

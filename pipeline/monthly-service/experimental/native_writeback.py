@@ -16,6 +16,7 @@ from xml.etree import ElementTree
 
 from native_mapping import NS, presentation_order
 from pptx_market_charts import resolve_chart
+from native_charts import preview_svg
 from pptx_preserve_patch import CHART_LABEL, blank_paragraph
 
 
@@ -78,6 +79,16 @@ def generated_images(archive, slide, root):
         name = posixpath.normpath(posixpath.join("ppt/slides", targets[svg.get(REL + "embed")]))
         if name in archive.namelist():
             found[marker.get("id")] = "data:image/svg+xml;base64," + base64.b64encode(archive.read(name)).decode("ascii")
+    # Native charts the generator built: the web view gets a picture drawn from the chart's own data.
+    for frame in root.iter(P + "graphicFrame"):
+        marker = frame.find(P + "nvGraphicFramePr/" + P + "cNvPr")
+        chart = frame.find(".//{http://schemas.openxmlformats.org/drawingml/2006/chart}chart")
+        extent = frame.find(P + "xfrm/" + A + "ext")
+        if marker is None or marker.get("descr") != CHART_LABEL or chart is None or extent is None:
+            continue
+        part, _ = resolve_chart(archive, slide, int(marker.get("id")))
+        svg = preview_svg(archive.read(part), int(extent.get("cx")) / 9525, int(extent.get("cy")) / 9525)
+        found[marker.get("id")] = "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii")
     return found
 
 

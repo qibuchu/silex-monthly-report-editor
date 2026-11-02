@@ -348,6 +348,48 @@ def picture_to_image(slide_xml: bytes, rels_xml: bytes, picture_id: int, png_tar
     return slide_xml, rels_xml
 
 
+CHART_REL = b"http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
+PACKAGE_REL = b"http://schemas.openxmlformats.org/officeDocument/2006/relationships/package"
+CHART_TYPE = b"application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
+
+
+def picture_to_chart(slide_xml: bytes, rels_xml: bytes, picture_id: int, chart_target: str, name: str):
+    """Replace a picture with a chart frame at the same z-order, position and size.
+
+    The frame keeps the picture's object id, so mappings and the web view still find it.
+    """
+    pictures = list(re.finditer(rb"<p:pic\b[^>]*>.*?</p:pic>", slide_xml, re.DOTALL))
+    matches = [match for match in pictures if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(picture_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError("Picture object missing or ambiguous")
+    picture = matches[0].group()
+    frame = re.search(rb"<a:xfrm\b[^>]*>.*?</a:xfrm>", picture, re.DOTALL)
+    if not frame:
+        raise ValueError("Picture has no position")
+    old_ids = re.findall(rb'r:(?:embed|link)="([^"]+)"', picture)
+    numbers = [int(value) for value in re.findall(rb'\bId="rId(\d+)"', rels_xml)]
+    chart_id = b"rId" + str(max(numbers, default=0) + 1).encode()
+    rels_xml = rels_xml.replace(b"</Relationships>", b'<Relationship Id="' + chart_id + b'" Type="' + CHART_REL
+                                + b'" Target="../charts/' + chart_target.encode() + b'"/></Relationships>', 1)
+    position = frame.group().replace(b"<a:xfrm", b"<p:xfrm", 1).replace(b"</a:xfrm>", b"</p:xfrm>")
+    graphic = (b'<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="' + str(picture_id).encode() + b'" name="'
+               + html.escape(name, quote=True).encode("utf-8") + b'" descr="' + CHART_LABEL.encode("utf-8") + b'"/>'
+               b'<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr>'
+               + position + b'<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">'
+               b'<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="' + chart_id + b'"/>'
+               b'</a:graphicData></a:graphic></p:graphicFrame>')
+    slide_xml = slide_xml[:matches[0].start()] + graphic + slide_xml[matches[0].end():]
+    for old_id in old_ids:
+        if not re.search(rb'r:(?:embed|link|id)="' + re.escape(old_id) + rb'"', slide_xml):
+            rels_xml = re.sub(rb'<Relationship\b[^>]*\bId="' + re.escape(old_id) + rb'"[^>]*/>', b"", rels_xml)
+    return slide_xml, rels_xml
+
+
+def free_number(names, pattern):
+    used = {int(match.group(1)) for name in names if (match := re.fullmatch(pattern, name))}
+    return next(number for number in range(1, len(used) + 2) if number not in used)
+
+
 def table_fill_span(cell: bytes):
     """Locate the cell background, the fill that follows the border lines."""
     properties = re.search(rb"<a:tcPr\b[^>]*?(/>|>.*?</a:tcPr>)", cell, re.DOTALL)
@@ -510,6 +552,20 @@ def main():
                 ElementTree.fromstring(item["svg"])
                 added[f"ppt/media/{stem}.png"] = base64.b64decode(item["png"])
                 added[f"ppt/media/{stem}.svg"] = item["svg"].encode("utf-8")
+            elif item.get("kind") == "chartFrame":
+                rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
+                names = set(source.namelist()) | set(added)
+                number = free_number(names, r"ppt/charts/chart(\d+)\.xml")
+                book = f"Microsoft_Excel_Worksheet{free_number(names, r'ppt/embeddings/Microsoft_Excel_Worksheet(\d+)\.xlsx')}.xlsx"
+                changed[name], changed[rels] = picture_to_chart(data, changed.get(rels, source.read(rels)), int(item["pictureId"]),
+                                                                f"chart{number}.xml", item.get("name") or "数据图表")
+                ElementTree.fromstring(changed[rels])
+                ElementTree.fromstring(item["chart"].encode("utf-8"))
+                added[f"ppt/charts/chart{number}.xml"] = item["chart"].encode("utf-8")
+                added[f"ppt/charts/_rels/chart{number}.xml.rels"] = (
+                    b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                    b'<Relationship Id="rId1" Type="' + PACKAGE_REL + b'" Target="../embeddings/' + book.encode() + b'"/></Relationships>')
+                added[f"ppt/embeddings/{book}"] = base64.b64decode(item["workbook"])
             elif item.get("kind") == "tableFills":
                 changed[name] = set_row_fills(data, int(item["tableId"]), int(item["firstRow"]), item["flags"], item["color"])
             elif item.get("kind") == "shapeRunStyle":
@@ -526,7 +582,12 @@ def main():
         added = {name: data for name, data in added.items() if name not in existing}
         if added:
             types = changed.get("[Content_Types].xml", source.read("[Content_Types].xml"))
-            for extension, mime in ((b"png", b"image/png"), (b"svg", b"image/svg+xml")):
+            for part in sorted(name for name in added if re.fullmatch(r"ppt/charts/chart\d+\.xml", name)):
+                entry = b'<Override PartName="/' + part.encode() + b'" ContentType="' + CHART_TYPE + b'"/>'
+                types = types.replace(b"</Types>", entry + b"</Types>", 1)
+                changed["[Content_Types].xml"] = types
+            for extension, mime in ((b"png", b"image/png"), (b"svg", b"image/svg+xml"),
+                                    (b"xlsx", b"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")):
                 if any(name.endswith("." + extension.decode()) for name in added) and \
                         not re.search(rb'<Default\b[^>]*\bExtension="' + extension + rb'"', types, re.IGNORECASE):
                     types = types.replace(b"</Types>", b'<Default Extension="' + extension + b'" ContentType="' + mime + b'"/></Types>', 1)

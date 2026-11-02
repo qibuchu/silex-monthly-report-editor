@@ -24,7 +24,7 @@ NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
-       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart"}
+       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME}
 PX = 9525  # EMU per 1/96 inch; slide coordinates in mappings use this unit.
 
@@ -312,6 +312,25 @@ class Compiler:
         self.source_issues.extend(issues)
         self.replacements.append({"kind": "pictureImage", "slide": op["slide"], "pictureId": op["pictureId"],
                                   "svg": svg, "png": base64.b64encode(png).decode("ascii")})
+
+    def do_nativeChart(self, op):
+        """Replace a picture with a native chart built from data, in the same frame."""
+        boxes = self.boxes(op)
+        if boxes is None:
+            return
+        picture = boxes.get(op["pictureId"])
+        if picture is None or picture["kind"] != "pic":
+            self.problem(op, "图片对象不存在")
+            return
+        build = self.source.get("charts", {}).get(op.get("source"))
+        if build is None:
+            self.problem(op, f"未知图表数据 {op.get('source')}")
+            return
+        chart, book, issues = build(self.data, self.extras)
+        self.source_issues.extend(issues)
+        self.replacements.append({"kind": "chartFrame", "slide": op["slide"], "pictureId": op["pictureId"],
+                                  "name": op.get("name") or "数据图表", "chart": chart,
+                                  "workbook": base64.b64encode(book).decode("ascii")})
 
     def do_chartSlot(self, op):
         try:
