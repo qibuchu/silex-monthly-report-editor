@@ -24,7 +24,7 @@ NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
-       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects"}
+       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME}
 PX = 9525  # EMU per 1/96 inch; slide coordinates in mappings use this unit.
 
@@ -342,6 +342,33 @@ class Compiler:
         self.replacements.append({"kind": "chartFrame", "slide": op["slide"], "pictureId": op["pictureId"],
                                   "name": op.get("name") or "数据图表", "chart": chart,
                                   "workbook": base64.b64encode(book).decode("ascii")})
+
+    def do_barLength(self, op):
+        """Set a progress bar's width from a number: the track's full width stands for `full` (default 100).
+
+        The absolute value is used (the text beside it shows the sign); a minimum keeps small changes
+        visible; a missing number collapses the bar so no old length is left behind.
+        """
+        boxes = self.boxes(op)
+        if boxes is None:
+            return
+        bar, track = boxes.get(op["shapeId"]), boxes.get(op["trackId"])
+        if bar is None or track is None:
+            self.problem(op, "进度条或轨道对象不存在")
+            return
+        numbers = self.source["numbers"](self.data, self.extras) if self.source.get("numbers") else {}
+        if op["value"] not in numbers:
+            self.problem(op, f"未知数值 {op['value']}")
+            return
+        value = numbers[op["value"]]
+        if value is None:
+            width = 0
+        else:
+            ratio = min(1.0, abs(value) / float(op.get("full", 100)))
+            width = round(track["cx"] * max(ratio, float(op.get("minRatio", 0.05))))
+        if width != bar["cx"]:
+            self.replacements.append({"kind": "shapeWidth", "slide": op["slide"], "shapeId": op["shapeId"],
+                                      "expectedWidth": bar["cx"], "width": width})
 
     def do_removeObjects(self, op):
         """Delete objects the template should not carry into drafts (decoration tied to one month)."""

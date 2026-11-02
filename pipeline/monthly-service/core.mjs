@@ -354,6 +354,18 @@ export function createCore(config) {
     }finally{fs.rmSync(dir2,{recursive:true,force:true});}
   }
   for(const t of Object.values(db.templates))seedTemplateMapping(t);
+  // PPT templates follow updates to their registered rule file; a published one keeps its published copy until republished.
+  const refreshPptSeeds=()=>{let changed=false;
+    for(const t of Object.values(db.pptTemplates||{})){
+      if(t.deletedAt||!t.mapping?.seedSha256)continue;
+      const seed=seedMappings.find(item=>item.seedSha256===t.mapping.seedSha256&&item.seedSha256===t.sourcePptx?.sha256);
+      if(!seed||JSON.stringify(seed)===JSON.stringify(t.mapping))continue;
+      t.mapping=seed;t.mappingRevision=(t.mappingRevision||0)+1;
+      try{t.mappingCheck=checkNativeMapping(t,t.mapping);}catch(error){t.mappingCheck={ok:false,configured:true,problems:[{reason:error.message}]};}
+      changed=true;
+    }
+    if(changed)persist();};
+  refreshPptSeeds();
   const previousMonthOf=month=>{const [y,m]=month.split('-').map(Number);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;};
   // Each data source checks its own package; the Python generator re-checks the full contract.
   const nativeSources={

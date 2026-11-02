@@ -5,7 +5,7 @@
  "seedSha256": "b10d6dc2958697b127667b122c0798d770c2e80cb223fa929f65773c8f7004f8",
  "templateNote": "由 9 月草稿 v4 保存的模板：榜单、新游卡片和第 2、5 页原生图表按数据重填；文字和图片空位保持空白。",
  "pageNotes": {
-  "2": "右侧买量趋势图按 charts.ads_trend 生成 PowerPoint 原生图表（近三个月素材量堆叠柱 + 在投游戏数折线）。左侧 KPI 进度条长度未随数据更新。",
+  "2": "右侧买量趋势图按 charts.ads_trend 生成 PowerPoint 原生图表（近三个月素材量堆叠柱 + 在投游戏数折线）。左侧 5 条进度条按变化幅度绘制（轨道全长=100%，取绝对值，最短 5%，缺数时不显示）。",
   "3": "MAU（万）、MAU环比接口无数据，需人工填写；重点游戏金色标记需人工标注。榜单观察只保留编号、标题和正文文字框，原稿表格下方还压着一套旧榜单文本框（被卡片遮住），建议在模板中删除。",
   "5": "TOP50 品类分布图按 iaa.top50 生成 PowerPoint 原生条形图（前 10 个品类，括号内为较上月变化）。",
   "6": "同第 3 页：MAU 两列人工填写，重点游戏标记人工标注，榜单观察的游戏图片不进入草稿，下层旧榜单建议删除。"
@@ -137,6 +137,41 @@
    "slide": 2,
    "shapeId": 111,
    "value": "{wechatGamesGrowth}"
+  },
+  {
+   "op": "barLength",
+   "slide": 2,
+   "shapeId": 68,
+   "trackId": 66,
+   "value": "douyinMaterialGrowth"
+  },
+  {
+   "op": "barLength",
+   "slide": 2,
+   "shapeId": 79,
+   "trackId": 75,
+   "value": "douyinInfoFlowGrowth"
+  },
+  {
+   "op": "barLength",
+   "slide": 2,
+   "shapeId": 89,
+   "trackId": 87,
+   "value": "douyinGamesGrowth"
+  },
+  {
+   "op": "barLength",
+   "slide": 2,
+   "shapeId": 101,
+   "trackId": 99,
+   "value": "wechatMaterialGrowth"
+  },
+  {
+   "op": "barLength",
+   "slide": 2,
+   "shapeId": 109,
+   "trackId": 107,
+   "value": "wechatGamesGrowth"
   },
   {
    "op": "replaceFragment",

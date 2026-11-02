@@ -58,3 +58,23 @@ test('generate_ppt fetches the minigame export for the month and refuses an unfi
     await assert.rejects(core.call('generate_ppt',{templateId:t.id,month:'2026-10'}),/还没有固化快照/);
   }finally{server.close();fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('a PPT template picks up updated registered rules; a published one shows them as unpublished changes',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'ppt-seed-'));
+  try{
+    const dataDir=path.join(root,'data');
+    const seed=JSON.parse(fs.readFileSync(new URL('./experimental/minigame_monthly_template_v4.json',import.meta.url),'utf8'));
+    fs.mkdirSync(path.join(dataDir,'template-pptx'),{recursive:true});
+    fs.writeFileSync(path.join(dataDir,'template-pptx',seed.seedSha256+'.pptx'),smallPptx());
+    const old={...seed,ops:seed.ops.filter(op=>op.op!=='barLength')};
+    const base={title:'小游戏月报',dataSourceId:'minigame-monthly',createdAt:'2026-11-02',sourcePptx:{sha256:seed.seedSha256,bytes:1}};
+    fs.writeFileSync(path.join(dataDir,'store.json'),JSON.stringify({projects:{},tasks:{},proposals:{},pptTemplates:{
+      a:{...base,id:'a',revision:0,mapping:old,mappingRevision:1},
+      b:{...base,id:'b',revision:1,mapping:old,mappingRevision:1,published:{sourcePptx:base.sourcePptx,mapping:old,mappingRevision:1,revision:1}}}}));
+    const core=createCore({dataDir,publicUrl:'http://127.0.0.1:4320'});
+    const [a,b]=['a','b'].map(id=>core.db.pptTemplates[id]);
+    assert.equal(a.mappingRevision,2);assert.ok(a.mapping.ops.some(op=>op.op==='barLength'));
+    assert.equal(b.published.mapping.ops.some(op=>op.op==='barLength'),false);
+    assert.equal((await core.call('list_ppt_templates')).find(t=>t.id==='b').draftChanged,true);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

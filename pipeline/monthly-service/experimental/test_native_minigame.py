@@ -164,6 +164,37 @@ class DraftAsTemplateTests(unittest.TestCase):
             self.assertEqual(compiled["slots"], [{"slide": 1, "objectId": 4, "type": "text"}])
 
 
+class BarTests(unittest.TestCase):
+    def compile(self, value):
+        with tempfile.TemporaryDirectory() as folder:
+            template = Path(folder) / "t.pptx"
+            pptx(template, {1: slide(box(66, 147, 340, "", width=168), box(68, 147, 340, "", width=8))})
+            data = export("2026-09", "2026-08")
+            data["adx_kpi"]["douyin_material_growth_pct"] = value
+            mapping = {"format": "native-pptx-mapping-v1", "dataSource": "minigame-monthly",
+                       "ops": [{"op": "barLength", "slide": 1, "shapeId": 68, "trackId": 66, "value": "douyinMaterialGrowth"}]}
+            return compile_mapping(mapping, template, data, {})
+
+    def width(self, value):
+        found = [item for item in self.compile(value)["replacements"] if item["kind"] == "shapeWidth"]
+        return round(found[0]["width"] / 9525, 1) if found else 8
+
+    def test_bar_follows_absolute_change_with_minimum_and_cap(self):
+        self.assertEqual(self.width(-20.9), 35.1)   # 168 x 20.9%
+        self.assertEqual(self.width(1.0), 8.4)      # never shorter than 5% of the track
+        self.assertEqual(self.width(250), 168.0)    # capped at the full track
+        self.assertEqual(self.width(None), 0)       # no data: no stale length
+        self.assertEqual(self.compile(None)["mappingIssues"], [])
+
+    def test_width_patch_keeps_left_edge_and_checks_old_width(self):
+        from pptx_preserve_patch import set_shape_width
+        xml = slide(box(68, 147, 340, "", width=8)).encode()
+        out = set_shape_width(xml, 68, 8 * 9525, 200000).decode()
+        self.assertIn(f'<a:off x="{147 * 9525}" y="{340 * 9525}"/><a:ext cx="200000"', out)
+        with self.assertRaises(ValueError):
+            set_shape_width(xml, 68, 999, 200000)
+
+
 class PatchTests(unittest.TestCase):
     def test_line_breaks_compare_like_an_xml_parser(self):
         self.assertEqual(run_text(b"<a:t>a\r\nb &amp; c</a:t>"), "a\nb & c")

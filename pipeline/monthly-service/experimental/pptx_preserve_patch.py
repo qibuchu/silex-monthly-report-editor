@@ -420,6 +420,20 @@ def remove_object(slide_xml: bytes, rels_xml: bytes, object_id: int):
     return slide_xml, rels_xml
 
 
+def set_shape_width(slide_xml: bytes, shape_id: int, expected_width: int, width: int):
+    """Change a shape's width, keeping its left edge, height and style."""
+    shapes = list(re.finditer(rb"<p:sp\b[^>]*>.*?</p:sp>", slide_xml, re.DOTALL))
+    matches = [match for match in shapes if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(shape_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError("Bar shape missing or ambiguous")
+    shape = matches[0].group()
+    extent = re.search(rb'(<p:spPr\b.*?<a:xfrm\b[^>]*>.*?<a:ext cx=")(\d+)(")', shape, re.DOTALL)
+    if not extent or int(extent.group(2)) != expected_width:
+        raise ValueError("Bar width changed; review bar binding")
+    changed = shape[:extent.start(2)] + str(int(width)).encode() + shape[extent.end(2):]
+    return slide_xml[:matches[0].start()] + changed + slide_xml[matches[0].end():]
+
+
 def free_number(names, pattern):
     used = {int(match.group(1)) for name in names if (match := re.fullmatch(pattern, name))}
     return next(number for number in range(1, len(used) + 2) if number not in used)
@@ -587,6 +601,8 @@ def main():
                 ElementTree.fromstring(item["svg"])
                 added[f"ppt/media/{stem}.png"] = base64.b64decode(item["png"])
                 added[f"ppt/media/{stem}.svg"] = item["svg"].encode("utf-8")
+            elif item.get("kind") == "shapeWidth":
+                changed[name] = set_shape_width(data, int(item["shapeId"]), int(item["expectedWidth"]), int(item["width"]))
             elif item.get("kind") == "removeObject":
                 rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
                 changed[name], changed[rels] = remove_object(data, changed.get(rels, source.read(rels)), int(item["objectId"]))

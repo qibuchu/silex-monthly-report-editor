@@ -147,6 +147,16 @@ KPI_FIELDS = {"douyinMaterialGrowth": "douyin_material_growth_pct",
               "wechatGamesGrowth": "wechat_games_growth_pct"}
 
 
+def numbers(data, extras):
+    """Raw KPI changes (percent) for shapes drawn to scale, such as progress bars."""
+    kpi = data.get("adx_kpi") or {}
+    found = {}
+    for name, field in KPI_FIELDS.items():
+        value = kpi.get(field) if kpi.get("month") == data.get("month") else None
+        found[name] = float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+    return found
+
+
 def values(data, extras):
     kpi = data.get("adx_kpi") or {}
     if kpi.get("month") != data.get("month"):
@@ -229,7 +239,7 @@ MINIGAME = {"contract": contract,
                        "minigame.most_played": board_rows("most_played"),
                        "minigame.featured.bestseller": featured_rows("bestseller"),
                        "minigame.featured.most_played": featured_rows("most_played")},
-            "highlights": {}, "values": values, "market": None, "marketIssues": [],
+            "highlights": {}, "values": values, "numbers": numbers, "market": None, "marketIssues": [],
             "images": {"minigame.adsTrend": ads_trend_image},
             "charts": {"minigame.adsTrend": ads_trend_native, "minigame.categoryTop": category_top_native},
             "warning": "MAU、榜单观察、品类分析、新游介绍和图片需人工或AI补齐；买量趋势图和品类分布图已按数据生成为 PowerPoint 原生图表。"}
