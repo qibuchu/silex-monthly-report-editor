@@ -42,9 +42,9 @@ test('PPT-only templates: upload without rules cannot publish, can be removed, a
 
 test('generate_ppt fetches the minigame export for the month and refuses an unfinished month',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'ppt-fetch-'));
-  const asked=[];
+  const asked=[];let complete=false;
   const server=http.createServer((req,res)=>{const month=new URL(req.url,'http://x').searchParams.get('month');asked.push(month);
-    res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({month,coverage:{calendar_complete:false},snapshot:{id:1}}));});
+    res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({month,coverage:{calendar_complete:complete},snapshot:complete?null:{id:1},mode:complete?'preview':'snapshot'}));});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   try{
     const core=createCore({dataDir:path.join(root,'data'),publicUrl:'http://127.0.0.1:4320',minigameExportUrl:`http://127.0.0.1:${server.address().port}/export?month={month}`});
@@ -54,5 +54,7 @@ test('generate_ppt fetches the minigame export for the month and refuses an unfi
     t.published={sourcePptx:t.sourcePptx,mapping:t.mapping,mappingRevision:1,revision:1};t.revision=1;
     await assert.rejects(core.call('generate_ppt',{templateId:t.id,month:'2026-11'}),/还没有完整的月度数据/);
     assert.deepEqual(asked,['2026-11','2026-10']);
+    complete=true;
+    await assert.rejects(core.call('generate_ppt',{templateId:t.id,month:'2026-10'}),/还没有固化快照/);
   }finally{server.close();fs.rmSync(root,{recursive:true,force:true});}
 });

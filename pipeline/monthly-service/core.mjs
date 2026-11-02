@@ -443,6 +443,7 @@ export function createCore(config) {
     }
     if(!data)throw new ServiceError('这个模板的数据源不能自动取数，请上传当月数据包',400);
     if(source==='minigame-monthly'&&data.month===args.month&&data.coverage?.calendar_complete!==true)throw new ServiceError(`${args.month} 还没有完整的月度数据（月份未结束或数据未齐），暂不能生成`,400);
+    if(source==='minigame-monthly'&&data.month===args.month&&data.snapshot?.id==null)throw new ServiceError(`${args.month} 的小游戏数据还没有固化快照（接口当前是预览数据，之后可能还会变），请先在小游戏数据库固化该月快照再生成`,400);
     return startNative({month:args.month,data,previous,audit},native,{pptTemplate:{id:t.id,title:t.title,revision:t.revision}},null,{dataFetched:fetched});
   }
 
