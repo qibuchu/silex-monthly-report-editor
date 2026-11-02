@@ -44,7 +44,9 @@ async function loadTemplates() {
   const ready = state.templates.filter(t => t.ready);
   const selected = $('genTemplate').value;
   $('genTemplate').innerHTML = ready.map(t => `<option value="${esc(t.id)}">${esc(t.title)}（v${t.revision}）</option>`).join('') || '<option value="">没有已发布的模板</option>';
-  if (ready.some(t => t.id === selected)) $('genTemplate').value = selected;
+  const requested = new URLSearchParams(location.search).get('template');
+  if (ready.some(t => t.id === requested)) $('genTemplate').value = requested;
+  else if (ready.some(t => t.id === selected)) $('genTemplate').value = selected;
   refreshInputs();
 }
 

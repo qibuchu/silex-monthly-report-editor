@@ -43,9 +43,9 @@ ul.notes{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
-<header><h1>PPT 月报</h1><span style="opacity:.75;font-size:13px">模板就是 PPT 文件，生成结果直接是可编辑 PPTX</span><a href="/">网页版工作台（已搁置）</a></header>
+<header><h1>PPT 月报</h1><span style="opacity:.75;font-size:13px">模板就是 PPT 文件，生成结果直接是可编辑 PPTX</span><a href="/#templates">返回工作台模板库</a></header>
 <main>
-  <section>
+  <section id="generate">
     <h2>生成 PPT</h2>
     <p class="hint">选模板和月份。小游戏模板会自动从小游戏接口取当月和上月数据；Steam 模板需要上传当月数据包和时间窗口审计。</p>
     <div class="row">
@@ -58,7 +58,7 @@ ul.notes{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
     <div class="status" id="genStatus"></div>
   </section>
 
-  <section>
+  <section id="templatesSection">
     <h2>PPT 模板</h2>
     <p class="hint">上传一份 PPTX 作为模板。已登记过填数规则的 PPT 会自动带上规则；请先下载原稿在 PowerPoint 里核对，再点“发布”。</p>
     <div class="cards" id="templates"></div>

@@ -40,10 +40,10 @@
   <div id="recycleProjects" class="project-grid"><p class="loading">正在读取回收站…</p></div><div id="recyclePagination" class="pagination"></div>
 </section>
 <section id="view-templates" data-page="templates" hidden>
-  <div class="section-heading"><div><h2>模板库 <span class="count-pill" id="templateTotal">0</span></h2><p>编辑版式、查看产出规则，发布后用于生成新月报。</p></div><div class="actions"><a class="button" href="#projects">从月报另存为模板 →</a><button class="button primary" id="openPptxTemplate">上传 PPT 生成模板</button></div></div>
+  <div class="section-heading"><div><h2>模板库 <span class="count-pill" id="templateTotal">0</span></h2><p>按产出格式选择模板：HTML 网页草稿或可编辑 PPTX。</p></div><div class="actions"><a class="button" href="#projects">从月报另存为 HTML 模板</a><button class="button" id="openPptxTemplate">上传 PPT 转 HTML 模板</button><a class="button primary" href="/ppt#templates">上传 PPTX 做 PPT 模板 ↗</a></div></div>
   <div class="info-strip">编辑稿与已发布版本分开保存。修改模板不会影响已有月报。</div>
   <div class="toolbar"><label class="search-box"><span aria-hidden="true">⌕</span><input id="templateSearch" type="search" placeholder="搜索模板" aria-label="搜索模板"></label><label class="compact-field">状态<select id="templateFilter" aria-label="模板筛选"><option value="all">全部模板</option><option value="published">已发布</option><option value="draft">未发布</option><option value="custom">自定义</option></select></label></div>
-  <div id="templates" class="template-grid"><p class="loading">正在读取模板…</p></div>
+  <div id="templates" class="template-zones"><p class="loading">正在读取模板…</p></div>
 </section>
 <section id="view-sources" data-page="sources" hidden>
   <div class="section-heading"><div><h2>数据源库 <span class="count-pill" id="sourceTotal">0</span></h2><p>统一管理 SteamAuto、小游戏接口和新业务的数据来源；模板可以复用同一来源。</p></div><button class="button primary" id="addDataSource">＋ 新建数据源</button></div>
@@ -60,14 +60,14 @@
 <div id="toast" class="toast" role="status" aria-live="polite" hidden><span id="status"></span><button class="icon-button" id="dismissToast" aria-label="关闭消息">×</button></div>
 
 <dialog id="generateDialog" class="modal"><div class="modal-head"><div><span class="eyebrow">NEW REPORT</span><h2>新建月报</h2></div><button class="icon-button" data-close aria-label="关闭新建月报">×</button></div><div class="modal-body">
-  <div class="form-grid"><label>月报模板<select id="template" aria-label="月报模板"></select></label><label>目标月份<input id="month" type="month" value="2026-08"></label></div>
+  <div class="form-grid"><label>月报模板<select id="template" aria-label="月报模板"></select></label><label>目标月份<input id="month" type="month" value="2026-08"></label></div><p id="templateOutputFormat" class="muted" role="status"></p>
   <div id="templateReadiness" class="info-strip" role="status" hidden></div><details class="rule-preview"><summary>查看所选模板产出规则</summary><div id="selectedTemplateRules"></div></details>
   <label class="drop-zone" id="dataDrop" for="data"><span class="upload-symbol">↑</span><strong>选择 SteamAuto 数据包</strong><span>点击选择或将 JSON 文件拖到这里</span><input id="data" type="file" accept=".json,application/json"><small id="dataInfo">尚未选择文件</small></label>
   <p id="generationHelp" class="muted">数据包月份须与目标月份一致。按所选模板创建独立、可编辑的新稿。</p>
   <label id="nativeAuditLabel" hidden><span id="nativeAuditTitle">时间窗口审计 JSON</span><input id="nativeAudit" type="file" accept=".json,application/json"><small id="nativeAuditHint">仅已审核的 Steam 原始 PPTX 模板支持；须与目标月数据包和快照一致。</small></label>
   <p id="generateError" class="form-error" role="alert"></p>
   <div class="demo-box"><div><strong>先体验一下</strong><p>使用内置的 2026 年 8 月数据与所选模板，不在线取数。</p></div><button class="button" id="demo">生成8月示例</button></div>
-  </div><div class="modal-foot"><span>原有月报保持不变</span><button class="button" id="nativeGenerate" hidden>生成可编辑 PPTX 草稿</button><button class="button primary" id="generate">生成月报草稿 →</button></div></dialog>
+  </div><div class="modal-foot"><span>原有月报保持不变</span><button class="button primary" id="nativeGenerate" hidden>生成可编辑 PPTX 草稿 →</button><button class="button primary" id="generate">生成 HTML 草稿 →</button></div></dialog>
 
 <dialog id="rulesDialog" class="modal modal-wide"><div class="modal-head"><div><span class="eyebrow">TEMPLATE RULES</span><h2 id="rulesTitle">模板产出规则</h2><p id="rulesMeta" class="muted"></p></div><button class="icon-button" data-close aria-label="关闭模板规则">×</button></div><div id="templateRulesEditor" class="modal-body"></div><div id="ruleDiscard" class="discard-bar" hidden><span>有尚未发布的规则修改。</span><button class="button" id="discardRules">放弃修改并关闭</button></div></dialog>
 
