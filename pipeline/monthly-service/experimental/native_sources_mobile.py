@@ -66,3 +66,25 @@ MOBILE = {"contract": contract,
           "highlights": {}, "values": values, "numbers": None, "market": None,
           "marketIssues": [], "images": {}, "charts": {},
           "warning": "公司、玩法、排名变化、H1汇总及案例文案不在移动游戏月度接口中，已留为空槽；请人工补齐。"}
+
+
+def cn_contract(data, extras):
+    month = data.get("month") if isinstance(data, dict) else None
+    package = data.get("cn") if isinstance(data, dict) else None
+    meta = (package or {}).get("meta") or {}
+    snapshot = meta.get("snapshot") or {}
+    if not isinstance(month, str) or not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+        raise ValueError("Mobile CN report month invalid")
+    if meta.get("month") != month or meta.get("market") != "cn" or meta.get("ranking_metric") != "revenue":
+        raise ValueError("Mobile CN report window/metric mismatch")
+    if snapshot.get("id") is None or not snapshot.get("frozen_at") or len(package.get("data") or []) < 20:
+        raise ValueError("Mobile CN frozen top20 snapshot missing")
+    year, number = map(int, month.split("-"))
+    previous = f"{year - 1}-12" if number == 1 else f"{year}-{number - 1:02d}"
+    return {"month": month, "previous": previous,
+            "snapshotId": f"cn:{snapshot['id']}@{snapshot['version']}"}
+
+
+MOBILE_CN = {**MOBILE, "contract": cn_contract,
+             "tables": {"mobile.cn": board("cn")},
+             "warning": "仅生成国区页面；公司、玩法、排名变化、H1汇总及案例文案仍需人工或AI补齐。"}

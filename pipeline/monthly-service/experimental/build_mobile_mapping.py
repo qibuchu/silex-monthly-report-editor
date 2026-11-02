@@ -1,4 +1,4 @@
-"""Build the reviewed object map for the 20-slide June mobile source deck."""
+"""Build the reviewed object map for the 12-slide China-only mobile source deck."""
 
 import hashlib
 import json
@@ -12,17 +12,17 @@ P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 C = "http://schemas.openxmlformats.org/drawingml/2006/chart"
 N = {"p": P, "a": A, "c": C}
-EXPECTED = "481fd10fd608e23d2d14373eb266e86017d4fa4d7c85691edb129f8434f43f64"
+EXPECTED = "a426c709c2d59cf2c281f15436fbf7727a95679170b4afb3dab1f05cff6be83d"
 
 
 def main(source, output):
     source = Path(source)
     if hashlib.sha256(source.read_bytes()).hexdigest() != EXPECTED:
-        raise ValueError("This map is for the reviewed 6月手游榜单.pptx only")
+        raise ValueError("This map is for the reviewed 12-page CN template only")
     ops = []
     notes = {}
     with zipfile.ZipFile(source) as archive:
-        for slide in range(1, 21):
+        for slide in range(1, 13):
             root = ET.fromstring(archive.read(f"ppt/slides/slide{slide}.xml"))
             for shape in root.findall(".//p:sp", N):
                 marker = shape.find("p:nvSpPr/p:cNvPr", N)
@@ -35,10 +35,10 @@ def main(source, output):
                 if slide == 1 and sid == 269:
                     ops.append({"op": "replaceFragment", "slide": slide, "shapeId": sid,
                                 "find": r"\d{4} M\d{1,2}", "value": "{year} M{monthNumber}"})
-                elif slide in (1, 13) and sid in (270, 122):
+                elif slide == 1 and sid == 270:
                     ops.append({"op": "replaceFragment", "slide": slide, "shapeId": sid,
                                 "find": r"\d{4}年\d{1,2}月", "value": "{year}年{monthNumber}月"})
-                elif slide in (1, 13) and sid in (275, 126):
+                elif slide == 1 and sid == 275:
                     ops.append({"op": "replaceFragment", "slide": slide, "shapeId": sid,
                                 "find": r"\d{4}\.\d{2}", "value": "{publicationDate}"})
                 elif value in ("RESEARCH TEAM", "研究团队 · 内部研究", "DATE / VER"):
@@ -61,9 +61,6 @@ def main(source, output):
                 if (slide, tid) == (4, 340):
                     ops.append({"op": "fillTable", "slide": slide, "tableId": tid,
                                 "source": "mobile.cn", "from": 0, "to": 20})
-                elif (slide, tid) == (15, 144):
-                    ops.append({"op": "fillTable", "slide": slide, "tableId": tid,
-                                "source": "mobile.global", "from": 0, "to": 20})
                 else:
                     ops.append({"op": "clearTable", "slide": slide, "tableId": tid, "slot": True})
             for pic in root.findall(".//p:pic", N):
@@ -74,9 +71,9 @@ def main(source, output):
                 marker = frame.find("p:nvGraphicFramePr/p:cNvPr", N)
                 if marker is not None and frame.find(".//c:chart", N) is not None:
                     ops.append({"op": "chartSlot", "slide": slide, "chartId": int(marker.get("id"))})
-            if slide not in (1, 4, 13, 15):
+            if slide not in (1, 4):
                 notes[str(slide)] = "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。"
-    mapping = {"format": "native-pptx-mapping-v1", "dataSource": "mobile-monthly",
+    mapping = {"format": "native-pptx-mapping-v1", "dataSource": "mobile-cn-monthly",
                "sourceMonth": "2026-06", "seedSha256": EXPECTED, "pageNotes": notes, "ops": ops}
     Path(output).write_text(json.dumps(mapping, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{len(ops)} rules -> {output}")

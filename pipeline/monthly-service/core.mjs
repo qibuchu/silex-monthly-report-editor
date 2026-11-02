@@ -338,7 +338,7 @@ export function createCore(config) {
     db.projects[id]={id,revision:1,month:task.month,title:`${template.title} · ${task.month} PPTX 草稿`,stage:'draft',dataOrigin:{kind:'native-pptx',taskId:task.id,snapshotId},template:task.template,project:built.project,updatedAt:new Date().toISOString(),author:'native-pptx',native:{taskId:task.id,syncedRevision:1,pending:[],rejected:[],unsupported:[],missing:built.missing}};
     return id;
   }
-  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json','minigame_monthly_template_v4.json','mobile_monthly_mapping.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
+  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json','minigame_monthly_template_v4.json','mobile_monthly_mapping.json','mobile_cn_monthly_mapping.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
   const seedTemplateMapping=t=>{const seed=!t.nativeMapping&&seedMappings.find(item=>item.seedSha256===t.sourcePptx?.sha256);if(seed){t.nativeMapping=seed;t.nativeMappingRevision=(t.nativeMappingRevision||0)+1;return true;}return false;};
   const snapshotNative=t=>{if(t.origin==='pptx')t.nativePublished={sourcePptx:t.sourcePptx,mapping:t.nativeMapping,mappingRevision:t.nativeMappingRevision||0,templateRevision:t.revision};};
   function checkNativeMapping(t,mapping=t.nativeMapping){
@@ -378,7 +378,10 @@ export function createCore(config) {
       error:'小游戏月报导出与目标月份不符、月份未结束，或上月导出月份不对'},
     'mobile-monthly':{extras:[],snapshot:args=>['cn','global'].map(m=>{const s=args.data[m].meta.snapshot;return s?.id!=null?`${m}:${s.id}@${s.version}`:`${m}:missing`;}).join('|'),
       check:(args,month)=>!!(args.data&&args.data.month===month&&['cn','global'].every(m=>{const p=args.data[m],meta=p?.meta;return meta?.month===month&&meta?.market===m&&meta?.ranking_metric==='revenue'&&Array.isArray(p.data)&&(!p.data.length||meta?.snapshot?.id!=null&&meta?.snapshot?.frozen_at);})&&['cn','global'].some(m=>args.data[m].data.length>=20)),
-      error:'手游月报时间窗口不符，或国区、海外均无可用的固化榜单'}
+      error:'手游月报时间窗口不符，或国区、海外均无可用的固化榜单'},
+    'mobile-cn-monthly':{extras:[],snapshot:args=>{const s=args.data.cn.meta.snapshot;return `cn:${s.id}@${s.version}`;},
+      check:(args,month)=>{const p=args.data?.cn,meta=p?.meta;return !!(args.data?.month===month&&meta?.month===month&&meta?.market==='cn'&&meta?.ranking_metric==='revenue'&&meta?.snapshot?.id!=null&&meta.snapshot.frozen_at&&Array.isArray(p.data)&&p.data.length>=20);},
+      error:'手游国区榜单缺少目标月份的完整固化快照'}
   };
   function generateNativePptx(args){
     const month=args.month,template=db.templates[args.templateId];
@@ -446,12 +449,12 @@ export function createCore(config) {
     if(text.length>30*1024*1024)throw new ServiceError('小游戏数据接口返回内容过大',502);
     try{return JSON.parse(text);}catch{throw new ServiceError('小游戏数据接口返回的不是 JSON',502);}
   }
-  async function fetchMobileMonthly(month,sourceId){
+  async function fetchMobileMonthly(month,sourceId,markets=['cn','global']){
     const registered=dataSource(sourceId);
     if(registered?.kind!=='api'||!String(registered.reference||'').includes('/mobile-monthly'))throw new ServiceError('手游数据源未登记或接口地址不匹配',400);
     const headers=db.dataSourceSecrets[sourceId]?unseal(db.dataSourceSecrets[sourceId]):{};
     const result={month};
-    for(const market of ['cn','global']){
+    for(const market of markets){
       const rows=[];let meta;
       for(let page=1;page<=20;page++){
         const url=new URL(registered.reference.replaceAll('{month}',encodeURIComponent(month)));
@@ -482,6 +485,7 @@ export function createCore(config) {
       if(!previous){try{previous=await fetchMinigameExport(previousMonthOfPpt(args.month));fetched.previous=true;}catch(error){fetched.previousError=error.message;}}
     }
     if(!data&&source==='mobile-monthly'){data=await fetchMobileMonthly(args.month,t.dataSourceId);fetched.current=true;}
+    if(!data&&source==='mobile-cn-monthly'){data=await fetchMobileMonthly(args.month,t.dataSourceId,['cn']);fetched.current=true;}
     if(!data)throw new ServiceError('这个模板的数据源不能自动取数，请上传当月数据包',400);
     if(source==='minigame-monthly'&&data.month===args.month&&data.coverage?.calendar_complete!==true)throw new ServiceError(`${args.month} 还没有完整的月度数据（月份未结束或数据未齐），暂不能生成`,400);
     if(source==='minigame-monthly'&&data.month===args.month&&data.snapshot?.id==null)throw new ServiceError(`${args.month} 的小游戏数据还没有固化快照（接口当前是预览数据，之后可能还会变），请先在小游戏数据库固化该月快照再生成`,400);
