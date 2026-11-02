@@ -41,15 +41,20 @@ def board(market):
     def build(data, extras):
         package = data[market]
         games = sorted(package["data"], key=lambda row: int(row["rank"]))
-        issues = [{"field": f"{market}.company/playstyle/rank_change", "reason": "not_in_open_api"}]
+        issues = []
         rows = []
         if not package["data"]:
             issues.append({"field": f"{market}.top20", "reason": "frozen_snapshot_missing"})
-        for game in games:
+        for game in games[:20]:
             if not game.get("game_name"):
                 raise ValueError(f"{market} rank {game.get('rank')} has no name")
-            rows.append([str(game["rank"]), game["game_name"], "", "", "", percent(game.get("revenue_growth_pct"))])
-        rows = rows[:20]
+            missing = [name for name in ("publisher", "genre", "rank_change") if game.get(name) is None]
+            if missing:
+                issues.append({"field": f"{market}.top20", "rank": game["rank"], "game": game["game_name"], "missing": missing})
+            change = game.get("rank_change")
+            rank_change = "" if change is None else "-" if change == 0 else f"{change:+d}"
+            rows.append([str(game["rank"]), game["game_name"], game.get("publisher") or "",
+                         game.get("genre") or "", rank_change, percent(game.get("revenue_growth_pct"))])
         rows.extend([["", "", "", "", "", ""] for _ in range(20 - len(rows))])
         return rows, issues
     return build
