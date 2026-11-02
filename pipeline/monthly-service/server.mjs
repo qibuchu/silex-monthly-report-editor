@@ -12,7 +12,9 @@ import {acquireStoreLock,backupStore} from './maintenance.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 export function createService(config) {
-  if (!['127.0.0.1', 'localhost', '::1'].includes(config.host) && !config.token) throw Error('非本机监听必须设置 REPORT_SERVICE_TOKEN');
+  const authMode=config.authMode||'token';
+  if(!['token','network'].includes(authMode))throw Error('无效的服务鉴权模式');
+  if(authMode==='token'&&!['127.0.0.1', 'localhost', '::1'].includes(config.host) && !config.token) throw Error('非本机监听必须设置 REPORT_SERVICE_TOKEN');
   const release=acquireStoreLock(config.dataDir);
   const editorTarget=()=>{
     const target=new URL(config.silexUrl || 'http://localhost:6805/'),service=new URL(config.publicUrl);
@@ -62,11 +64,11 @@ export function createService(config) {
       if (req.headers.origin) { res.setHeader('Access-Control-Allow-Origin', req.headers.origin); res.setHeader('Access-Control-Allow-Credentials', 'true'); res.setHeader('Vary', 'Origin'); }
       if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.writeHead(204); return res.end(); }
       if (url.pathname === '/api/login' && req.method === 'POST') {
-        if (!config.token || (await body(req)).token !== config.token) return json(res, 401, { error: 'Invalid token' });
+        if (authMode!=='token'||!config.token || (await body(req)).token !== config.token) return json(res, 401, { error: 'Invalid token' });
         res.setHeader('Set-Cookie', `monthly_session=${cookieToken}; HttpOnly; SameSite=Strict; Path=/${config.publicUrl.startsWith('https:') ? '; Secure' : ''}`);
         return json(res, 200, { ok: true });
       }
-      const authenticated = !config.token || req.headers.authorization === `Bearer ${config.token}` || String(req.headers.cookie || '').split(';').some(c => c.trim() === `monthly_session=${cookieToken}`);
+      const authenticated = authMode==='network'||!config.token || req.headers.authorization === `Bearer ${config.token}` || String(req.headers.cookie || '').split(';').some(c => c.trim() === `monthly_session=${cookieToken}`);
       if (!authenticated && url.pathname !== '/') return json(res, 401, { error: 'Authentication required' });
       if (url.pathname === '/mcp') {
         if (req.method !== 'POST') return json(res, 405, { error: 'Stateless MCP supports POST' });
@@ -97,7 +99,7 @@ export function createService(config) {
       if (url.pathname === '/api/health' && req.method === 'GET') {
         let editorAvailable = false;
         try { editorAvailable = (await fetch(config.editorHealthUrl || config.silexUrl || 'http://localhost:6805/', { signal: AbortSignal.timeout(1500) })).ok; } catch {}
-        return json(res, 200, { service: 'ok', application:'steam-monthly-service',version:'0.2.0',tools:tools.length,editorAvailable, onlineGenerationConfigured: Boolean(config.generationConfig), templateAiServerConfigured:Boolean(config.templateAi?.key&&config.templateAi?.model&&config.templateAi?.url),demoMonth: '2026-08' });
+        return json(res, 200, { service: 'ok', application:'steam-monthly-service',version:'0.2.0',authMode,tools:tools.length,editorAvailable, onlineGenerationConfigured: Boolean(config.generationConfig), templateAiServerConfigured:Boolean(config.templateAi?.key&&config.templateAi?.model&&config.templateAi?.url),demoMonth: '2026-08' });
       }
       if(url.pathname==='/api/backup'&&req.method==='POST')return json(res,200,runBackup());
       if (url.pathname === '/api/demo' && req.method === 'POST') {
@@ -189,7 +191,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const input = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file)) : {};
   const base = path.dirname(file); const resolve = value => path.resolve(base, value);
   const port = input.port || 4320;
-  const config = { host: '127.0.0.1', port, publicUrl: `http://127.0.0.1:${port}`, ...input, token: process.env.REPORT_SERVICE_TOKEN, dataDir: resolve(input.dataDir || './data'), toolkitDir: resolve(input.toolkitDir || '../../releases/monthly-toolkit-portable'), workspaceRoot: resolve(input.workspaceRoot || '../..'), backupDir:input.backupDir?resolve(input.backupDir):undefined,generationConfig: input.generationConfig ? resolve(input.generationConfig) : undefined };
+  const config = { host: '127.0.0.1', port, publicUrl: `http://127.0.0.1:${port}`, ...input, token: process.env.REPORT_SERVICE_TOKEN, encryptionKey:process.env.REPORT_SERVICE_ENCRYPTION_KEY||input.encryptionKey, authMode:process.env.REPORT_SERVICE_AUTH_MODE||input.authMode||'token', dataDir: resolve(input.dataDir || './data'), toolkitDir: resolve(input.toolkitDir || '../../releases/monthly-toolkit-portable'), workspaceRoot: resolve(input.workspaceRoot || '../..'), backupDir:input.backupDir?resolve(input.backupDir):undefined,generationConfig: input.generationConfig ? resolve(input.generationConfig) : undefined };
   const service=createService(config);
   for(const signal of ['SIGTERM','SIGINT'])process.once(signal,()=>{
     service.server.close(()=>process.exit(0));

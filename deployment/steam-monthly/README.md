@@ -10,9 +10,9 @@
 - MCP：http://9.135.95.168:14320/mcp
 - 项目：Docker Compose `steam-monthly`；容器：`steam-monthly-app`。
 
-工作台先进入“AI与设置”→“输入访问令牌”，登录后再打开编辑器。两端使用同一主机名和HttpOnly会话；不要自行切换IP、localhost或其他域名。远程MCP请求使用`Authorization: Bearer <访问令牌>`；stdio桥接器使用现有mcp-bridge.mjs，设置REPORT_SERVICE_URL和REPORT_SERVICE_TOKEN。令牌不放URL或代码仓库。
+当前服务器在 Compose 中显式配置 `REPORT_SERVICE_AUTH_MODE=network`，工作台、编辑器和 MCP 均无需填写共享访问令牌。内网可达的用户现在都能访问及修改项目；接入内网身份凭证前应由网络层限制可达范围。本地 AI 只需配置工作台显示的 MCP URL，stdio 桥接器设置 `REPORT_SERVICE_URL` 即可。令牌模式仍可通过 `REPORT_SERVICE_AUTH_MODE=token` 启用。
 
-初始私有令牌在服务器`secrets/monthly_token`；本机交付副本在`work/server-deploy-20261023/service-token.txt`。此文件和运行配置不可提交到源码仓库。服务器端令牌权限400，只对容器运行用户可读。
+服务器原有 `secrets/monthly_token` 继续作为内部加密密钥和 Silex 会话密钥，以便读取既有数据源凭据；它不再是当前部署的访问凭证，不应发给使用者。此文件和运行配置不可提交到源码仓库。
 
 ## 隔离范围
 

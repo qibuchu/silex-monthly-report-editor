@@ -6,11 +6,12 @@ export function authenticated(req,token){
   const equal=(a,b)=>Buffer.byteLength(a)===Buffer.byteLength(b)&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
   return equal(String(req.headers.authorization||''),'Bearer '+token)||String(req.headers.cookie||'').split(';').some(c=>equal(c.trim(),'monthly_session='+digest));
 }
-export function createGateway({token,editor=false,targetPort,publicUrl,editorUrl}){
-  if(!token||token.length<32)throw Error('A strong service token is required');
+export function createGateway({token,authMode='token',editor=false,targetPort,publicUrl,editorUrl}){
+  if(!['token','network'].includes(authMode))throw Error('Invalid authentication mode');
+  if(authMode==='token'&&(!token||token.length<32))throw Error('A strong service token is required');
   const origins=new Set([new URL(publicUrl).origin,new URL(editorUrl).origin]);
   const server=http.createServer((req,res)=>{
-    if(editor&&!authenticated(req,token)){
+    if(editor&&authMode==='token'&&!authenticated(req,token)){
       res.writeHead(401,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
       return res.end(`<!doctype html><meta charset="utf-8"><title>请先登录月报工作台</title><p>请先在月报工作台输入访问令牌，再打开编辑器。</p><a href="${publicUrl}">打开月报工作台</a>`);
     }

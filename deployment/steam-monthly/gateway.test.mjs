@@ -15,3 +15,12 @@ test('all editor routes require the service session or bearer token and reject f
   assert.equal((await fetch(url+'/',{headers:{Cookie:cookie,Origin:'https://other.invalid'}})).status,403);
  }finally{await new Promise(r=>g.close(r));await new Promise(r=>backend.close(r));}
 });
+test('network mode opens editor without a token but rejects foreign origins',async()=>{
+ const backend=http.createServer((req,res)=>res.end('editor '+req.url));await new Promise(r=>backend.listen(0,'127.0.0.1',r));
+ const gateway=createGateway({authMode:'network',editor:true,targetPort:backend.address().port,publicUrl:'http://localhost:14320/',editorUrl:'http://localhost:16805/'});
+ await new Promise(r=>gateway.listen(0,'127.0.0.1',r));const url='http://127.0.0.1:'+gateway.address().port;
+ try{
+  assert.equal(await (await fetch(url+'/page')).text(),'editor /page');
+  assert.equal((await fetch(url+'/',{headers:{Origin:'https://other.invalid'}})).status,403);
+ }finally{await new Promise(r=>gateway.close(r));await new Promise(r=>backend.close(r));}
+});

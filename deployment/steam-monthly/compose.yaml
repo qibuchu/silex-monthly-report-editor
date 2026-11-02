@@ -7,6 +7,8 @@ services:
     restart: unless-stopped
     stop_grace_period: 20s
     command: ["node", "/app/deployment/steam-monthly/start.mjs"]
+    environment:
+      REPORT_SERVICE_AUTH_MODE: network
     working_dir: /app
     ports:
       - "9.135.95.168:14320:14320"
