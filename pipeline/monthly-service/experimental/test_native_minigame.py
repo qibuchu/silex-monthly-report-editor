@@ -139,6 +139,31 @@ class RemoveTests(unittest.TestCase):
             self.assertEqual([issue["reason"] for issue in compiled["mappingIssues"]], ["要删除的对象不存在"])
 
 
+class DraftAsTemplateTests(unittest.TestCase):
+    """A draft saved as the template: blank slots, refilled cells and existing charts."""
+
+    def test_blank_cell_is_filled_from_its_paragraph_marker(self):
+        xml = slide(box(4, 0, 0, "x", "C89C4A")).encode()
+        cleared = replace_shape_text(xml, 4, "x", "")
+        self.assertEqual(replace_shape_text(cleared, 4, "", ""), cleared)
+        filled = replace_shape_text(cleared, 4, "", "9.04").decode()
+        self.assertRegex(filled, r'<a:r><a:rPr sz="800"><a:solidFill><a:srgbClr val="C89C4A"\s*/></a:solidFill></a:rPr><a:t>9.04</a:t></a:r><a:endParaRPr')
+        with self.assertRaises(ValueError):
+            replace_shape_text(cleared, 4, "旧", "9.04")
+
+    def test_blank_text_slot_is_kept_without_an_issue(self):
+        with tempfile.TemporaryDirectory() as folder:
+            template = Path(folder) / "t.pptx"
+            cleared = replace_shape_text(slide(box(4, 0, 0, "x")).encode(), 4, "x", "").decode()
+            pptx(template, {1: cleared})
+            mapping = {"format": "native-pptx-mapping-v1", "dataSource": "minigame-monthly",
+                       "ops": [{"op": "clearText", "slide": 1, "shapeId": 4}, {"op": "clearText", "slide": 1, "shapeId": 4}]}
+            compiled = compile_mapping(mapping, template, export("2026-09", "2026-08"), {})
+            self.assertEqual(compiled["mappingIssues"], [])
+            self.assertEqual(compiled["replacements"], [])
+            self.assertEqual(compiled["slots"], [{"slide": 1, "objectId": 4, "type": "text"}])
+
+
 class PatchTests(unittest.TestCase):
     def test_line_breaks_compare_like_an_xml_parser(self):
         self.assertEqual(run_text(b"<a:t>a\r\nb &amp; c</a:t>"), "a\nb & c")

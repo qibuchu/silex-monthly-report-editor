@@ -1,0 +1,562 @@
+{
+ "format": "native-pptx-mapping-v1",
+ "dataSource": "minigame-monthly",
+ "sourceMonth": "2026-09",
+ "seedSha256": "b10d6dc2958697b127667b122c0798d770c2e80cb223fa929f65773c8f7004f8",
+ "templateNote": "由 9 月草稿 v4 保存的模板：榜单、新游卡片和第 2、5 页原生图表按数据重填；文字和图片空位保持空白。",
+ "pageNotes": {
+  "2": "右侧买量趋势图按 charts.ads_trend 生成 PowerPoint 原生图表（近三个月素材量堆叠柱 + 在投游戏数折线）。左侧 KPI 进度条长度未随数据更新。",
+  "3": "MAU（万）、MAU环比接口无数据，需人工填写；重点游戏金色标记需人工标注。榜单观察只保留编号、标题和正文文字框，原稿表格下方还压着一套旧榜单文本框（被卡片遮住），建议在模板中删除。",
+  "5": "TOP50 品类分布图按 iaa.top50 生成 PowerPoint 原生条形图（前 10 个品类，括号内为较上月变化）。",
+  "6": "同第 3 页：MAU 两列人工填写，重点游戏标记人工标注，榜单观察的游戏图片不进入草稿，下层旧榜单建议删除。"
+ },
+ "ops": [
+  {
+   "op": "replaceFragment",
+   "slide": 1,
+   "shapeId": 7,
+   "find": "\\d{4}\\.\\d{1,2}$",
+   "value": "{year}.{monthNumber}"
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 1,
+   "shapeId": 2,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "replaceAll",
+   "slide": 1,
+   "shapeId": 4,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 2,
+   "shapeId": 14,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "clearText",
+   "slide": 2,
+   "shapeId": 113
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 2,
+   "shapeId": 123,
+   "find": "\\d{1,2}—\\d{1,2}月",
+   "value": "{twoMonthsAgoNumber}—{monthNumber}月"
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 2,
+   "shapeId": 21,
+   "find": "\\d{4}年\\d{1,2}—\\d{1,2}月",
+   "value": "{year}年{twoMonthsAgoNumber}—{monthNumber}月"
+  },
+  {
+   "op": "nativeChart",
+   "slide": 2,
+   "pictureId": 121,
+   "source": "minigame.adsTrend",
+   "name": "素材量与在投游戏数"
+  },
+  {
+   "op": "clearText",
+   "slide": 2,
+   "shapeId": 31
+  },
+  {
+   "op": "clearText",
+   "slide": 2,
+   "shapeId": 125
+  },
+  {
+   "op": "setRuns",
+   "slide": 2,
+   "shapeId": 129,
+   "values": [
+    "{douyinInfoFlowGrowth}",
+    "{douyinTalentGrowth}"
+   ]
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 2,
+   "shapeId": 53,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "replaceText",
+   "slide": 2,
+   "shapeId": 70,
+   "value": "{douyinMaterialGrowth}"
+  },
+  {
+   "op": "replaceText",
+   "slide": 2,
+   "shapeId": 81,
+   "value": "{douyinInfoFlowGrowth}"
+  },
+  {
+   "op": "replaceText",
+   "slide": 2,
+   "shapeId": 91,
+   "value": "{douyinGamesGrowth}"
+  },
+  {
+   "op": "clearText",
+   "slide": 2,
+   "shapeId": 44
+  },
+  {
+   "op": "clearText",
+   "slide": 2,
+   "shapeId": 127
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 2,
+   "shapeId": 95,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "replaceText",
+   "slide": 2,
+   "shapeId": 103,
+   "value": "{wechatMaterialGrowth}"
+  },
+  {
+   "op": "replaceText",
+   "slide": 2,
+   "shapeId": 111,
+   "value": "{wechatGamesGrowth}"
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 3,
+   "shapeId": 76,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "clearText",
+   "slide": 3,
+   "shapeId": 273
+  },
+  {
+   "op": "fillGrid",
+   "slide": 3,
+   "source": "minigame.bestseller",
+   "header": [
+    171,
+    173,
+    175,
+    177,
+    179,
+    181,
+    183,
+    744,
+    746
+   ],
+   "columns": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    null,
+    null
+   ],
+   "rows": 20,
+   "bottom": 660,
+   "uniformStyle": true
+  },
+  {
+   "op": "clearText",
+   "slide": 3,
+   "shapeId": 13
+  },
+  {
+   "op": "clearText",
+   "slide": 3,
+   "shapeId": 15
+  },
+  {
+   "op": "clearText",
+   "slide": 3,
+   "shapeId": 17
+  },
+  {
+   "op": "clearText",
+   "slide": 3,
+   "shapeId": 4
+  },
+  {
+   "op": "clearText",
+   "slide": 3,
+   "shapeId": 115
+  },
+  {
+   "op": "clearText",
+   "slide": 3,
+   "shapeId": 117
+  },
+  {
+   "op": "clearText",
+   "slide": 3,
+   "shapeId": 156
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 4,
+   "shapeId": 6,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 10
+  },
+  {
+   "op": "fillShapes",
+   "slide": 4,
+   "source": "minigame.featured.bestseller",
+   "cells": [
+    [
+     25,
+     37,
+     49,
+     61,
+     79
+    ],
+    [
+     114,
+     124,
+     132,
+     145,
+     153
+    ],
+    [
+     210,
+     226,
+     239,
+     252,
+     275
+    ]
+   ]
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 27
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 83
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 87
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 91
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 118
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 159
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 167
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 176
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 214
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 283
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 291
+  },
+  {
+   "op": "clearText",
+   "slide": 4,
+   "shapeId": 303
+  },
+  {
+   "op": "clearRegion",
+   "slide": 4,
+   "box": [
+    40,
+    150,
+    1260,
+    690
+   ],
+   "texts": false
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 5,
+   "shapeId": 392,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "clearText",
+   "slide": 5,
+   "shapeId": 381
+  },
+  {
+   "op": "nativeChart",
+   "slide": 5,
+   "pictureId": 6,
+   "source": "minigame.categoryTop",
+   "name": "TOP50品类数量"
+  },
+  {
+   "op": "clearText",
+   "slide": 5,
+   "shapeId": 5
+  },
+  {
+   "op": "clearText",
+   "slide": 5,
+   "shapeId": 7
+  },
+  {
+   "op": "clearText",
+   "slide": 5,
+   "shapeId": 9
+  },
+  {
+   "op": "clearText",
+   "slide": 5,
+   "shapeId": 11
+  },
+  {
+   "op": "clearText",
+   "slide": 5,
+   "shapeId": 17
+  },
+  {
+   "op": "clearText",
+   "slide": 5,
+   "shapeId": 21
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 6,
+   "shapeId": 407,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "clearText",
+   "slide": 6,
+   "shapeId": 600
+  },
+  {
+   "op": "fillGrid",
+   "slide": 6,
+   "source": "minigame.most_played",
+   "header": [
+    466,
+    469,
+    471,
+    473,
+    475,
+    477,
+    479,
+    481,
+    483
+   ],
+   "columns": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    null,
+    null
+   ],
+   "rows": 20,
+   "bottom": 660,
+   "uniformStyle": true
+  },
+  {
+   "op": "clearText",
+   "slide": 6,
+   "shapeId": 33
+  },
+  {
+   "op": "clearText",
+   "slide": 6,
+   "shapeId": 37
+  },
+  {
+   "op": "clearText",
+   "slide": 6,
+   "shapeId": 47
+  },
+  {
+   "op": "clearText",
+   "slide": 6,
+   "shapeId": 55
+  },
+  {
+   "op": "clearText",
+   "slide": 6,
+   "shapeId": 456
+  },
+  {
+   "op": "clearText",
+   "slide": 6,
+   "shapeId": 458
+  },
+  {
+   "op": "replaceFragment",
+   "slide": 7,
+   "shapeId": 281,
+   "find": "\\d{1,2}月",
+   "value": "{monthNumber}月"
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 282
+  },
+  {
+   "op": "fillShapes",
+   "slide": 7,
+   "source": "minigame.featured.most_played",
+   "cells": [
+    [
+     368,
+     372,
+     375,
+     378,
+     381
+    ],
+    [
+     416,
+     420,
+     18,
+     426,
+     24
+    ],
+    [
+     40,
+     53,
+     256,
+     259,
+     262
+    ]
+   ]
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 369
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 383
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 2
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 5
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 14
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 25
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 26
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 28
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 44
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 264
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 266
+  },
+  {
+   "op": "clearText",
+   "slide": 7,
+   "shapeId": 268
+  },
+  {
+   "op": "clearRegion",
+   "slide": 7,
+   "box": [
+    40,
+    150,
+    1260,
+    690
+   ],
+   "texts": false
+  }
+ ]
+}

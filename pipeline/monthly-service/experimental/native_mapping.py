@@ -70,7 +70,7 @@ def shape_boxes(xml):
                       "x": int(offset.get("x")), "y": int(offset.get("y")),
                       "cx": int(extent.get("cx")), "cy": int(extent.get("cy")),
                       "text": "".join(t.text or "" for t in item.findall(".//a:t", NS)),
-                      "runs": len(item.findall(".//a:r", NS)),
+                      "runs": len(item.findall(".//a:r", NS)), "hasText": item.find("p:txBody", NS) is not None,
                       "style": ElementTree.tostring(style, encoding="unicode") if style is not None else None,
                       "paragraph": ElementTree.tostring(paragraph, encoding="unicode") if paragraph is not None else None,
                       "layout": layout})
@@ -251,7 +251,9 @@ class Compiler:
         if current is None:
             return
         if not current:
-            self.problem(op, "文字对象已为空")
+            # Already blank (e.g. a template saved from a draft): still a slot to fill.
+            if op.get("slot", True):
+                self.slots.append({"slide": op["slide"], "objectId": op["shapeId"], "type": "text"})
             return
         self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": op["shapeId"],
                                   "expectedText": current, "value": ""})
@@ -320,15 +322,23 @@ class Compiler:
         if boxes is None:
             return
         picture = boxes.get(op["pictureId"])
+        existing = None
         if picture is None or picture["kind"] != "pic":
-            self.problem(op, "图片对象不存在")
-            return
+            try:
+                existing = resolve_chart(self.archive, op["slide"], op["pictureId"])
+            except (KeyError, ValueError):
+                self.problem(op, "图片或图表对象不存在")
+                return
         build = self.source.get("charts", {}).get(op.get("source"))
         if build is None:
             self.problem(op, f"未知图表数据 {op.get('source')}")
             return
         chart, book, issues = build(self.data, self.extras)
         self.source_issues.extend(issues)
+        if existing:
+            self.replacements.append({"kind": "chartReplace", "slide": op["slide"], "part": existing[0], "workbookPart": existing[1],
+                                      "chart": chart, "workbook": base64.b64encode(book).decode("ascii")})
+            return
         self.replacements.append({"kind": "chartFrame", "slide": op["slide"], "pictureId": op["pictureId"],
                                   "name": op.get("name") or "数据图表", "chart": chart,
                                   "workbook": base64.b64encode(book).decode("ascii")})
@@ -417,9 +427,9 @@ class Compiler:
                     continue
                 box, column = boxes[shape_id], columns[position] if position < len(columns) else None
                 value = "" if values is None or column is None or column >= len(values) else values[column]
-                if box["runs"] == 0:
+                if not box["hasText"]:
                     if value:
-                        self.problem({**op, "shapeId": shape_id}, "文字对象没有文字格式，无法填入")
+                        self.problem({**op, "shapeId": shape_id}, "对象没有文本框，无法填入")
                     continue
                 if value != box["text"]:
                     self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": shape_id,
@@ -536,6 +546,12 @@ def compile_mapping(mapping, template, data, extras=None):
             getattr(compiler, "do_" + op["op"])(op)
         if market:
             compiler.source_issues.extend(source["marketIssues"])
+    seen, slots = set(), []
+    for slot in compiler.slots:
+        if (slot["slide"], slot["objectId"]) not in seen:
+            seen.add((slot["slide"], slot["objectId"]))
+            slots.append(slot)
+    compiler.slots = slots
     return {"replacements": compiler.replacements, "slots": compiler.slots, "charts": compiler.charts, "blankCharts": compiler.blank_charts,
             "sourceIssues": compiler.source_issues, "mappingIssues": compiler.mapping_issues, "contract": contract,
             "warning": source["warning"], "dataSource": source_name,
@@ -575,7 +591,8 @@ def check_mapping(mapping, template):
                     problems.append({"op": op["op"], "slide": op["slide"], "object": shape_id, "reason": "文字对象不存在"})
             if "shapeId" in op and op["shapeId"] not in texts:
                 problems.append({"op": op["op"], "slide": op["slide"], "object": op["shapeId"], "reason": "文字对象不存在"})
-            if "pictureId" in op and op["pictureId"] not in object_ids(xml, "pic", "nvPicPr"):
+            frames = object_ids(xml, "graphicFrame", "nvGraphicFramePr") if op["op"] == "nativeChart" else set()
+            if "pictureId" in op and op["pictureId"] not in object_ids(xml, "pic", "nvPicPr") | frames:
                 problems.append({"op": op["op"], "slide": op["slide"], "object": op["pictureId"], "reason": "图片对象不存在"})
             if "chartId" in op and op["chartId"] not in object_ids(xml, "graphicFrame", "nvGraphicFramePr"):
                 problems.append({"op": op["op"], "slide": op["slide"], "object": op["chartId"], "reason": "图表对象不存在"})

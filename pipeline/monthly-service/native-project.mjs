@@ -248,6 +248,9 @@ function syncObject(object, extraction, render, report, storeImage) {
         edits.push(...paragraphEdits(cell.paragraphs, rows[cell.row][cell.column] || []));
       }
       if (trimmed.length && id === rootId && object.style) object.style = { ...object.style, height: `${owner.rows.slice(0, rows.length).reduce((sum, row) => sum + row.height, 0)}px` };
+    } else if (kind === 'chart' && id !== rootId && native.generated?.[number] && storeImage && owner.innerStart !== undefined) {
+      edits.push({ start: owner.outerStart, end: owner.innerStart, value: withChartAttribute(owner.openTag, null) });
+      edits.push({ start: owner.innerStart, end: owner.innerEnd, value: generatedImage(storeImage(native.generated[number])) });
     } else if (kind === 'chart' && id !== rootId && native.charts[number]?.placeholder && owner.innerStart !== undefined) {
       edits.push({ start: owner.outerStart, end: owner.innerStart, value: withChartAttribute(owner.openTag, null) });
       edits.push({ start: owner.innerStart, end: owner.innerEnd, value: slot('图表待补') });
@@ -275,10 +278,12 @@ function syncObject(object, extraction, render, report, storeImage) {
     return `<div data-object-id="${attribute(tag, 'data-object-id')}" style="${escapeText(style)}">${slot('图片待补')}</div>`;
   });
   object.content = content;
-  const top = rootId.match(/slide-(\d+)-(image|chart)-(\d+)$/);
+  // Charts the browser reader cannot draw arrive as 'unsupported' placeholders with the same object id.
+  const top = rootId.match(/slide-(\d+)-(image|chart|unsupported)-(\d+)$/);
   const native = top && extraction.slides[top[1]];
   if (!native) return;
-  if (top[2] === 'image' && native.generated?.[top[3]] && storeImage) {
+  if (native.generated?.[top[3]] && storeImage && ['image', 'chart', 'unsupported'].includes(top[2])) {
+    delete object.attributes['data-pptx-chart'];
     // A chart the generator drew from data: the web view shows the same SVG as the PPTX.
     object.content = generatedImage(storeImage(native.generated[top[3]]), object.attributes['data-name']);
   } else if (top[2] === 'image' && isImageSlot(native, top[3])) {

@@ -332,7 +332,7 @@ export function createCore(config) {
     db.projects[id]={id,revision:1,month:task.month,title:`${template.title} · ${task.month} PPTX 草稿`,stage:'draft',dataOrigin:{kind:'native-pptx',taskId:task.id,snapshotId},template:task.template,project:built.project,updatedAt:new Date().toISOString(),author:'native-pptx',native:{taskId:task.id,syncedRevision:1,pending:[],rejected:[],unsupported:[],missing:built.missing}};
     return id;
   }
-  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
+  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json','minigame_monthly_template_v4.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
   const seedTemplateMapping=t=>{const seed=!t.nativeMapping&&seedMappings.find(item=>item.seedSha256===t.sourcePptx?.sha256);if(seed){t.nativeMapping=seed;t.nativeMappingRevision=(t.nativeMappingRevision||0)+1;return true;}return false;};
   const snapshotNative=t=>{if(t.origin==='pptx')t.nativePublished={sourcePptx:t.sourcePptx,mapping:t.nativeMapping,mappingRevision:t.nativeMappingRevision||0,templateRevision:t.revision};};
   function checkNativeMapping(t,mapping=t.nativeMapping){

@@ -87,6 +87,9 @@ test('a chart drawn from data replaces the template picture in the web view',()=
   assert.match(page.objects[0].content,/src="\/assets\/1\.svg"/);assert.doesNotMatch(page.objects[0].content,/old\.png|-17%/);
   assert.match(page.objects[1].content,/data-object-id="pptx-x-slide-2-image-7" src="\/assets\/2\.svg"/);
   assert.equal(stored.length,2);
+  const placeholder={attributes:{'data-object-id':'pptx-x-slide-2-unsupported-121','data-name':'待识别图表/SmartArt'},content:'待识别图表/SmartArt',style:{}};
+  const shown=buildNativeDeck({format:'steam-grapesjs-v2',deck:{css:'',pages:[{name:'大盘',objects:[placeholder]}]}},extraction,[],()=>'',()=>'/assets/c.svg').project.deck.pages[0];
+  assert.match(shown.objects[0].content,/src="\/assets\/c\.svg"/);
 });
 
 test('objects the mapping removed from the PPTX leave the web view',()=>{

@@ -126,6 +126,12 @@ class PackageTests(unittest.TestCase):
                 self.assertNotIn("image2.png", archive.read("ppt/slides/_rels/slide2.xml.rels").decode())
             slide = extract(output)["slides"]["2"]
             self.assertIn("121", slide["charts"])
+            # The draft itself used as the next template: the existing chart is refilled in place.
+            data["charts"]["ads_trend"][2]["douyin_games"] = 30000
+            again = compile_mapping(mapping, output, data, {})
+            self.assertEqual([item["kind"] for item in again["replacements"]], ["chartReplace"])
+            self.assertEqual(again["replacements"][0]["part"], "ppt/charts/chart1.xml")
+            self.assertIn("30000", again["replacements"][0]["chart"])
             preview = base64.b64decode(slide["generated"]["121"].split(",", 1)[1]).decode()
             self.assertIn("20,097", preview)
 

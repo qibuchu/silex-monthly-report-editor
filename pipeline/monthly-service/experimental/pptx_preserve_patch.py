@@ -218,8 +218,24 @@ def replace_shape_text(slide_xml: bytes, shape_id: int, expected_text: str, valu
     shape = matches[0]
     runs = list(re.finditer(rb"<a:t(?:\s[^>]*)?>.*?</a:t>", shape.group(), re.DOTALL))
     old = "".join(run_text(run.group()) for run in runs)
-    if not runs or old != expected_text:
+    if old != expected_text or (not runs and expected_text):
         raise ValueError("Text shape changed; review manual slot mapping")
+    if not runs:
+        # A slot cleared earlier keeps its style on the end-of-paragraph marker; build the run from it.
+        if not value:
+            return slide_xml
+        paragraph = re.search(PARAGRAPH, shape.group(), re.DOTALL)
+        if not paragraph:
+            raise ValueError("Text shape has no paragraph")
+        end = re.search(rb"<a:endParaRPr\b([^>]*?)(/>|>(.*?)</a:endParaRPr>)", paragraph.group(), re.DOTALL)
+        properties = (b"<a:rPr" + end.group(1) + (b"/>" if end.group(3) is None else b">" + end.group(3) + b"</a:rPr>")) if end else b""
+        run = b"<a:r>" + properties + b"<a:t>" + html.escape(value, quote=False).encode("utf-8") + b"</a:t></a:r>"
+        body = paragraph.group()
+        body = re.sub(rb"<a:p\s*/>", b"<a:p></a:p>", body)
+        at = body.find(b"<a:endParaRPr") if b"<a:endParaRPr" in body else body.rfind(b"</a:p>")
+        body = body[:at] + run + body[at:]
+        changed = shape.group()[:paragraph.start()] + body + shape.group()[paragraph.end():]
+        return slide_xml[:shape.start()] + changed + slide_xml[shape.end():]
     changed = shape.group()
     for index, run in reversed(list(enumerate(runs))):
         opening = run.group()[:run.group().find(b">") + 1]
@@ -575,11 +591,17 @@ def main():
                 rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
                 changed[name], changed[rels] = remove_object(data, changed.get(rels, source.read(rels)), int(item["objectId"]))
                 ElementTree.fromstring(changed[rels])
+            elif item.get("kind") == "chartReplace":
+                # A chart this generator built earlier (template saved from a draft): refill in place.
+                ElementTree.fromstring(item["chart"].encode("utf-8"))
+                changed[item["part"]] = item["chart"].encode("utf-8")
+                changed[item["workbookPart"]] = base64.b64decode(item["workbook"])
             elif item.get("kind") == "chartFrame":
                 rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
                 names = set(source.namelist()) | set(added)
                 number = free_number(names, r"ppt/charts/chart(\d+)\.xml")
-                book = f"Microsoft_Excel_Worksheet{free_number(names, r'ppt/embeddings/Microsoft_Excel_Worksheet(\d+)\.xlsx')}.xlsx"
+                book_pattern = r"ppt/embeddings/Microsoft_Excel_Worksheet(\d+)\.xlsx"
+                book = "Microsoft_Excel_Worksheet" + str(free_number(names, book_pattern)) + ".xlsx"
                 changed[name], changed[rels] = picture_to_chart(data, changed.get(rels, source.read(rels)), int(item["pictureId"]),
                                                                 f"chart{number}.xml", item.get("name") or "数据图表")
                 ElementTree.fromstring(changed[rels])
