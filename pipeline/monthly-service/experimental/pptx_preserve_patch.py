@@ -1,6 +1,7 @@
 """Proof of concept: replace selected native PPTX table cells without rebuilding slides."""
 
 import argparse
+import base64
 import copy
 import hashlib
 import html
@@ -308,6 +309,45 @@ def picture_to_slot(slide_xml: bytes, rels_xml: bytes, picture_id: int):
     return slide_xml, rels_xml
 
 
+CHART_LABEL = "数据生成图表"
+SVG_EXTENSION = "{96DAC541-7B7A-43D3-8B79-37D633B846F1}"
+
+
+def picture_to_image(slide_xml: bytes, rels_xml: bytes, picture_id: int, png_target: str, svg_target: str):
+    """Show a generated chart in an existing picture: SVG for current Office, PNG as the required fallback.
+
+    The frame keeps its position, size and effects; the template image's crop is dropped
+    because the generated image already has the frame's proportions.
+    """
+    pictures = list(re.finditer(rb"<p:pic\b[^>]*>.*?</p:pic>", slide_xml, re.DOTALL))
+    matches = [match for match in pictures if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(picture_id).encode() + rb'"', match.group())]
+    if len(matches) != 1:
+        raise ValueError("Picture object missing or ambiguous")
+    picture = matches[0].group()
+    blip = re.search(rb"<a:blip\b[^>]*/>|<a:blip\b[^>]*>.*?</a:blip>", picture, re.DOTALL)
+    old_ids = re.findall(rb'r:(?:embed|link)="([^"]+)"', blip.group()) if blip else []
+    if not blip or not old_ids:
+        raise ValueError("Picture has no embedded image")
+    numbers = [int(value) for value in re.findall(rb'\bId="rId(\d+)"', rels_xml)]
+    png_id, svg_id = (b"rId" + str(max(numbers, default=0) + offset).encode() for offset in (1, 2))
+    entries = b"".join(b'<Relationship Id="' + rid + b'" Type="' + IMAGE_REL + b'" Target="../media/' + target.encode() + b'"/>'
+                       for rid, target in ((png_id, png_target), (svg_id, svg_target)))
+    rels_xml = rels_xml.replace(b"</Relationships>", entries + b"</Relationships>", 1)
+    new_blip = (b'<a:blip r:embed="' + png_id + b'"><a:extLst><a:ext uri="' + SVG_EXTENSION.encode() + b'">'
+                b'<asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="'
+                + svg_id + b'"/></a:ext></a:extLst></a:blip>')
+    picture = picture[:blip.start()] + new_blip + picture[blip.end():]
+    picture = re.sub(rb"<a:srcRect\b[^>]*/>", b"", picture, count=1)
+    marker = re.search(rb"<p:cNvPr\b[^>]*?(/?>)", picture)
+    tag = re.sub(rb'\sdescr="[^"]*"', b"", marker.group()[:-len(marker.group(1))])
+    picture = picture[:marker.start()] + tag + b' descr="' + CHART_LABEL.encode("utf-8") + b'"' + marker.group(1) + picture[marker.end():]
+    slide_xml = slide_xml[:matches[0].start()] + picture + slide_xml[matches[0].end():]
+    for old_id in old_ids:
+        if not re.search(rb'r:(?:embed|link|id)="' + re.escape(old_id) + rb'"', slide_xml):
+            rels_xml = re.sub(rb'<Relationship\b[^>]*\bId="' + re.escape(old_id) + rb'"[^>]*/>', b"", rels_xml)
+    return slide_xml, rels_xml
+
+
 def table_fill_span(cell: bytes):
     """Locate the cell background, the fill that follows the border lines."""
     properties = re.search(rb"<a:tcPr\b[^>]*?(/>|>.*?</a:tcPr>)", cell, re.DOTALL)
@@ -461,6 +501,15 @@ def main():
                 changed[name], changed[rels] = picture_to_slot(data, changed.get(rels, source.read(rels)), int(item["pictureId"]))
                 ElementTree.fromstring(changed[rels])
                 added[SLOT_MEDIA] = slot_png()
+            elif item.get("kind") == "pictureImage":
+                rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
+                stem = f"monthly-chart-s{slide}-p{int(item['pictureId'])}"
+                changed[name], changed[rels] = picture_to_image(data, changed.get(rels, source.read(rels)), int(item["pictureId"]),
+                                                                stem + ".png", stem + ".svg")
+                ElementTree.fromstring(changed[rels])
+                ElementTree.fromstring(item["svg"])
+                added[f"ppt/media/{stem}.png"] = base64.b64decode(item["png"])
+                added[f"ppt/media/{stem}.svg"] = item["svg"].encode("utf-8")
             elif item.get("kind") == "tableFills":
                 changed[name] = set_row_fills(data, int(item["tableId"]), int(item["firstRow"]), item["flags"], item["color"])
             elif item.get("kind") == "shapeRunStyle":
@@ -471,12 +520,17 @@ def main():
                 changed[name] = patch_cell(data, int(item["tableId"]), int(item["row"]),
                                            int(item["column"]), str(item["expected"]), str(item["value"]))
             ElementTree.fromstring(changed[name])
-        added = {name: data for name, data in added.items() if name not in source.namelist()}
+        existing = set(source.namelist())
+        replaced = {name: data for name, data in added.items() if name in existing and name.startswith("ppt/media/monthly-chart-")}
+        changed.update(replaced)
+        added = {name: data for name, data in added.items() if name not in existing}
         if added:
             types = changed.get("[Content_Types].xml", source.read("[Content_Types].xml"))
-            if not re.search(rb'<Default\b[^>]*\bExtension="png"', types, re.IGNORECASE):
-                types = types.replace(b"</Types>", b'<Default Extension="png" ContentType="image/png"/></Types>', 1)
-                changed["[Content_Types].xml"] = types
+            for extension, mime in ((b"png", b"image/png"), (b"svg", b"image/svg+xml")):
+                if any(name.endswith("." + extension.decode()) for name in added) and \
+                        not re.search(rb'<Default\b[^>]*\bExtension="' + extension + rb'"', types, re.IGNORECASE):
+                    types = types.replace(b"</Types>", b'<Default Extension="' + extension + b'" ContentType="' + mime + b'"/></Types>', 1)
+                    changed["[Content_Types].xml"] = types
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=args.output.parent, suffix=".partial", delete=False) as temp:
             temp_path = Path(temp.name)

@@ -5,6 +5,7 @@ longer find are skipped and listed in mappingIssues; only a broken data contract
 stops generation.
 """
 
+import base64
 import copy
 import json
 import re
@@ -23,7 +24,7 @@ NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
-       "fillGrid", "fillShapes", "replaceAll", "clearRegion"}
+       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME}
 PX = 9525  # EMU per 1/96 inch; slide coordinates in mappings use this unit.
 
@@ -293,6 +294,24 @@ class Compiler:
             return
         self.replacements.append({"kind": "pictureSlot", "slide": op["slide"], "pictureId": op["pictureId"]})
         self.slots.append({"slide": op["slide"], "objectId": op["pictureId"], "type": "image"})
+
+    def do_imageChart(self, op):
+        """Replace a picture's content with a chart drawn from data, keeping its frame."""
+        boxes = self.boxes(op)
+        if boxes is None:
+            return
+        picture = boxes.get(op["pictureId"])
+        if picture is None or picture["kind"] != "pic":
+            self.problem(op, "图片对象不存在")
+            return
+        draw = self.source.get("images", {}).get(op.get("source"))
+        if draw is None:
+            self.problem(op, f"未知图表数据 {op.get('source')}")
+            return
+        svg, png, issues = draw(self.data, self.extras, picture["cx"] / PX, picture["cy"] / PX)
+        self.source_issues.extend(issues)
+        self.replacements.append({"kind": "pictureImage", "slide": op["slide"], "pictureId": op["pictureId"],
+                                  "svg": svg, "png": base64.b64encode(png).decode("ascii")})
 
     def do_chartSlot(self, op):
         try:

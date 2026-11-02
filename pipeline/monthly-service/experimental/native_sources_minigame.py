@@ -8,6 +8,7 @@ import calendar
 import re
 from decimal import Decimal, ROUND_HALF_UP
 
+from chart_images import ads_trend
 from native_sources import previous_month
 
 
@@ -158,10 +159,40 @@ def values(data, extras):
     return text, issues
 
 
+def ads_trend_image(data, extras, width, height):
+    """Three months ending at the report month; months the export marks incomplete stay empty."""
+    month = data["month"]
+    window = [previous_month(previous_month(month)), previous_month(month), month]
+    rows = {item.get("month"): item for item in (data.get("charts") or {}).get("ads_trend") or []}
+    months, issues = [], []
+    for key in window:
+        item = rows.get(key)
+        entry = {"label": f"{int(key[-2:])}月", "douyin": None, "wechat": None, "douyinGames": None, "wechatGames": None}
+        if not item or item.get("complete") is not True:
+            issues.append({"field": f"charts.ads_trend.{key}", "reason": "month_missing_or_incomplete"})
+            months.append(entry)
+            continue
+        for name in ("douyin", "wechat"):
+            info, talent = item.get(f"{name}_info_flow_wan"), item.get(f"{name}_talent_wan")
+            # The export says stacked-bar labels use split_sum_wan (raw info + talent counts).
+            total = item.get(f"{name}_split_sum_wan")
+            if None in (info, talent, total):
+                issues.append({"field": f"charts.ads_trend.{key}.{name}", "reason": "missing"})
+            else:
+                entry[name] = (info, talent, total)
+            entry[name + "Games"] = item.get(f"{name}_games")
+            if entry[name + "Games"] is None:
+                issues.append({"field": f"charts.ads_trend.{key}.{name}_games", "reason": "missing"})
+        months.append(entry)
+    svg, png = ads_trend(months, width, height)
+    return svg, png, issues
+
+
 MINIGAME = {"contract": contract,
             "tables": {"minigame.bestseller": board_rows("bestseller"),
                        "minigame.most_played": board_rows("most_played"),
                        "minigame.featured.bestseller": featured_rows("bestseller"),
                        "minigame.featured.most_played": featured_rows("most_played")},
             "highlights": {}, "values": values, "market": None, "marketIssues": [],
-            "warning": "MAU、榜单观察、品类分析、新游介绍和图片需人工或AI补齐；趋势图与品类图在原稿中是图片，已改为待补空位。"}
+            "images": {"minigame.adsTrend": ads_trend_image},
+            "warning": "MAU、榜单观察、品类分析、新游介绍和图片需人工或AI补齐；买量趋势图已按数据生成，品类分布图在原稿中是图片，已改为待补空位。"}

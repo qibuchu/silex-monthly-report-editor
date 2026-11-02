@@ -222,7 +222,9 @@ const withChartAttribute = (tag, chart) => {
 const isImageSlot = (native, number) => Boolean(native) && (number in native.shapes || (native.placeholders || []).includes(number));
 const px = value => Number(String(value ?? '').match(/[\d.]+/)?.[0]) || 0;
 
-function syncObject(object, extraction, render, report) {
+const generatedImage = (src, name) => `<img src="${escapeText(src)}" alt="${escapeText(name || '数据生成图表')}" style="position: absolute; left: 0%; top: 0%; width: 100%; height: 100%; object-fit: fill;">`;
+
+function syncObject(object, extraction, render, report, storeImage) {
   const rootId = object.attributes?.['data-object-id'];
   if (!rootId) return;
   const owners = scan(String(object.content ?? ''), rootId);
@@ -266,6 +268,8 @@ function syncObject(object, extraction, render, report) {
     const id = attribute(tag, 'data-object-id')?.match(/slide-(\d+)-image-(\d+)$/);
     if (!id || id[0] === rootId.match(/slide-\d+-image-\d+$/)?.[0]) return tag;
     const native = extraction.slides[id[1]];
+    const drawn = native?.generated?.[id[2]];
+    if (drawn && storeImage) return tag.replace(/\ssrc\s*=\s*("[^"]*"|'[^']*')/i, ` src="${escapeText(storeImage(drawn))}"`);
     if (!isImageSlot(native, id[2])) return tag;
     const style = attribute(tag, 'style') || '';
     return `<div data-object-id="${attribute(tag, 'data-object-id')}" style="${escapeText(style)}">${slot('图片待补')}</div>`;
@@ -274,7 +278,10 @@ function syncObject(object, extraction, render, report) {
   const top = rootId.match(/slide-(\d+)-(image|chart)-(\d+)$/);
   const native = top && extraction.slides[top[1]];
   if (!native) return;
-  if (top[2] === 'image' && isImageSlot(native, top[3])) {
+  if (top[2] === 'image' && native.generated?.[top[3]] && storeImage) {
+    // A chart the generator drew from data: the web view shows the same SVG as the PPTX.
+    object.content = generatedImage(storeImage(native.generated[top[3]]), object.attributes['data-name']);
+  } else if (top[2] === 'image' && isImageSlot(native, top[3])) {
     object.content = slot('图片待补');
     delete object.attributes.src;
     delete object.attributes.alt;
@@ -294,7 +301,7 @@ function syncObject(object, extraction, render, report) {
 const slideOf = page => Number(page.objects.map(object => object.attributes?.['data-object-id']?.match(/slide-(\d+)-/)?.[1]).find(Boolean));
 
 // Builds the editing view for a generated PPTX from the template's published deck.
-export function buildNativeDeck(templateProject, extraction, continuations, render) {
+export function buildNativeDeck(templateProject, extraction, continuations, render, storeImage) {
   const project = structuredClone(templateProject);
   delete project.silexState;
   project.current = 0;
@@ -309,6 +316,6 @@ export function buildNativeDeck(templateProject, extraction, continuations, rend
   }
   project.deck.pages = extraction.order.map(slide => pages.get(slide)).filter(Boolean);
   project.deck.pages.forEach((page, index) => { page.index = index; });
-  for (const page of project.deck.pages) for (const object of page.objects) syncObject(object, extraction, render, report);
+  for (const page of project.deck.pages) for (const object of page.objects) syncObject(object, extraction, render, report, storeImage);
   return { project, missing: [...new Set(report.missing)] };
 }

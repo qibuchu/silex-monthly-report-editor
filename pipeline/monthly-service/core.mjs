@@ -324,8 +324,9 @@ export function createCore(config) {
   async function createNativeProject(task,template,output,snapshotId,continuations){
     const snapshot=JSON.parse(fs.readFileSync(path.join(dir,'history','template-'+template.id,task.template.revision+'.json'),'utf8'));
     const extraction=JSON.parse(await runPython([writebackScript,'extract',output]));
-    const built=buildNativeDeck(snapshot.project,extraction,continuations,renderImportedChart);validate(built.project);
-    const id=randomUUID(),folder=path.dirname(nativeFile(id));fs.mkdirSync(folder,{recursive:true});
+    const id=randomUUID();
+    const built=buildNativeDeck(snapshot.project,extraction,continuations,renderImportedChart,data=>assets.put(id,data).src);validate(built.project);
+    const folder=path.dirname(nativeFile(id));fs.mkdirSync(folder,{recursive:true});
     // The task keeps the generated original; write-back replaces this path atomically.
     try{fs.linkSync(output,nativeFile(id));}catch{fs.copyFileSync(output,nativeFile(id));}
     db.projects[id]={id,revision:1,month:task.month,title:`${template.title} · ${task.month} PPTX 草稿`,stage:'draft',dataOrigin:{kind:'native-pptx',taskId:task.id,snapshotId},template:task.template,project:built.project,updatedAt:new Date().toISOString(),author:'native-pptx',native:{taskId:task.id,syncedRevision:1,pending:[],rejected:[],unsupported:[],missing:built.missing}};

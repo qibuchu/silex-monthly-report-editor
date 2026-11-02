@@ -4,7 +4,7 @@
   "sourceMonth": "2026-08",
   "seedSha256": "91a8ee1bf75d656f3a34e21ad621c1f0635957a6d662f6348c2ccbd3116d728e",
   "pageNotes": {
-    "2": "右侧买量趋势图是图片，已改为图片空位；接口 charts.ads_trend 有数据，建议模板改为原生图表。左侧 KPI 进度条长度未随数据更新。",
+    "2": "右侧买量趋势图按 charts.ads_trend 生成（近三个月素材量堆叠柱 + 在投游戏数折线）。左侧 KPI 进度条长度未随数据更新。",
     "3": "MAU（万）、MAU环比接口无数据，需人工填写；重点游戏金色标记需人工标注。原稿表格下方还压着一套旧榜单文本框（被卡片遮住），建议在模板中删除。",
     "5": "TOP50 品类分布图是图片，已改为图片空位；接口 iaa.top50 有品类数量，建议模板改为原生图表。",
     "6": "同第 3 页：MAU 两列人工填写，重点游戏标记人工标注，下层旧榜单建议删除。"
@@ -18,7 +18,7 @@
     {"op": "clearText", "slide": 2, "shapeId": 113},
     {"op": "replaceFragment", "slide": 2, "shapeId": 123, "find": "\\d{1,2}—\\d{1,2}月", "value": "{twoMonthsAgoNumber}—{monthNumber}月"},
     {"op": "replaceFragment", "slide": 2, "shapeId": 21, "find": "\\d{4}年\\d{1,2}—\\d{1,2}月", "value": "{year}年{twoMonthsAgoNumber}—{monthNumber}月"},
-    {"op": "imageSlot", "slide": 2, "pictureId": 121},
+    {"op": "imageChart", "slide": 2, "pictureId": 121, "source": "minigame.adsTrend"},
     {"op": "clearText", "slide": 2, "shapeId": 31},
     {"op": "clearText", "slide": 2, "shapeId": 125},
     {"op": "setRuns", "slide": 2, "shapeId": 129, "values": ["{douyinInfoFlowGrowth}", "{douyinTalentGrowth}"]},

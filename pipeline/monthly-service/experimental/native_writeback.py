@@ -1,7 +1,9 @@
 """Read a PPTX's editable content and write object-level text changes back to it."""
 
 import argparse
+import base64
 import copy
+import posixpath
 import html
 import json
 import os
@@ -14,7 +16,7 @@ from xml.etree import ElementTree
 
 from native_mapping import NS, presentation_order
 from pptx_market_charts import resolve_chart
-from pptx_preserve_patch import blank_paragraph
+from pptx_preserve_patch import CHART_LABEL, blank_paragraph
 
 
 P = "{" + NS["p"] + "}"
@@ -57,6 +59,28 @@ def chart_data(archive, slide, chart_id):
     return {"categories": categories, "series": series, "title": heading, "placeholder": empty}
 
 
+SVG_BLIP = "{http://schemas.microsoft.com/office/drawing/2016/SVG/main}svgBlip"
+REL = "{" + NS["r"] + "}"
+
+
+def generated_images(archive, slide, root):
+    """Charts the generator drew into pictures, as data URIs for the web view."""
+    found = {}
+    rels_name = f"ppt/slides/_rels/slide{slide}.xml.rels"
+    if rels_name not in archive.namelist():
+        return found
+    targets = {rel.get("Id"): rel.get("Target") for rel in ElementTree.fromstring(archive.read(rels_name))}
+    for picture in root.iter(P + "pic"):
+        marker = picture.find(P + "nvPicPr/" + P + "cNvPr")
+        svg = picture.find(".//" + SVG_BLIP)
+        if marker is None or marker.get("descr") != CHART_LABEL or svg is None or svg.get(REL + "embed") not in targets:
+            continue
+        name = posixpath.normpath(posixpath.join("ppt/slides", targets[svg.get(REL + "embed")]))
+        if name in archive.namelist():
+            found[marker.get("id")] = "data:image/svg+xml;base64," + base64.b64encode(archive.read(name)).decode("ascii")
+    return found
+
+
 def extract(source: Path):
     with zipfile.ZipFile(source) as archive:
         order = presentation_order(archive)
@@ -78,7 +102,8 @@ def extract(source: Path):
             markers = [picture.find(P + "nvPicPr/" + P + "cNvPr") for picture in root.iter(P + "pic")]
             pictures = [marker.get("id") for marker in markers]
             placeholders = [marker.get("id") for marker in markers if marker.get("descr") == "图片待补"]
-            slides[str(slide)] = {"shapes": shapes, "tables": tables, "charts": charts, "pictures": pictures, "placeholders": placeholders}
+            slides[str(slide)] = {"shapes": shapes, "tables": tables, "charts": charts, "pictures": pictures, "placeholders": placeholders,
+                                  "generated": generated_images(archive, slide, root)}
     return {"order": order, "slides": slides}
 
 

@@ -77,6 +77,18 @@ test('buildNativeDeck mirrors the PPTX: text, trimmed rows, slots, charts and co
   assert.equal(template.deck.pages[0].objects[0].content.includes('8'),false);
 });
 
+test('a chart drawn from data replaces the template picture in the web view',()=>{
+  const picture={attributes:{'data-object-id':'pptx-x-slide-2-image-121','data-name':'Picture 70'},content:'<img src="old.png" style="top:-17%">',style:{}};
+  const inGroup={attributes:{'data-object-id':'pptx-x-slide-2-group-9'},content:'<img data-object-id="pptx-x-slide-2-image-7" src="old2.png">',style:{}};
+  const template={format:'steam-grapesjs-v2',deck:{css:'',pages:[{name:'大盘',objects:[picture,inGroup]}]}};
+  const stored=[];
+  const extraction={order:[2],slides:{2:{shapes:{},tables:{},charts:{},pictures:['121','7'],placeholders:[],generated:{121:'data:image/svg+xml;base64,PHN2Zy8+',7:'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='}}}};
+  const page=buildNativeDeck(template,extraction,[],()=>'',data=>{stored.push(data);return `/assets/${stored.length}.svg`;}).project.deck.pages[0];
+  assert.match(page.objects[0].content,/src="\/assets\/1\.svg"/);assert.doesNotMatch(page.objects[0].content,/old\.png|-17%/);
+  assert.match(page.objects[1].content,/data-object-id="pptx-x-slide-2-image-7" src="\/assets\/2\.svg"/);
+  assert.equal(stored.length,2);
+});
+
 test('saving a linked project queues write-back, reports problems and blocks stale downloads',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'monthly-native-project-'));
   try{
