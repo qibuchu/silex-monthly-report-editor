@@ -95,7 +95,7 @@ def empty_caches(xml: bytes):
     def clear(cache):
         changed = re.sub(rb"<c:pt\b[^>]*>.*?</c:pt>", b"", cache.group(), flags=re.DOTALL)
         return re.sub(rb'(<c:ptCount val=")\d+("/>)', rb"\g<1>0\2", changed)
-    return re.sub(rb"<c:(?:num|str|multiLvlStr)Cache>.*?</c:(?:num|str|multiLvlStr)Cache>", clear, xml, flags=re.DOTALL)
+    return re.sub(rb"<c:(?:num|str|multiLvlStr)(?:Cache|Lit)>.*?</c:(?:num|str|multiLvlStr)(?:Cache|Lit)>", clear, xml, flags=re.DOTALL)
 
 
 def rename_sheets(xml: bytes, names: dict):
