@@ -17,9 +17,14 @@ def contract(data, extras):
         snapshot = meta.get("snapshot") or {}
         if meta.get("month") != month or meta.get("market") != market or meta.get("ranking_metric") != "revenue":
             raise ValueError(f"{market} report window/metric mismatch")
-        if not package["data"] or not snapshot or not snapshot.get("frozen_at"):
-            raise ValueError(f"{market} frozen snapshot missing")
-        ids.append(f"{market}:{snapshot['id']}@{snapshot['version']}")
+        if snapshot and snapshot.get("id") is not None and snapshot.get("frozen_at"):
+            ids.append(f"{market}:{snapshot['id']}@{snapshot['version']}")
+        else:
+            if package["data"]:
+                raise ValueError(f"{market} has rows without frozen snapshot")
+            ids.append(f"{market}:missing")
+    if all(item.endswith(":missing") for item in ids):
+        raise ValueError("Both markets have no frozen snapshot")
     year, number = map(int, month.split("-"))
     previous = f"{year - 1}-12" if number == 1 else f"{year}-{number - 1:02d}"
     return {"month": month, "previous": previous, "snapshotId": "|".join(ids)}
@@ -38,10 +43,14 @@ def board(market):
         games = sorted(package["data"], key=lambda row: int(row["rank"]))
         issues = [{"field": f"{market}.company/playstyle/rank_change", "reason": "not_in_open_api"}]
         rows = []
+        if not package["data"]:
+            issues.append({"field": f"{market}.top20", "reason": "frozen_snapshot_missing"})
         for game in games:
             if not game.get("game_name"):
                 raise ValueError(f"{market} rank {game.get('rank')} has no name")
             rows.append([str(game["rank"]), game["game_name"], "", "", "", percent(game.get("revenue_growth_pct"))])
+        rows = rows[:20]
+        rows.extend([["", "", "", "", "", ""] for _ in range(20 - len(rows))])
         return rows, issues
     return build
 

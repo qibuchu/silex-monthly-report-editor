@@ -376,9 +376,9 @@ export function createCore(config) {
     'minigame-monthly':{extras:['previous'],snapshot:args=>`${args.data.snapshot.id}@${args.data.snapshot.revision??0}`,
       check:(args,month)=>!!(args.data&&args.data.month===month&&args.data.snapshot?.id!=null&&args.data.coverage?.calendar_complete===true&&(!args.previous||args.previous.month===previousMonthOf(month))),
       error:'小游戏月报导出与目标月份不符、月份未结束，或上月导出月份不对'},
-    'mobile-monthly':{extras:[],snapshot:args=>['cn','global'].map(m=>`${m}:${args.data[m].meta.snapshot.id}@${args.data[m].meta.snapshot.version}`).join('|'),
-      check:(args,month)=>!!(args.data&&args.data.month===month&&['cn','global'].every(m=>{const p=args.data[m],meta=p?.meta;return meta?.month===month&&meta?.market===m&&meta?.ranking_metric==='revenue'&&meta?.snapshot?.id!=null&&meta?.snapshot?.frozen_at&&Array.isArray(p.data)&&p.data.length>=20;})),
-      error:'手游月报国区或海外快照缺失、时间窗口不符，或榜单不足20条'}
+    'mobile-monthly':{extras:[],snapshot:args=>['cn','global'].map(m=>{const s=args.data[m].meta.snapshot;return s?.id!=null?`${m}:${s.id}@${s.version}`:`${m}:missing`;}).join('|'),
+      check:(args,month)=>!!(args.data&&args.data.month===month&&['cn','global'].every(m=>{const p=args.data[m],meta=p?.meta;return meta?.month===month&&meta?.market===m&&meta?.ranking_metric==='revenue'&&Array.isArray(p.data)&&(!p.data.length||meta?.snapshot?.id!=null&&meta?.snapshot?.frozen_at);})&&['cn','global'].some(m=>args.data[m].data.length>=20)),
+      error:'手游月报时间窗口不符，或国区、海外均无可用的固化榜单'}
   };
   function generateNativePptx(args){
     const month=args.month,template=db.templates[args.templateId];
@@ -464,7 +464,8 @@ export function createCore(config) {
         rows.push(...(response?.data||[]));
         if(rows.length>=(meta?.total||0))break;
       }
-      if(!meta?.snapshot?.id||!meta.snapshot.frozen_at||rows.length<20)throw new ServiceError(`${market} ${month} 无完整固化快照或不足20条`,400);
+      if(rows.length&&(!meta?.snapshot?.id||!meta.snapshot.frozen_at))throw new ServiceError(`${market} ${month} 数据未固化，不能使用当前快照`,400);
+      if(!meta||rows.length&&rows.length<20)throw new ServiceError(`${market} ${month} 榜单不足20条`,400);
       result[market]={data:rows,meta};
     }
     return result;
