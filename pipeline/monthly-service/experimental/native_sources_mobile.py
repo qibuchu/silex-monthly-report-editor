@@ -78,8 +78,11 @@ def trend_chart(kind):
         if any(row.get(field) is None for row in rows):
             return None, [{"field": "cn.trend." + field, "reason": "value_missing"}]
         divisor = Decimal("100000000") if kind != "growth" else Decimal("100")
+        values = [Decimal(str(row[field])) / divisor for row in rows]
+        if kind == "users":
+            values = [value.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP) for value in values]
         return {"categories": [f"{int(row['month'][:4])}.{int(row['month'][5:])}" for row in rows],
-                "values": [str(Decimal(str(row[field])) / divisor) for row in rows]}, []
+                "values": [str(value) for value in values]}, []
     return build
 
 

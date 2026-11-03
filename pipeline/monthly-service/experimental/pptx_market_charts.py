@@ -43,7 +43,7 @@ def drop_static_labels(series: bytes):
         rich = re.search(rb"<c:tx><c:rich>.*?</c:rich></c:tx>", label, re.DOTALL)
         if not rich:
             return label
-        text = b"".join(re.findall(rb"<a:t>(.*?)</a:t>", rich.group(), re.DOTALL)).strip()
+        text = b"".join(re.findall(rb"<a:t>(.*?)</a:t>", rich.group(), re.DOTALL)).strip().replace("％".encode(), b"%")
         return label[:rich.start()] + label[rich.end():] if NUMBER.match(text) else label
     return re.sub(rb"<c:dLbl>.*?</c:dLbl>", fix, series, flags=re.DOTALL)
 
