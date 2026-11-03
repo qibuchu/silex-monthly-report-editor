@@ -1073,6 +1073,11 @@ export function createCore(config) {
     const t={id,title,dataSourceId,revision:0,createdAt:new Date().toISOString(),sourcePptx:{sha256,bytes:bytes.length,storedAt:new Date().toISOString()},mapping:seed||null,mappingRevision:seed?1:0};
     if(seed){try{t.mappingCheck=checkNativeMapping(t,t.mapping);}catch(error){t.mappingCheck={ok:false,configured:true,problems:[{reason:error.message}]};}}
     db.pptTemplates[id]=t;persist();return pptTemplateView(t);
+  }, templatePptxSource(id) {
+    const t=db.templates[id];if(!t||t.origin!=='pptx'||!t.sourcePptx)throw new ServiceError('PPT模板不存在',404);
+    const file=path.join(dir,'template-pptx',t.sourcePptx.sha256+'.pptx');
+    if(!fs.existsSync(file))throw new ServiceError('原始PPTX文件不存在',404);
+    return {file,filename:t.title+'.pptx'};
   }, pptTemplateSource(id) {
     const t=db.pptTemplates[id];if(!t||t.deletedAt)throw new ServiceError('PPT模板不存在',404);
     return {file:path.join(dir,'template-pptx',t.sourcePptx.sha256+'.pptx'),filename:t.title+'.pptx'};

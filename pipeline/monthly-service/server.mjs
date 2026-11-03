@@ -137,6 +137,11 @@ export function createService(config) {
         return fs.createReadStream(draft.file).pipe(res);
       }
       const templatePptx=url.pathname.match(/^\/api\/templates\/([a-f0-9-]+)\/source\.pptx$/);
+      if(templatePptx&&req.method==='GET'){
+        const {file,filename}=core.templatePptxSource(templatePptx[1]);
+        res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.presentationml.presentation','Content-Disposition':`attachment; filename="template.pptx"; filename*=UTF-8''${encodeURIComponent(filename)}`,'Content-Length':fs.statSync(file).size,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
+        return fs.createReadStream(file).pipe(res);
+      }
       if(templatePptx&&req.method==='POST'){
         const revision=Number(req.headers['x-project-revision']);
         if(!Number.isInteger(revision)||revision<1)throw Object.assign(Error('缺少模板编辑稿版本'),{status:400});
