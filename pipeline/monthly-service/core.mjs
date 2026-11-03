@@ -481,6 +481,12 @@ export function createCore(config) {
       url.searchParams.set('from',from);url.searchParams.set('to',month);url.searchParams.set('market','cn');
       try{result.trend=(await fetchDataInterface({url:url.toString(),headers})).json;}
       catch(error){if(error.status===401||error.status===403)throw new ServiceError(error.message,error.status);result.trend={data:[],meta:{complete:false,error:error.message}};}
+      const periodYear=number>=6?year:year-1,periodUrl=new URL(url);
+      periodUrl.pathname=periodUrl.pathname.replace(/\/trend$/,'/period');periodUrl.search='';
+      periodUrl.searchParams.set('period',`${periodYear}H1`);periodUrl.searchParams.set('market','cn');
+      periodUrl.searchParams.set('sort_by','revenue');periodUrl.searchParams.set('size','20');
+      try{result.period=(await fetchDataInterface({url:periodUrl.toString(),headers})).json;}
+      catch(error){if(error.status===401||error.status===403)throw new ServiceError(error.message,error.status);result.period={data:[],meta:{complete:false,error:error.message}};}
     }
     return result;
   }

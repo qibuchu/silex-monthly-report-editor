@@ -5,13 +5,13 @@
   "seedSha256": "a426c709c2d59cf2c281f15436fbf7727a95679170b4afb3dab1f05cff6be83d",
   "pageNotes": {
     "2": "26个月趋势图按国区月度接口填入；观察文案留作人工编辑。",
-    "3": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
+    "3": "品类图与五张数据卡按目标月接口填入；头部变化分析与游戏案例留作人工编辑。",
     "5": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
     "6": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
     "7": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
     "8": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
-    "9": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
-    "10": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
+    "9": "H1图表按最近完整半年和可比周期数据填入；观点分析由人工编辑。",
+    "10": "H1 Top20及增减收候选按半年接口填入；简述列和配图留空。",
     "11": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
     "12": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。"
   },
@@ -64,9 +64,10 @@
       "categoriesVisible": false
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 293
+      "shapeId": 293,
+      "value": "{category0Growth}"
     },
     {
       "op": "clearText",
@@ -74,9 +75,10 @@
       "shapeId": 294
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 295
+      "shapeId": 295,
+      "value": "{category0Revenue}"
     },
     {
       "op": "clearText",
@@ -84,14 +86,16 @@
       "shapeId": 296
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 298
+      "shapeId": 298,
+      "value": "{category1Growth}"
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 301
+      "shapeId": 301,
+      "value": "{category2Growth}"
     },
     {
       "op": "clearText",
@@ -99,24 +103,22 @@
       "shapeId": 302
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 303
+      "shapeId": 303,
+      "value": "{category2Revenue}"
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 306
+      "shapeId": 309,
+      "value": "{category4Revenue}"
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 309
-    },
-    {
-      "op": "clearText",
-      "slide": 3,
-      "shapeId": 310
+      "shapeId": 310,
+      "value": "{category4Growth}"
     },
     {
       "op": "clearText",
@@ -124,19 +126,10 @@
       "shapeId": 311
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 313
-    },
-    {
-      "op": "clearText",
-      "slide": 3,
-      "shapeId": 319
-    },
-    {
-      "op": "clearText",
-      "slide": 3,
-      "shapeId": 323
+      "shapeId": 323,
+      "value": "{category3Revenue}"
     },
     {
       "op": "clearText",
@@ -146,52 +139,62 @@
     {
       "op": "clearText",
       "slide": 3,
-      "shapeId": 327
-    },
-    {
-      "op": "clearText",
-      "slide": 3,
       "shapeId": 328
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 330
+      "shapeId": 333,
+      "value": "{category1Revenue}"
     },
     {
-      "op": "clearText",
+      "op": "replaceText",
       "slide": 3,
-      "shapeId": 333
+      "shapeId": 336,
+      "value": "{category3Growth}"
     },
     {
-      "op": "clearText",
+      "op": "dataChart",
       "slide": 3,
-      "shapeId": 336
+      "chartId": 314,
+      "source": "mobile.cn.categories",
+      "titleFind": "6",
+      "titleValue": "{monthNumber}"
     },
     {
-      "op": "imageSlot",
+      "op": "growthArrow",
       "slide": 3,
-      "pictureId": 315
+      "arrowId": 331,
+      "category": "竞技对抗",
+      "up": false
     },
     {
-      "op": "imageSlot",
+      "op": "growthArrow",
       "slide": 3,
-      "pictureId": 316
+      "arrowId": 332,
+      "category": "射击",
+      "up": false
     },
     {
-      "op": "imageSlot",
+      "op": "growthArrow",
       "slide": 3,
-      "pictureId": 317
+      "arrowId": 334,
+      "category": "RPG",
+      "up": false
     },
     {
-      "op": "imageSlot",
+      "op": "growthArrow",
       "slide": 3,
-      "pictureId": 318
+      "arrowId": 335,
+      "category": "休闲",
+      "up": false
     },
     {
-      "op": "chartSlot",
+      "op": "growthArrow",
       "slide": 3,
-      "chartId": 314
+      "arrowId": 337,
+      "category": "策略",
+      "up": true
     },
     {
       "op": "replaceFragment",
@@ -702,9 +705,11 @@
       "shapeId": 47
     },
     {
-      "op": "chartSlot",
+      "op": "dataChart",
       "slide": 9,
-      "chartId": 34
+      "chartId": 34,
+      "source": "mobile.cn.h1",
+      "numberFormat": "0.0"
     },
     {
       "op": "clearText",
@@ -712,22 +717,28 @@
       "shapeId": 49
     },
     {
-      "op": "clearTable",
+      "op": "fillTable",
       "slide": 10,
       "tableId": 50,
-      "slot": true
+      "slot": true,
+      "source": "mobile.cn.h1.top20",
+      "headerRow": 0
     },
     {
-      "op": "clearTable",
+      "op": "fillTable",
       "slide": 10,
       "tableId": 54,
-      "slot": true
+      "slot": true,
+      "source": "mobile.cn.h1.rise",
+      "headerRow": 0
     },
     {
-      "op": "clearTable",
+      "op": "fillTable",
       "slide": 10,
       "tableId": 56,
-      "slot": true
+      "slot": true,
+      "source": "mobile.cn.h1.decline",
+      "headerRow": 0
     },
     {
       "op": "imageSlot",

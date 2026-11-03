@@ -336,7 +336,23 @@ def patch_pptx(source: Path, output: Path, charts: list[dict], blanks: list[dict
                 names = {}
             parts[blank["part"]] = blank_chart_xml(chart_xml, names)
         for chart in charts:
-            if chart.get("trend"):
+            if chart.get("cacheOnly"):
+                changed = patch_chart(archive.read(chart["part"]), chart["categories"], chart["series"])
+                if chart.get("numberFormat"):
+                    changed = re.sub(rb'<c:dLbls>.*?</c:dLbls>',
+                                     lambda part: part.group().replace(b'formatCode="General"',
+                                                b'formatCode="' + chart["numberFormat"].encode() + b'"'),
+                                     changed, flags=re.DOTALL)
+                if chart.get("titleReplace"):
+                    old, new = chart["titleReplace"]
+                    title = re.search(rb'<c:title>.*?</c:title>', changed, re.DOTALL)
+                    before = b'<a:t>' + old.encode() + b'</a:t>'
+                    after = b'<a:t>' + new.encode() + b'</a:t>'
+                    if not title or title.group().count(before) != 1:
+                        raise ValueError("Chart title month changed")
+                    changed = changed[:title.start()] + title.group().replace(before, after) + changed[title.end():]
+                parts[chart["part"]] = changed
+            elif chart.get("trend"):
                 parts[chart["part"]] = patch_trend_chart(archive.read(chart["part"]), chart["categories"],
                                                          chart["series"][0], chart["categoriesVisible"])
             else:

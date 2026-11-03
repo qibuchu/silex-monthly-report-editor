@@ -10,6 +10,7 @@ import copy
 import json
 import re
 import zipfile
+from decimal import Decimal
 from xml.etree import ElementTree
 
 from native_sources import STEAM, month_context
@@ -25,7 +26,7 @@ NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
-       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength", "trendChart"}
+       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength", "trendChart", "dataChart", "growthArrow"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME, "mobile-monthly": MOBILE,
            "mobile-cn-monthly": MOBILE_CN}
 PX = 9525  # EMU per 1/96 inch; slide coordinates in mappings use this unit.
@@ -414,6 +415,40 @@ class Compiler:
         self.charts.append({"part": chart, "workbook": workbook, "categories": series["categories"],
                             "series": [series["values"]], "columns": {}, "trend": True,
                             "categoriesVisible": bool(op.get("categoriesVisible"))})
+
+    def do_dataChart(self, op):
+        build = self.source.get("charts", {}).get(op.get("source"))
+        if not build:
+            self.problem(op, "未知图表数据源")
+            return
+        try:
+            chart, workbook = resolve_chart(self.archive, op["slide"], op["chartId"])
+        except (KeyError, ValueError):
+            self.problem(op, "图表对象不存在")
+            return
+        series, issues = build(self.data, self.extras)
+        self.source_issues.extend(issues)
+        if series is None:
+            self.blank_charts.append({"part": chart, "workbook": workbook})
+            self.slots.append({"slide": op["slide"], "objectId": op["chartId"], "type": "chart"})
+            return
+        self.charts.append({"part": chart, "workbook": workbook, "categories": series["categories"],
+                            "series": series["series"], "cacheOnly": True,
+                            "numberFormat": op.get("numberFormat"),
+                            "titleReplace": [op["titleFind"], self.text(op, op["titleValue"])]
+                                if op.get("titleFind") and op.get("titleValue") else None})
+
+    def do_growthArrow(self, op):
+        summaries = (self.data.get("cn") or {}).get("meta", {}).get("category_summaries") or {}
+        growth = (summaries.get(op.get("category")) or {}).get("revenue_growth_pct")
+        if growth is not None and (Decimal(str(growth)) > 0) == bool(op.get("up")):
+            return
+        arrow_id = op["arrowId"]
+        if arrow_id not in object_ids(self.slide(op["slide"]), "sp", "nvSpPr"):
+            self.problem(op, "趋势箭头对象不存在")
+            return
+        self.removed.append((op["slide"], arrow_id))
+        self.replacements.append({"kind": "removeObject", "slide": op["slide"], "objectId": arrow_id})
 
     def do_hideFill(self, op):
         if self.shape(op) is not None:
