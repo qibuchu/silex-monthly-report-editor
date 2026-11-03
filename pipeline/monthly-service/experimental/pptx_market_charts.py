@@ -88,6 +88,32 @@ def patch_chart(xml: bytes, categories: list[str], series: list[list[int]]):
     return fit_axis(xml, series)
 
 
+def patch_trend_chart(xml: bytes, categories: list[str], values: list[str], categories_visible: bool):
+    """Fill one preserved 26-point mobile chart, including sparse overlaid axes."""
+    matches = list(re.finditer(rb'<c:ser>.*?</c:ser>', xml, re.DOTALL))
+    if len(matches) != 1 or len(categories) != 26 or len(values) != 26:
+        raise ValueError("Mobile trend chart shape changed")
+    match = matches[0]
+    data = match.group()
+    data = replace_section(data, b'val', lambda section: patch_points(section, values))
+    def patch_categories(section):
+        points = list(re.finditer(rb'<c:pt\b[^>]*\bidx="(\d+)"[^>]*>.*?</c:pt>', section, re.DOTALL))
+        if categories_visible and [int(point.group(1)) for point in points] != list(range(26)):
+            raise ValueError("Visible trend axis no longer has 26 categories")
+        for point in reversed(points):
+            index = int(point.group(1))
+            if index >= 26:
+                raise ValueError("Trend category index outside 26 months")
+            updated = re.sub(rb'(<c:v>).*?(</c:v>)',
+                             lambda item: item.group(1) + html.escape(categories[index]).encode() + item.group(2),
+                             point.group(), count=1, flags=re.DOTALL)
+            section = section[:point.start()] + updated + section[point.end():]
+        return section
+    data = replace_section(data, b'cat', patch_categories)
+    data = drop_static_labels(data)
+    return fit_axis(xml[:match.start()] + data + xml[match.end():], [[float(value) for value in values]])
+
+
 SLOT_TITLE = "图表标题待补"
 
 
@@ -310,9 +336,13 @@ def patch_pptx(source: Path, output: Path, charts: list[dict], blanks: list[dict
                 names = {}
             parts[blank["part"]] = blank_chart_xml(chart_xml, names)
         for chart in charts:
-            parts[chart["part"]] = patch_chart(archive.read(chart["part"]), chart["categories"], chart["series"])
-            parts[chart["workbook"]] = patch_workbook(archive.read(chart["workbook"]), chart["categories"],
-                                                      chart["columns"], ai_auxiliary=chart["blankAuxiliary"])
+            if chart.get("trend"):
+                parts[chart["part"]] = patch_trend_chart(archive.read(chart["part"]), chart["categories"],
+                                                         chart["series"][0], chart["categoriesVisible"])
+            else:
+                parts[chart["part"]] = patch_chart(archive.read(chart["part"]), chart["categories"], chart["series"])
+                parts[chart["workbook"]] = patch_workbook(archive.read(chart["workbook"]), chart["categories"],
+                                                          chart["columns"], ai_auxiliary=chart["blankAuxiliary"])
         output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=output.parent, suffix=".partial", delete=False) as temp:
             path = Path(temp.name)

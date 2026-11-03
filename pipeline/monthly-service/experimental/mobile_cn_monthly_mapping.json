@@ -4,7 +4,7 @@
   "sourceMonth": "2026-06",
   "seedSha256": "a426c709c2d59cf2c281f15436fbf7727a95679170b4afb3dab1f05cff6be83d",
   "pageNotes": {
-    "2": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
+    "2": "26个月趋势图按国区月度接口填入；观察文案留作人工编辑。",
     "3": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
     "5": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
     "6": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
@@ -43,19 +43,25 @@
       "shapeId": 277
     },
     {
-      "op": "chartSlot",
+      "op": "trendChart",
       "slide": 2,
-      "chartId": 278
+      "chartId": 278,
+      "source": "mobile.cn.revenue",
+      "categoriesVisible": true
     },
     {
-      "op": "chartSlot",
+      "op": "trendChart",
       "slide": 2,
-      "chartId": 287
+      "chartId": 287,
+      "source": "mobile.cn.users",
+      "categoriesVisible": false
     },
     {
-      "op": "chartSlot",
+      "op": "trendChart",
       "slide": 2,
-      "chartId": 288
+      "chartId": 288,
+      "source": "mobile.cn.growth",
+      "categoriesVisible": false
     },
     {
       "op": "clearText",

@@ -25,7 +25,7 @@ NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
-       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength"}
+       "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength", "trendChart"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME, "mobile-monthly": MOBILE,
            "mobile-cn-monthly": MOBILE_CN}
 PX = 9525  # EMU per 1/96 inch; slide coordinates in mappings use this unit.
@@ -394,6 +394,26 @@ class Compiler:
             return
         self.blank_charts.append({"part": chart, "workbook": workbook})
         self.slots.append({"slide": op["slide"], "objectId": op["chartId"], "type": "chart"})
+
+    def do_trendChart(self, op):
+        build = self.source.get("charts", {}).get(op.get("source"))
+        if not build:
+            self.problem(op, "未知趋势图数据源")
+            return
+        try:
+            chart, workbook = resolve_chart(self.archive, op["slide"], op["chartId"])
+        except (KeyError, ValueError):
+            self.problem(op, "图表对象不存在")
+            return
+        series, issues = build(self.data, self.extras)
+        self.source_issues.extend(issues)
+        if series is None:
+            self.blank_charts.append({"part": chart, "workbook": workbook})
+            self.slots.append({"slide": op["slide"], "objectId": op["chartId"], "type": "chart"})
+            return
+        self.charts.append({"part": chart, "workbook": workbook, "categories": series["categories"],
+                            "series": [series["values"]], "columns": {}, "trend": True,
+                            "categoriesVisible": bool(op.get("categoriesVisible"))})
 
     def do_hideFill(self, op):
         if self.shape(op) is not None:

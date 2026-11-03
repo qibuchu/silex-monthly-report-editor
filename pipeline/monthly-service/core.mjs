@@ -50,6 +50,8 @@ export const tools = [
   tool('get_native_mapping', '读取模板的 PPTX 对象映射、版本及与当前原始 PPTX 的核对结果', {templateId:idSchema}, ['templateId'], true),
   tool('save_native_mapping', '保存模板的 PPTX 对象映射草稿，发布模板后生效；须带刚读取的映射版本。对象已不存在时返回问题清单，不阻止保存', {templateId:idSchema,baseRevision:{type:'integer',minimum:0},mapping:{type:'object'}}, ['templateId','baseRevision','mapping']),
   tool('list_ppt_templates', '列出 PPT 模板（只保存原始 PPTX 与填数规则，不转网页版）及发布状态', {}, [], true),
+  tool('get_ppt_mapping', '读取 PPT 模板的对象映射和版本', {templateId:idSchema}, ['templateId'], true),
+  tool('save_ppt_mapping', '按版本保存 PPT 模板对象映射草稿，发布后生效', {templateId:idSchema,baseRevision:{type:'integer',minimum:0},mapping:{type:'object'}}, ['templateId','baseRevision','mapping']),
   tool('publish_ppt_template', '发布 PPT 模板当前的原始 PPTX 与填数规则；需在 PowerPoint 中核对原稿后再发布', {templateId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['templateId','baseRevision']),
   tool('delete_ppt_template', '从 PPT 模板列表移除模板（原始 PPTX 文件与已生成的 PPT 保留）', {templateId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['templateId','baseRevision']),
   tool('generate_ppt', '用已发布的 PPT 模板生成目标月可编辑 PPTX 和问题清单。小游戏模板自动从小游戏接口取当月和上月数据；Steam 模板需传 data 与 audit', {templateId:idSchema,month:idSchema,data:{type:'object'},audit:{type:'object'},previous:{type:'object'}}, ['templateId','month']),
@@ -471,6 +473,15 @@ export function createCore(config) {
       if(!meta||rows.length&&rows.length<20)throw new ServiceError(`${market} ${month} 榜单不足20条`,400);
       result[market]={data:rows,meta};
     }
+    if(markets.length===1&&markets[0]==='cn'){
+      const [year,number]=month.split('-').map(Number),startIndex=year*12+number-25;
+      const from=`${Math.floor((startIndex-1)/12)}-${String((startIndex-1)%12+1).padStart(2,'0')}`;
+      const url=new URL(registered.reference.replaceAll('{month}',encodeURIComponent(month)));
+      url.pathname=url.pathname.replace(/\/$/,'')+'/trend';url.search='';
+      url.searchParams.set('from',from);url.searchParams.set('to',month);url.searchParams.set('market','cn');
+      try{result.trend=(await fetchDataInterface({url:url.toString(),headers})).json;}
+      catch(error){if(error.status===401||error.status===403)throw new ServiceError(error.message,error.status);result.trend={data:[],meta:{complete:false,error:error.message}};}
+    }
     return result;
   }
   async function generatePpt(args){
@@ -871,6 +882,19 @@ export function createCore(config) {
       case 'generate_monthly_report': return generate(args);
       case 'generate_native_pptx': return generateNativePptx(args);
       case 'list_ppt_templates': return Object.values(db.pptTemplates).filter(t=>!t.deletedAt).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).map(pptTemplateView);
+      case 'get_ppt_mapping': {
+        const t=db.pptTemplates[args.templateId];if(!t||t.deletedAt)throw new ServiceError('PPT模板不存在',404);
+        return {templateId:t.id,revision:t.mappingRevision||0,mapping:t.mapping||null,publishedRevision:t.published?.mappingRevision??null,check:t.mappingCheck||null};
+      }
+      case 'save_ppt_mapping': {
+        const t=db.pptTemplates[args.templateId];if(!t||t.deletedAt)throw new ServiceError('PPT模板不存在',404);
+        if((t.mappingRevision||0)!==args.baseRevision)throw new ServiceError('映射已变化，请重新读取',409);
+        if(args.mapping?.format!=='native-pptx-mapping-v1'||!Array.isArray(args.mapping.ops))throw new ServiceError('映射格式无效',400);
+        const check=checkNativeMapping(t,args.mapping);
+        if(!check.ok)throw new ServiceError('映射与PPT不匹配',400);
+        t.mapping=args.mapping;t.mappingRevision=args.baseRevision+1;t.mappingCheck=check;persist();
+        return {templateId:t.id,revision:t.mappingRevision,check,published:false};
+      }
       case 'publish_ppt_template': {
         const t=db.pptTemplates[args.templateId];if(!t||t.deletedAt)throw new ServiceError('PPT模板不存在',404);
         if(t.revision!==args.baseRevision)throw new ServiceError('模板已变化，请刷新后再发布',409);

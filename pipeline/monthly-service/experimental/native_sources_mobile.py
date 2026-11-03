@@ -66,6 +66,23 @@ def values(data, extras):
     return {"publicationDate": publication}, [{"field": "H1/cases/narrative", "reason": "not_in_monthly_open_api"}]
 
 
+def trend_chart(kind):
+    def build(data, extras):
+        trend = data.get("trend") or {}
+        meta, rows = trend.get("meta") or {}, trend.get("data") or []
+        if (not meta.get("complete") or meta.get("mixed_coverage") or len(rows) != 26
+                or meta.get("to") != data["month"] or any(not row.get("available") or row.get("coverage_scope") != "full" for row in rows)):
+            return None, [{"field": "cn.trend", "reason": "26_month_full_coverage_unavailable"}]
+        field = {"revenue": "revenue", "users": "active_users_sum",
+                 "growth": "revenue_growth_pct"}[kind]
+        if any(row.get(field) is None for row in rows):
+            return None, [{"field": "cn.trend." + field, "reason": "value_missing"}]
+        divisor = Decimal("100000000") if kind != "growth" else Decimal("100")
+        return {"categories": [f"{int(row['month'][:4])}.{int(row['month'][5:])}" for row in rows],
+                "values": [str(Decimal(str(row[field])) / divisor) for row in rows]}, []
+    return build
+
+
 MOBILE = {"contract": contract,
           "tables": {"mobile.cn": board("cn"), "mobile.global": board("global")},
           "highlights": {}, "values": values, "numbers": None, "market": None,
@@ -92,4 +109,7 @@ def cn_contract(data, extras):
 
 MOBILE_CN = {**MOBILE, "contract": cn_contract,
              "tables": {"mobile.cn": board("cn")},
+             "charts": {"mobile.cn.revenue": trend_chart("revenue"),
+                        "mobile.cn.users": trend_chart("users"),
+                        "mobile.cn.growth": trend_chart("growth")},
              "warning": "仅生成国区页面；公司、玩法、排名变化、H1汇总及案例文案仍需人工或AI补齐。"}
