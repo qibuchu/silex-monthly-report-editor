@@ -5,11 +5,12 @@ const root=path.resolve(__dirname,'..');
 const target=path.resolve(process.argv[2]||path.join(root,'releases/monthly-demo-0.2.0'));
 if(fs.existsSync(target))throw Error('发布目录已存在，请选择新目录，禁止覆盖');
 const manifest=[];
-const excluded=new Set(['node_modules','dist','.git','.env','config.json','.mcp.json','.claude','.test-temp','data','backups','silex','.playwright-mcp']);
+const excluded=new Set(['node_modules','node-compile-cache','dist','.git','.env','config.json','.mcp.json','.claude','.test-temp','data','backups','silex','.playwright-mcp','__pycache__']);
 function copy(relative){
  const source=path.join(root,relative);if(!fs.existsSync(source))return;
  const stat=fs.lstatSync(source);if(stat.isSymbolicLink())return;
- if(stat.isDirectory()){for(const name of fs.readdirSync(source)){if(!excluded.has(name)&&!name.startsWith('.service-test-')&&!name.startsWith('.chat-test-')&&!name.startsWith('.operations-test-')&&!name.startsWith('.maintenance-test-'))copy(path.join(relative,name));}return;}
+ if(stat.isDirectory()){for(const name of fs.readdirSync(source)){if(!excluded.has(name)&&!name.startsWith('.service-test-')&&!name.startsWith('.chat-test-')&&!name.startsWith('.operations-test-')&&!name.startsWith('.maintenance-test-')&&!name.startsWith('.maintenance-dedup-test-'))copy(path.join(relative,name));}return;}
+ if(relative.endsWith('.log'))return;
  const bytes=fs.readFileSync(source),dest=path.join(target,relative);fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,bytes);
  manifest.push({path:relative.split(path.sep).join('/'),size:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')});
 }
