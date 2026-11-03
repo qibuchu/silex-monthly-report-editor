@@ -70,7 +70,7 @@ def values(data, extras):
         revenue, growth = item.get("revenue"), item.get("revenue_growth_pct")
         output[f"category{index}Revenue"] = (str((Decimal(str(revenue)) / Decimal("100000000")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) + "亿/美元") if revenue is not None else ""
         output[f"category{index}Growth"] = ("月增长率 " + percent(growth).replace("%", "％")) if growth is not None else ""
-    return output, [{"field": "H1/cases/narrative", "reason": "not_in_monthly_open_api"}]
+    return output, []
 
 
 def category_chart(data, extras):

@@ -1,0 +1,659 @@
+{
+  "format": "native-pptx-mapping-v1",
+  "dataSource": "mobile-cn-monthly",
+  "sourceMonth": "2026-06",
+  "seedSha256": "8eeaa27057611fd6dd52895b27b9395c9e8929c528c29338cf2a6bbd0ba5781a",
+  "pageNotes": {
+    "2": "26个月趋势图按国区月度接口填入；观察文案留作人工编辑。",
+    "3": "品类图与五张数据卡按目标月接口填入；头部变化分析与游戏案例留作人工编辑。",
+    "5": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
+    "6": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
+    "7": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。",
+    "8": "原稿含该月案例、趋势或H1内容；接口未提供完整对应字段，已清空为人工编辑空槽。"
+  },
+  "ops": [
+    {
+      "op": "replaceFragment",
+      "slide": 1,
+      "shapeId": 269,
+      "find": "\\d{4} M\\d{1,2}",
+      "value": "{year} M{monthNumber}"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 1,
+      "shapeId": 270,
+      "find": "\\d{4}年\\d{1,2}月",
+      "value": "{year}年{monthNumber}月"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 1,
+      "shapeId": 275,
+      "find": "\\d{4}\\.\\d{2}",
+      "value": "{publicationDate}"
+    },
+    {
+      "op": "clearText",
+      "slide": 2,
+      "shapeId": 277
+    },
+    {
+      "op": "trendChart",
+      "slide": 2,
+      "chartId": 278,
+      "source": "mobile.cn.revenue",
+      "categoriesVisible": true
+    },
+    {
+      "op": "trendChart",
+      "slide": 2,
+      "chartId": 287,
+      "source": "mobile.cn.users",
+      "categoriesVisible": false
+    },
+    {
+      "op": "trendChart",
+      "slide": 2,
+      "chartId": 288,
+      "source": "mobile.cn.growth",
+      "categoriesVisible": false
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 293,
+      "value": "{category0Growth}"
+    },
+    {
+      "op": "clearText",
+      "slide": 3,
+      "shapeId": 294
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 295,
+      "value": "{category0Revenue}"
+    },
+    {
+      "op": "clearText",
+      "slide": 3,
+      "shapeId": 296
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 298,
+      "value": "{category1Growth}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 301,
+      "value": "{category2Growth}"
+    },
+    {
+      "op": "clearText",
+      "slide": 3,
+      "shapeId": 302
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 303,
+      "value": "{category2Revenue}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 309,
+      "value": "{category4Revenue}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 310,
+      "value": "{category4Growth}"
+    },
+    {
+      "op": "clearText",
+      "slide": 3,
+      "shapeId": 311
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 323,
+      "value": "{category3Revenue}"
+    },
+    {
+      "op": "clearText",
+      "slide": 3,
+      "shapeId": 324
+    },
+    {
+      "op": "clearText",
+      "slide": 3,
+      "shapeId": 328
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 333,
+      "value": "{category1Revenue}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 3,
+      "shapeId": 336,
+      "value": "{category3Growth}"
+    },
+    {
+      "op": "dataChart",
+      "slide": 3,
+      "chartId": 314,
+      "source": "mobile.cn.categories",
+      "titleFind": "6",
+      "titleValue": "{monthNumber}"
+    },
+    {
+      "op": "growthArrow",
+      "slide": 3,
+      "arrowId": 331,
+      "category": "竞技对抗",
+      "up": false
+    },
+    {
+      "op": "growthArrow",
+      "slide": 3,
+      "arrowId": 332,
+      "category": "射击",
+      "up": false
+    },
+    {
+      "op": "growthArrow",
+      "slide": 3,
+      "arrowId": 334,
+      "category": "RPG",
+      "up": false
+    },
+    {
+      "op": "growthArrow",
+      "slide": 3,
+      "arrowId": 335,
+      "category": "休闲",
+      "up": false
+    },
+    {
+      "op": "growthArrow",
+      "slide": 3,
+      "arrowId": 337,
+      "category": "策略",
+      "up": true
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 4,
+      "shapeId": 339,
+      "find": "6月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 344
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 345
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 347
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 348
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 349
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 352
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 355
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 356
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 358
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 360
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 361
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 363
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 364
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 365
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 368
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 369
+    },
+    {
+      "op": "fillTable",
+      "slide": 4,
+      "tableId": 340,
+      "source": "mobile.cn",
+      "from": 0,
+      "to": 20
+    },
+    {
+      "op": "imageSlot",
+      "slide": 4,
+      "pictureId": 343
+    },
+    {
+      "op": "imageSlot",
+      "slide": 4,
+      "pictureId": 353
+    },
+    {
+      "op": "imageSlot",
+      "slide": 4,
+      "pictureId": 354
+    },
+    {
+      "op": "imageSlot",
+      "slide": 4,
+      "pictureId": 357
+    },
+    {
+      "op": "imageSlot",
+      "slide": 4,
+      "pictureId": 366
+    },
+    {
+      "op": "imageSlot",
+      "slide": 4,
+      "pictureId": 367
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 5,
+      "shapeId": 371,
+      "find": "6月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 376
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 377
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 379
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 380
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 381
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 383
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 384
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 387
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 388
+    },
+    {
+      "op": "clearTable",
+      "slide": 5,
+      "tableId": 372,
+      "slot": true
+    },
+    {
+      "op": "imageSlot",
+      "slide": 5,
+      "pictureId": 375
+    },
+    {
+      "op": "imageSlot",
+      "slide": 5,
+      "pictureId": 385
+    },
+    {
+      "op": "imageSlot",
+      "slide": 5,
+      "pictureId": 386
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 391
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 394
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 395
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 397
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 398
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 401
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 404
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 407
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 410
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 413
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 415
+    },
+    {
+      "op": "imageSlot",
+      "slide": 6,
+      "pictureId": 390
+    },
+    {
+      "op": "imageSlot",
+      "slide": 6,
+      "pictureId": 392
+    },
+    {
+      "op": "imageSlot",
+      "slide": 6,
+      "pictureId": 396
+    },
+    {
+      "op": "imageSlot",
+      "slide": 6,
+      "pictureId": 400
+    },
+    {
+      "op": "imageSlot",
+      "slide": 6,
+      "pictureId": 403
+    },
+    {
+      "op": "imageSlot",
+      "slide": 6,
+      "pictureId": 405
+    },
+    {
+      "op": "imageSlot",
+      "slide": 6,
+      "pictureId": 412
+    },
+    {
+      "op": "imageSlot",
+      "slide": 6,
+      "pictureId": 414
+    },
+    {
+      "op": "chartSlot",
+      "slide": 6,
+      "chartId": 411
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 418
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 422
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 423
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 425
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 426
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 429
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 432
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 434
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 438
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 439
+    },
+    {
+      "op": "imageSlot",
+      "slide": 7,
+      "pictureId": 417
+    },
+    {
+      "op": "imageSlot",
+      "slide": 7,
+      "pictureId": 420
+    },
+    {
+      "op": "imageSlot",
+      "slide": 7,
+      "pictureId": 424
+    },
+    {
+      "op": "imageSlot",
+      "slide": 7,
+      "pictureId": 428
+    },
+    {
+      "op": "imageSlot",
+      "slide": 7,
+      "pictureId": 431
+    },
+    {
+      "op": "imageSlot",
+      "slide": 7,
+      "pictureId": 436
+    },
+    {
+      "op": "imageSlot",
+      "slide": 7,
+      "pictureId": 437
+    },
+    {
+      "op": "chartSlot",
+      "slide": 7,
+      "chartId": 435
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 3
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 7
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 12
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 13
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 17
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 18
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 21
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 22
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 25
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 27
+    },
+    {
+      "op": "clearText",
+      "slide": 8,
+      "shapeId": 32
+    },
+    {
+      "op": "imageSlot",
+      "slide": 8,
+      "pictureId": 2
+    },
+    {
+      "op": "imageSlot",
+      "slide": 8,
+      "pictureId": 9
+    },
+    {
+      "op": "imageSlot",
+      "slide": 8,
+      "pictureId": 23
+    },
+    {
+      "op": "chartSlot",
+      "slide": 8,
+      "chartId": 4
+    }
+  ]
+}
