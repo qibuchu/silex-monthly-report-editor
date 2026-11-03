@@ -124,6 +124,7 @@ DISPLAY_ALIASES = {
     "Eggy Party": "蛋仔派对", "CrossFire": "穿越火线",
     "Love and Deepspace": "恋与深空", "Genshin Impact": "原神",
     "League of Legends: Wild Rift": "英雄联盟", "My Garden Tale": "我的花园世界",
+    "无畏契约：源能行动": "无畏契约",
 }
 
 
