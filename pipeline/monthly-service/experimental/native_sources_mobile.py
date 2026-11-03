@@ -110,12 +110,26 @@ def period_chart(data, extras):
     if any(summary.get(a) is None or summary.get(b) is None for a,b in keys):
         return None, [{"field": "cn.period.summary", "reason": "value_missing"}]
     year = int(meta["period"][:4])
-    revenue = [float(Decimal(str(summary[a])) / Decimal("100000000")) for a,b in keys]
+    revenue = [float((Decimal(str(summary[a])) / Decimal("100000000")).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)) for a,b in keys]
     # The source exposes monthly mean MAU. Six times that value is the sum of six
     # monthly counts shown by the original H1 chart, not unique half-year users.
     active = [float((Decimal(str(summary[b])) * 6 / Decimal("100000000")).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)) for a,b in keys]
     return {"categories": [f"{year-1}H1", f"{year-1}H2", f"{year}H1"],
             "series": [revenue, active]}, []
+
+
+DISPLAY_ALIASES = {
+    "Game For Peace": "和平精英", "Delta Force Mobile": "三角洲行动",
+    "Whiteout Survival": "无尽冬日", "Dungeon & Fighter Mobile": "地下城与勇士",
+    "Eggy Party": "蛋仔派对", "CrossFire": "穿越火线",
+    "Love and Deepspace": "恋与深空", "Genshin Impact": "原神",
+    "League of Legends: Wild Rift": "英雄联盟", "My Garden Tale": "我的花园世界",
+}
+
+
+def display_game_name(game):
+    original = game.get("game_name") or ""
+    return DISPLAY_ALIASES.get(original, original)
 
 
 def period_board(kind):
@@ -132,7 +146,7 @@ def period_board(kind):
                 missing = [key for key in ("publisher","genre","rank_change","revenue_growth_pct") if game.get(key) is None]
                 if missing: issues.append({"field":"cn.period.top20","game":game.get("game_name"),"missing":missing})
                 change=game.get("rank_change")
-                rows.append([str(game.get("rank") or game.get("revenue_rank") or ""),game.get("game_name") or "",
+                rows.append([str(game.get("rank") or game.get("revenue_rank") or ""),display_game_name(game),
                              game.get("publisher") or "",game.get("genre") or "",
                              "" if change is None else "-" if change == 0 else f"{change:+d}",percent(game.get("revenue_growth_pct"))])
             rows.extend([[""]*6 for _ in range(20-len(rows))])
@@ -141,7 +155,7 @@ def period_board(kind):
         valid.sort(key=lambda game:Decimal(str(game["revenue_growth_pct"])),reverse=(kind=="rise"))
         valid = [game for game in valid if (Decimal(str(game["revenue_growth_pct"]))>0 if kind=="rise" else Decimal(str(game["revenue_growth_pct"]))<0)]
         capacity = 3 if kind == "rise" else 4
-        rows = [[game.get("game_name") or "",percent(game.get("revenue_growth_pct")),""] for game in valid[:capacity]]
+        rows = [[display_game_name(game),percent(game.get("revenue_growth_pct")),""] for game in valid[:capacity]]
         rows.extend([["","",""] for _ in range(capacity-len(rows))])
         return rows,issues
     return build
