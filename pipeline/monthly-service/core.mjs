@@ -14,6 +14,7 @@ import {jsonSource,validateDataSources,matchTemplateData,fillTemplateData,normal
 import {renderImportedChart} from './template-chart-render.mjs';
 import {buildNativeDeck,diffDecks} from './native-project.mjs';
 import {fetchDataInterface} from './data-interface.mjs';
+import {fetchSteamMonthly} from './steamauto-source.mjs';
 import {matchSourceViews} from './minigame-data-fields.mjs';
 import {backupStore} from './maintenance.mjs';
 import {validateVisualRules,fillVisualTemplate,recognitionClass,pendingVisualReviews} from './visual-template-rules.mjs';
@@ -55,7 +56,7 @@ export const tools = [
   tool('publish_ppt_template', '发布 PPT 模板当前的原始 PPTX 与填数规则；需在 PowerPoint 中核对原稿后再发布', {templateId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['templateId','baseRevision']),
   tool('delete_ppt_template', '从 PPT 模板列表移除模板（原始 PPTX 文件与已生成的 PPT 保留）', {templateId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['templateId','baseRevision']),
   tool('prepare_ppt_game_selection', '按模板规则读取目标月榜单，返回候选游戏和默认推荐；生成前供人工确认', {templateId:idSchema,month:idSchema,data:{type:'object'},audit:{type:'object'}}, ['templateId','month']),
-  tool('generate_ppt', '用已发布的 PPT 模板生成目标月可编辑 PPTX 和问题清单。配置游戏介绍的模板必须先确认候选游戏；Steam 模板需传 data 与 audit', {templateId:idSchema,month:idSchema,data:{type:'object'},audit:{type:'object'},previous:{type:'object'},selection:{type:'object',additionalProperties:{type:'array',maxItems:8,items:{type:['integer','string']}}},selectionSnapshot:{type:'string'},selectionTemplateRevision:{type:'integer',minimum:1}}, ['templateId','month']),
+  tool('generate_ppt', '用已发布的 PPT 模板生成目标月可编辑 PPTX 和问题清单。配置游戏介绍的模板须先确认候选游戏；已配置接口的 Steam 模板按月自动取数并核验凭据与时间窗口', {templateId:idSchema,month:idSchema,data:{type:'object'},audit:{type:'object'},previous:{type:'object'},selection:{type:'object',additionalProperties:{type:'array',maxItems:8,items:{type:['integer','string']}}},selectionSnapshot:{type:'string'},selectionTemplateRevision:{type:'integer',minimum:1}}, ['templateId','month']),
   tool('list_ppt_drafts', '列出由 PPT 模板生成的 PPTX 及下载、问题清单链接', {}, [], true),
   tool('list_native_drafts', '列出已生成的原生 PPTX 草稿及其问题清单下载链接', {}, [], true),
   tool('get_task', '读取生成任务状态和结果', { taskId: idSchema }, ['taskId'], true),
@@ -453,6 +454,12 @@ export function createCore(config) {
     if(text.length>30*1024*1024)throw new ServiceError('小游戏数据接口返回内容过大',502);
     try{return JSON.parse(text);}catch{throw new ServiceError('小游戏数据接口返回的不是 JSON',502);}
   }
+  async function fetchSteamAutoReport(month){
+    const source=dataSource('steamauto');
+    const headers=db.dataSourceSecrets.steamauto?unseal(db.dataSourceSecrets.steamauto):{};
+    try{return await fetchSteamMonthly(month,source,headers);}
+    catch(error){throw new ServiceError(error.message,/凭据|续期|过期/.test(error.message)?424:502);}
+  }
   async function fetchMobileMonthly(month,sourceId,markets=['cn','global'],includePeriod=true){
     const registered=dataSource(sourceId);
     if(registered?.kind!=='api'||!String(registered.reference||'').includes('/mobile-monthly'))throw new ServiceError('手游数据源未登记或接口地址不匹配',400);
@@ -529,12 +536,13 @@ export function createCore(config) {
     if(!pptMonth.test(args.month||''))throw new ServiceError('目标月份无效',400);
     const mapping=t.published.mapping,source=mapping.dataSource||'steam-monthly';
     if(!mapping.gameSelection?.groups?.length)return {required:false,groups:[]};
-    let data=args.data;
+    let data=args.data,audit=args.audit;
+    if(!data&&source==='steam-monthly')({data,audit}=await fetchSteamAutoReport(args.month));
     if(!data&&source==='minigame-monthly')data=await fetchMinigameExport(args.month);
     if(!data&&source==='mobile-monthly')data=await fetchMobileMonthly(args.month,t.dataSourceId);
     if(!data&&source==='mobile-cn-monthly')data=await fetchMobileMonthly(args.month,t.dataSourceId,['cn'],false);
     if(!data)throw new ServiceError('请先上传目标月数据包',400);
-    const input={month:args.month,data,audit:args.audit},rule=nativeSources[source];
+    const input={month:args.month,data,audit},rule=nativeSources[source];
     if(!rule?.check(input,args.month))throw new ServiceError(rule?.error||'目标月数据包校验未通过',400);
     return {required:true,templateId:t.id,templateRevision:t.revision,month:args.month,
       snapshot:rule.snapshot(input),groups:selectionCandidates(mapping,data)};
@@ -546,6 +554,9 @@ export function createCore(config) {
     if(!pptMonth.test(args.month||''))throw new ServiceError('目标月份无效');
     const native=t.published,source=native.mapping.dataSource||'steam-monthly';
     let {data,previous,audit}=args;const fetched={};
+    if(!data&&source==='steam-monthly'){
+      ({data,audit}=await fetchSteamAutoReport(args.month));fetched.current=true;
+    }
     if(!data&&source==='minigame-monthly'){
       data=await fetchMinigameExport(args.month);fetched.current=true;
       if(!previous){try{previous=await fetchMinigameExport(previousMonthOfPpt(args.month));fetched.previous=true;}catch(error){fetched.previousError=error.message;}}

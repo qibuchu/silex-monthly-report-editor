@@ -60,7 +60,7 @@ async function loadTemplates() {
 
 function refreshInputs() {
   const t = state.templates.find(item => item.id === $('genTemplate').value);
-  const manual = Boolean(t) && t.dataSourceId !== 'minigame-monthly' && !state.mobileSourceIds.has(t.dataSourceId);
+  const manual = Boolean(t) && !['minigame-monthly','steamauto'].includes(t.dataSourceId) && !state.mobileSourceIds.has(t.dataSourceId);
   $('dataLabel').hidden = !manual; $('auditLabel').hidden = !manual;
   const needsSelection=Boolean(t?.gameSelection?.groups?.length);
   $('readCandidates').hidden=!needsSelection;
@@ -87,7 +87,7 @@ async function readCandidates(){
     const templateId=$('genTemplate').value,month=$('genMonth').value,t=state.templates.find(item=>item.id===templateId);
     if(!t||!month)throw Error('请先选择模板和月份');
     const args={templateId,month};
-    if(t.dataSourceId!=='minigame-monthly'&&!state.mobileSourceIds.has(t.dataSourceId)){
+    if(!['minigame-monthly','steamauto'].includes(t.dataSourceId)&&!state.mobileSourceIds.has(t.dataSourceId)){
       args.data=await readJson($('genData'),'当月数据包');args.audit=await readJson($('genAudit'),'时间窗口审计');
       if(!args.data||!args.audit)throw Error('请先上传当月数据包和时间窗口审计');
     }
@@ -134,12 +134,12 @@ async function generate() {
       if(!state.selectionConfirmed||!preview||preview.templateId!==templateId||preview.templateRevision!==t.revision||preview.month!==month)throw Error('请先读取并确认目标月要介绍的游戏');
       args.selection=state.selectionDraft;args.selectionSnapshot=preview.snapshot;args.selectionTemplateRevision=preview.templateRevision;
     }
-    if (t.dataSourceId !== 'minigame-monthly' && !state.mobileSourceIds.has(t.dataSourceId)) {
+    if (!['minigame-monthly','steamauto'].includes(t.dataSourceId) && !state.mobileSourceIds.has(t.dataSourceId)) {
       args.data = await readJson($('genData'), '当月数据包');
       args.audit = await readJson($('genAudit'), '时间窗口审计');
-      if (!args.data || !args.audit) throw Error('Steam 模板需要上传当月数据包和时间窗口审计');
+      if (!args.data || !args.audit) throw Error('此数据源尚未接通自动取数，请上传当月数据包和时间窗口审计');
     }
-    show('genStatus', t.dataSourceId === 'minigame-monthly' ? '正在从小游戏接口取数并生成…' : state.mobileSourceIds.has(t.dataSourceId) ? '正在从手游接口取国区及海外月榜并生成…' : '正在生成…');
+    show('genStatus', t.dataSourceId === 'minigame-monthly' ? '正在从小游戏接口取数并生成…' : t.dataSourceId === 'steamauto' ? '正在检查 DataBrain 凭据并读取目标月 SteamAuto 数据…' : state.mobileSourceIds.has(t.dataSourceId) ? '正在从手游接口取国区及海外月榜并生成…' : '正在生成…');
     let task = await call('generate_ppt', args);
     while (task.status === 'running') { await new Promise(r => setTimeout(r, 1500)); task = await call('get_task', { taskId: task.id }); }
     if (task.status !== 'succeeded') throw Error(String(task.error || '生成失败').trim().split('\n').pop());
