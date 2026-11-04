@@ -36,7 +36,8 @@
     {
       "op": "clearText",
       "slide": 2,
-      "shapeId": 277
+      "shapeId": 277,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "trendChart",
@@ -68,7 +69,8 @@
     {
       "op": "clearText",
       "slide": 3,
-      "shapeId": 294
+      "shapeId": 294,
+      "sample": "待填"
     },
     {
       "op": "replaceText",
@@ -79,7 +81,8 @@
     {
       "op": "clearText",
       "slide": 3,
-      "shapeId": 296
+      "shapeId": 296,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "replaceText",
@@ -96,7 +99,8 @@
     {
       "op": "clearText",
       "slide": 3,
-      "shapeId": 302
+      "shapeId": 302,
+      "sample": "待填"
     },
     {
       "op": "replaceText",
@@ -119,7 +123,8 @@
     {
       "op": "clearText",
       "slide": 3,
-      "shapeId": 311
+      "shapeId": 311,
+      "sample": "待填"
     },
     {
       "op": "replaceText",
@@ -130,12 +135,14 @@
     {
       "op": "clearText",
       "slide": 3,
-      "shapeId": 324
+      "shapeId": 324,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 3,
-      "shapeId": 328
+      "shapeId": 328,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "replaceText",
@@ -200,122 +207,23 @@
       "value": "{monthNumber}月"
     },
     {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 344
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 345
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 347
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 348
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 349
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 352
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 355
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 356
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 358
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 360
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 361
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 363
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 364
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 365
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 368
-    },
-    {
-      "op": "clearText",
-      "slide": 4,
-      "shapeId": 369
-    },
-    {
       "op": "fillTable",
       "slide": 4,
       "tableId": 340,
       "source": "mobile.cn",
       "from": 0,
-      "to": 20
-    },
-    {
-      "op": "imageSlot",
-      "slide": 4,
-      "pictureId": 343
-    },
-    {
-      "op": "imageSlot",
-      "slide": 4,
-      "pictureId": 353
-    },
-    {
-      "op": "imageSlot",
-      "slide": 4,
-      "pictureId": 354
-    },
-    {
-      "op": "imageSlot",
-      "slide": 4,
-      "pictureId": 357
-    },
-    {
-      "op": "imageSlot",
-      "slide": 4,
-      "pictureId": 366
-    },
-    {
-      "op": "imageSlot",
-      "slide": 4,
-      "pictureId": 367
+      "to": 20,
+      "highlight": {
+        "selectionGroup": "mobileTop20",
+        "sourcePath": "cn.data",
+        "idField": "game_id",
+        "nameField": "game_name",
+        "keyColumn": 1,
+        "color": "FFF1D6",
+        "resetColor": "FFFFFF",
+        "textColor": "C9912F",
+        "resetTextColor": "202020"
+      }
     },
     {
       "op": "replaceFragment",
@@ -327,123 +235,74 @@
     {
       "op": "clearText",
       "slide": 5,
-      "shapeId": 376
-    },
-    {
-      "op": "clearText",
-      "slide": 5,
-      "shapeId": 377
-    },
-    {
-      "op": "clearText",
-      "slide": 5,
-      "shapeId": 379
-    },
-    {
-      "op": "clearText",
-      "slide": 5,
-      "shapeId": 380
-    },
-    {
-      "op": "clearText",
-      "slide": 5,
-      "shapeId": 381
-    },
-    {
-      "op": "clearText",
-      "slide": 5,
-      "shapeId": 383
-    },
-    {
-      "op": "clearText",
-      "slide": 5,
-      "shapeId": 384
-    },
-    {
-      "op": "clearText",
-      "slide": 5,
-      "shapeId": 387
-    },
-    {
-      "op": "clearText",
-      "slide": 5,
-      "shapeId": 388
-    },
-    {
-      "op": "clearTable",
-      "slide": 5,
-      "tableId": 372,
-      "slot": true
-    },
-    {
-      "op": "imageSlot",
-      "slide": 5,
-      "pictureId": 375
-    },
-    {
-      "op": "imageSlot",
-      "slide": 5,
-      "pictureId": 385
-    },
-    {
-      "op": "imageSlot",
-      "slide": 5,
-      "pictureId": 386
+      "shapeId": 388,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 391
+      "shapeId": 391,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 394
+      "shapeId": 394,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 395
+      "shapeId": 395,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 397
+      "shapeId": 397,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 398
+      "shapeId": 398,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 401
+      "shapeId": 401,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 404
+      "shapeId": 404,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 407
+      "shapeId": 407,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 410
+      "shapeId": 410,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 413
+      "shapeId": 413,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 6,
-      "shapeId": 415
+      "shapeId": 415,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "imageSlot",
@@ -493,52 +352,62 @@
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 418
+      "shapeId": 418,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 422
+      "shapeId": 422,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 423
+      "shapeId": 423,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 425
+      "shapeId": 425,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 426
+      "shapeId": 426,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 429
+      "shapeId": 429,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 432
+      "shapeId": 432,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 434
+      "shapeId": 434,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 438
+      "shapeId": 438,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 7,
-      "shapeId": 439
+      "shapeId": 439,
+      "sample": "待填"
     },
     {
       "op": "imageSlot",
@@ -583,57 +452,68 @@
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 3
+      "shapeId": 3,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 7
+      "shapeId": 7,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 12
+      "shapeId": 12,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 13
+      "shapeId": 13,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 17
+      "shapeId": 17,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 18
+      "shapeId": 18,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 21
+      "shapeId": 21,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 22
+      "shapeId": 22,
+      "sample": "待填"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 25
+      "shapeId": 25,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 27
+      "shapeId": 27,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "clearText",
       "slide": 8,
-      "shapeId": 32
+      "shapeId": 32,
+      "sample": "示例：填写本月事实与依据"
     },
     {
       "op": "imageSlot",
@@ -654,6 +534,222 @@
       "op": "chartSlot",
       "slide": 8,
       "chartId": 4
+    },
+    {
+      "op": "selectedGameCards",
+      "slide": 4,
+      "group": "mobileTop20",
+      "sourcePath": "cn.data",
+      "idField": "game_id",
+      "nameField": "game_name",
+      "rankField": "rank",
+      "singleShiftInches": 2.45,
+      "cards": [
+        {
+          "nameId": 345,
+          "rankId": 348,
+          "objectIds": [
+            342,
+            343,
+            344,
+            345,
+            347,
+            348,
+            349,
+            350,
+            352,
+            353,
+            354,
+            355,
+            356,
+            346
+          ],
+          "pictureIds": [
+            343,
+            353,
+            354
+          ],
+          "prompts": [
+            {
+              "shapeId": 344,
+              "sample": "示例：填写本月活动名称"
+            },
+            {
+              "shapeId": 347,
+              "sample": "—"
+            },
+            {
+              "shapeId": 349,
+              "sample": "示例：填写流水与活跃变化"
+            },
+            {
+              "shapeId": 352,
+              "sample": "示例：说明活动做法与变化原因。"
+            },
+            {
+              "shapeId": 355,
+              "sample": "图片说明（待填）"
+            },
+            {
+              "shapeId": 356,
+              "sample": "图片说明（待填）"
+            }
+          ]
+        },
+        {
+          "nameId": 358,
+          "rankId": 361,
+          "objectIds": [
+            351,
+            357,
+            358,
+            360,
+            361,
+            362,
+            363,
+            364,
+            365,
+            366,
+            367,
+            368,
+            369,
+            359
+          ],
+          "pictureIds": [
+            357,
+            366,
+            367
+          ],
+          "prompts": [
+            {
+              "shapeId": 360,
+              "sample": "—"
+            },
+            {
+              "shapeId": 363,
+              "sample": "示例：说明活动做法与变化原因。"
+            },
+            {
+              "shapeId": 364,
+              "sample": "示例：填写本月活动名称"
+            },
+            {
+              "shapeId": 365,
+              "sample": "示例：填写流水与活跃变化"
+            },
+            {
+              "shapeId": 368,
+              "sample": "图片说明（待填）"
+            },
+            {
+              "shapeId": 369,
+              "sample": "图片说明（待填）"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "fillSelectedTable",
+      "slide": 5,
+      "tableId": 372,
+      "source": "mobile.cn.top100",
+      "group": "mobileTop21to100",
+      "sourcePath": "cn.data",
+      "idField": "game_id",
+      "rankField": "rank"
+    },
+    {
+      "op": "selectedGameCards",
+      "slide": 5,
+      "group": "mobileTop21to100",
+      "sourcePath": "cn.data",
+      "idField": "game_id",
+      "nameField": "game_name",
+      "rankField": "rank",
+      "cards": [
+        {
+          "nameId": 377,
+          "rankId": 380,
+          "objectIds": [
+            374,
+            375,
+            376,
+            377,
+            379,
+            380,
+            381,
+            382,
+            383,
+            384,
+            385,
+            386,
+            387,
+            378
+          ],
+          "pictureIds": [
+            375,
+            385,
+            386
+          ],
+          "prompts": [
+            {
+              "shapeId": 376,
+              "sample": "示例：填写本月活动名称"
+            },
+            {
+              "shapeId": 379,
+              "sample": "—"
+            },
+            {
+              "shapeId": 381,
+              "sample": "示例：填写流水与活跃变化"
+            },
+            {
+              "shapeId": 383,
+              "sample": "示例：说明活动做法与变化原因。"
+            },
+            {
+              "shapeId": 384,
+              "sample": "示例：补充本月观察依据。"
+            },
+            {
+              "shapeId": 387,
+              "sample": "—"
+            }
+          ]
+        }
+      ]
     }
-  ]
+  ],
+  "gameSelection": {
+    "groups": [
+      {
+        "id": "mobileTop20",
+        "title": "第4页 Top20 右侧介绍",
+        "source": "cn.data",
+        "idField": "game_id",
+        "nameField": "game_name",
+        "rankField": "rank",
+        "minRank": 1,
+        "maxRank": 20,
+        "min": 1,
+        "max": 2,
+        "layout": "two-stacked-cards"
+      },
+      {
+        "id": "mobileTop21to100",
+        "title": "第5页 21–100名重点游戏",
+        "source": "cn.data",
+        "idField": "game_id",
+        "nameField": "game_name",
+        "rankField": "rank",
+        "minRank": 21,
+        "maxRank": 100,
+        "min": 1,
+        "max": 3,
+        "layout": "three-row-table-and-feature"
+      }
+    ]
+  }
 }

@@ -76,7 +76,8 @@ function renderSelection(){
     const chosen=state.selectionDraft[group.id]||[],byId=new Map(group.candidates.map(game=>[String(game.id),game]));
     const options=group.candidates.map(game=>`<label class="selection-option"><input type="checkbox" data-group="${esc(group.id)}" data-game="${esc(game.id)}" ${chosen.some(id=>String(id)===String(game.id))?'checked':''}><span>${game.rank!=null?`#${esc(game.rank)} `:''}${esc(game.name)}${game.recommended?' · 默认推荐':''}</span></label>`).join('');
     const ordered=chosen.map((id,index)=>{const game=byId.get(String(id));return game?`<span class="tag gray">${index+1}. ${esc(game.name)} <button type="button" data-order="up" data-group="${esc(group.id)}" data-index="${index}" aria-label="上移">↑</button><button type="button" data-order="down" data-group="${esc(group.id)}" data-index="${index}" aria-label="下移">↓</button></span>`:''}).join('');
-    return `<div class="selection-group"><strong>${esc(group.title)}</strong><div class="selection-note">选 ${group.min}–${group.max} 款；榜单仍完整保留。当前 ${chosen.length} 款，双列 ${Math.ceil(chosen.length/2)} 行。</div><div class="selection-order">${ordered||'尚未选取'}</div><div class="selection-list">${options}</div></div>`;
+    const layout={"two-column-cards":`双列 ${Math.ceil(chosen.length/2)} 行`,"two-stacked-cards":`${chosen.length} 个介绍卡片`,"three-row-table-and-feature":`${chosen.length} 行表格，首款展示右侧案例`,"three-observations":`${chosen.length} 条榜单观察`}[group.layout]||`${chosen.length} 款`;
+    return `<div class="selection-group"><strong>${esc(group.title)}</strong><div class="selection-note">选 ${group.min}–${group.max} 款；榜单仍完整保留。当前 ${layout}。</div><div class="selection-order">${ordered||'尚未选取'}</div><div class="selection-list">${options}</div></div>`;
   }).join('');
   $('selectionState').textContent=state.selectionConfirmed?'已确认；可生成草稿':'选择变化后请重新确认';
 }

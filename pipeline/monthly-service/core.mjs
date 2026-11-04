@@ -499,10 +499,13 @@ export function createCore(config) {
       if(!Array.isArray(source))throw new ServiceError(`介绍游戏候选榜单不存在：${group.source}`,400);
       const recommended=new Set(Array.isArray(defaults)?defaults.map(item=>String(item?.[group.idField])):[]);
       const seen=new Set(),candidates=[];
-      for(const item of source){
+      for(const [index,item] of source.entries()){
         const id=item?.[group.idField],name=item?.[group.nameField];
+        const rank=Number(item?.[group.rankField]??index+1);
+        if((group.minRank!=null&&(!Number.isFinite(rank)||rank<Number(group.minRank)))||
+           (group.maxRank!=null&&(!Number.isFinite(rank)||rank>Number(group.maxRank))))continue;
         if((typeof id!=='number'&&typeof id!=='string')||!String(name||'').trim()||seen.has(String(id)))continue;
-        seen.add(String(id));candidates.push({id,name:String(name),rank:item?.[group.rankField]??null,
+        seen.add(String(id));candidates.push({id,name:String(name),rank,
           recommended:recommended.has(String(id)),revenueGrowth:item?.revenue_growth??null,rankChange:item?.rank_delta??null});
       }
       return {id:group.id,title:group.title,min:Math.max(0,Number(group.min)||0),max:Math.min(8,Math.max(1,Number(group.max)||6)),layout:group.layout||'cards',candidates};

@@ -57,6 +57,25 @@ test('game introduction candidates require an explicit selection from the same m
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
+test('mobile page groups constrain candidates to Top20 and ranks 21–100',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'ppt-mobile-game-selection-'));
+  try{
+    const core=createCore({dataDir:path.join(root,'data'),publicUrl:'http://127.0.0.1:4320'});
+    const groups=[{id:'top20',title:'第4页',source:'cn.data',idField:'game_id',nameField:'game_name',rankField:'rank',minRank:1,maxRank:20,min:1,max:2},
+      {id:'tail',title:'第5页',source:'cn.data',idField:'game_id',nameField:'game_name',rankField:'rank',minRank:21,maxRank:100,min:1,max:3}];
+    core.db.pptTemplates.example={id:'example',title:'Mobile',revision:1,published:{mapping:{dataSource:'mobile-cn-monthly',gameSelection:{groups}},sourcePptx:{sha256:'x'}}};
+    const data={month:'2026-09',cn:{meta:{month:'2026-09',market:'cn',ranking_metric:'revenue',snapshot:{id:2,version:1,frozen_at:'2026-10-01'}},
+      data:Array.from({length:101},(_,i)=>({game_id:`g${i+1}`,game_name:`Game ${i+1}`,rank:i+1}))}};
+    const preview=await core.call('prepare_ppt_game_selection',{templateId:'example',month:'2026-09',data});
+    assert.equal(preview.groups[0].candidates.length,20);
+    assert.equal(preview.groups[1].candidates.length,80);
+    assert.equal(preview.groups[1].candidates[0].rank,21);
+    assert.equal(preview.groups[1].candidates.at(-1).rank,100);
+    await assert.rejects(core.call('generate_ppt',{templateId:'example',month:'2026-09',data,
+      selection:{top20:['g1'],tail:['g20']},selectionSnapshot:preview.snapshot,selectionTemplateRevision:1}),/不在当前榜单/);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
 test('generate_ppt fetches the minigame export for the month and refuses an unfinished month',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'ppt-fetch-'));
   const asked=[];let complete=false;

@@ -76,7 +76,21 @@ def patch_cell(slide_xml: bytes, table_id: int, row: int, column: int, expected:
                 if value == old:
                     return data
                 if not text_runs:
-                    raise ValueError("Cell has no editable text run")
+                    # Some source tables leave a cell truly empty. Add a native run
+                    # using its paragraph end style so the new value stays editable.
+                    end_style = re.search(rb"<a:endParaRPr\b([^>]*)>(.*?)</a:endParaRPr>|<a:endParaRPr\b([^>]*)/>", data, re.DOTALL)
+                    if end_style:
+                        attrs = end_style.group(1) if end_style.group(1) is not None else end_style.group(3)
+                        children = end_style.group(2) or b""
+                        style = b"<a:rPr" + attrs + b">" + children + b"</a:rPr>"
+                    else:
+                        style = b'<a:rPr lang="zh-CN" dirty="0"/>'
+                    run = b"<a:r>" + style + b"<a:t>" + html.escape(value, quote=False).encode("utf-8") + b"</a:t></a:r>"
+                    if end_style:
+                        return data[:end_style.start()] + run + data[end_style.start():]
+                    if b"</a:p>" not in data:
+                        raise ValueError("Cell has no editable paragraph")
+                    return data.replace(b"</a:p>", run + b"</a:p>", 1)
                 encoded = html.escape(value, quote=False).encode("utf-8")
                 for i, match in reversed(list(enumerate(text_runs))):
                     start, end = match.span()
@@ -404,7 +418,7 @@ def picture_to_chart(slide_xml: bytes, rels_xml: bytes, picture_id: int, chart_t
 def move_object(slide_xml: bytes, object_id: int, dx: int, dy: int):
     """Shift one native shape or picture without changing its text or editable geometry."""
     marker = rb'<p:cNvPr\b[^>]*\bid="' + str(object_id).encode() + rb'"'
-    found = [match for tag in (rb"sp", rb"pic")
+    found = [match for tag in (rb"sp", rb"pic", rb"cxnSp")
              for match in re.finditer(rb"<p:" + tag + rb"\b[^>]*>.*?</p:" + tag + rb">", slide_xml, re.DOTALL)
              if re.search(marker, match.group()) and len(re.findall(rb"<p:cNvPr\b", match.group())) == 1]
     if len(found) != 1:
@@ -477,7 +491,36 @@ def table_fill_span(cell: bytes):
     return properties, (inner_start + last, inner_start + last)
 
 
-def set_row_fills(slide_xml: bytes, table_id: int, first_row: int, flags: list, color: str):
+def color_table_row_runs(row: bytes, color: str, bold=None):
+    fill = b'<a:solidFill><a:srgbClr val="' + color.upper().encode() + b'"/></a:solidFill>'
+    def weight(style):
+        if bold is None:
+            return style
+        opening = re.search(rb'<a:rPr\b[^>]*', style)
+        if not opening:
+            return style
+        value = b'1' if bold else b'0'
+        changed = re.sub(rb'\s+b="[01]"', b' b="' + value + b'"', opening.group())
+        if b' b="' not in changed:
+            changed += b' b="' + value + b'"'
+        return style[:opening.start()] + changed + style[opening.end():]
+    def patch_run(match):
+        run = match.group()
+        props = re.search(rb'<a:rPr\b[^>]*?(?:/>|>.*?</a:rPr>)', run, re.DOTALL)
+        if props:
+            original = props.group()
+            if original.endswith(b'/>'):
+                updated = original[:-2] + b'>' + fill + b'</a:rPr>'
+            else:
+                updated = re.sub(rb'<a:solidFill>.*?</a:solidFill>', b'', original, flags=re.DOTALL)
+                updated = updated.replace(b'</a:rPr>', fill + b'</a:rPr>', 1)
+            return run[:props.start()] + weight(updated) + run[props.end():]
+        return run.replace(b'<a:r>', b'<a:r><a:rPr b="' + (b'1' if bold else b'0') + b'">' + fill + b'</a:rPr>', 1)
+    return re.sub(rb'<a:r\b[^>]*>.*?</a:r>', patch_run, row, flags=re.DOTALL)
+
+
+def set_row_fills(slide_xml: bytes, table_id: int, first_row: int, flags: list, color: str,
+                  reset_color=None, text_color=None, reset_text_color=None):
     """Mark selected data rows with the highlight colour and reset the others."""
     frames = list(re.finditer(rb"<p:graphicFrame\b[^>]*>.*?</p:graphicFrame>", slide_xml, re.DOTALL))
     matches = [match for match in frames if re.search(rb'<p:cNvPr\b[^>]*\bid="' + str(table_id).encode() + rb'"', match.group())]
@@ -496,7 +539,7 @@ def set_row_fills(slide_xml: bytes, table_id: int, first_row: int, flags: list, 
                 fill = cell.group()[span[1][0]:span[1][1]]
                 if color.upper().encode() not in fill.upper():
                     normal = normal or fill
-    normal = normal or b"<a:noFill/>"
+    normal = (b'<a:solidFill><a:srgbClr val="' + reset_color.upper().encode() + b'"/></a:solidFill>') if reset_color else (normal or b"<a:noFill/>")
     for index in reversed(range(len(flags))):
         row = rows[first_row + index]
         updated = row.group()
@@ -512,6 +555,9 @@ def set_row_fills(slide_xml: bytes, table_id: int, first_row: int, flags: list, 
             else:
                 text = text[:span[1][0]] + value + text[span[1][1]:]
             updated = updated[:cell.start()] + text + updated[cell.end():]
+        run_color = text_color if flags[index] else reset_text_color
+        if run_color:
+            updated = color_table_row_runs(updated, run_color, flags[index])
         frame = frame[:row.start()] + updated + frame[row.end():]
     return slide_xml[:matches[0].start()] + frame + slide_xml[matches[0].end():]
 
@@ -649,7 +695,8 @@ def main():
                     b'<Relationship Id="rId1" Type="' + PACKAGE_REL + b'" Target="../embeddings/' + book.encode() + b'"/></Relationships>')
                 added[f"ppt/embeddings/{book}"] = base64.b64decode(item["workbook"])
             elif item.get("kind") == "tableFills":
-                changed[name] = set_row_fills(data, int(item["tableId"]), int(item["firstRow"]), item["flags"], item["color"])
+                changed[name] = set_row_fills(data, int(item["tableId"]), int(item["firstRow"]), item["flags"], item["color"],
+                                              item.get("resetColor"), item.get("textColor"), item.get("resetTextColor"))
             elif item.get("kind") == "shapeRunStyle":
                 changed[name] = set_run_style(data, int(item["shapeId"]), item["style"], item.get("paragraph"))
             elif item.get("kind") == "hideShapeFill":

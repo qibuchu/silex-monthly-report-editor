@@ -24,7 +24,7 @@ button,.button{font:inherit;padding:7px 16px;border-radius:6px;border:1px solid 
 button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 button:disabled{opacity:.55;cursor:not-allowed}
 .selection-panel{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#fff}
-.selection-panel h3{margin:0 0 6px}.selection-group{margin-top:14px}.selection-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 14px;margin-top:8px}
+.selection-panel h3{margin:0 0 6px}.selection-group{margin-top:14px}.selection-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 14px;margin-top:8px;max-height:300px;overflow:auto}
 .selection-option{display:flex;gap:7px;align-items:flex-start;padding:5px 7px;border:1px solid var(--line);border-radius:5px}.selection-option input{min-width:0;margin-top:4px}
 .selection-order{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}.selection-order button{padding:1px 6px}.selection-note{font-size:12px;color:var(--muted)}
 .small{padding:4px 11px;font-size:13px}
@@ -60,7 +60,7 @@ ul.notes{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
       <button id="readCandidates" hidden>读取候选游戏</button>
       <button class="primary" id="generate">生成 PPT</button>
     </div>
-    <div class="selection-panel" id="selectionPanel" hidden><h3>确认入选游戏</h3><p class="selection-note">默认勾选来自模板规则，可增删并调整介绍顺序。确认后将按数量使用对应卡片行数。</p><div id="selectionGroups"></div><div class="actions"><button id="confirmSelection">确认这些游戏</button><span id="selectionState" class="selection-note"></span></div></div>
+    <div class="selection-panel" id="selectionPanel" hidden><h3>确认入选游戏</h3><p class="selection-note">如模板有默认规则，会预先勾选；也可手动增删和调整介绍顺序。确认后按入选数量安排页面。</p><div id="selectionGroups"></div><div class="actions"><button id="confirmSelection">确认这些游戏</button><span id="selectionState" class="selection-note"></span></div></div>
     <div class="status" id="genStatus"></div>
   </section>
 

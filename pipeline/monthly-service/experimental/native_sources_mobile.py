@@ -37,7 +37,7 @@ def percent(value):
     return ("+" if number > 0 else "") + str(number) + "%"
 
 
-def board(market):
+def board(market, limit=20):
     def build(data, extras):
         package = data[market]
         games = sorted(package["data"], key=lambda row: int(row["rank"]))
@@ -45,7 +45,7 @@ def board(market):
         rows = []
         if not package["data"]:
             issues.append({"field": f"{market}.top20", "reason": "frozen_snapshot_missing"})
-        for game in games[:20]:
+        for game in games[:limit]:
             if not game.get("game_name"):
                 raise ValueError(f"{market} rank {game.get('rank')} has no name")
             missing = [name for name in ("publisher", "genre", "rank_change") if game.get(name) is None]
@@ -55,7 +55,7 @@ def board(market):
             rank_change = "" if change is None else "-" if change == 0 else f"{change:+d}"
             rows.append([str(game["rank"]), game["game_name"], game.get("publisher") or "",
                          game.get("genre") or "", rank_change, percent(game.get("revenue_growth_pct"))])
-        rows.extend([["", "", "", "", "", ""] for _ in range(20 - len(rows))])
+        rows.extend([["", "", "", "", "", ""] for _ in range(limit - len(rows))])
         return rows, issues
     return build
 
@@ -207,7 +207,7 @@ def cn_contract(data, extras):
 
 
 MOBILE_CN = {**MOBILE, "contract": cn_contract,
-             "tables": {"mobile.cn": board("cn"),
+             "tables": {"mobile.cn": board("cn"), "mobile.cn.top100": board("cn", 100),
                         "mobile.cn.h1.top20": period_board("top20"),
                         "mobile.cn.h1.rise": period_board("rise"),
                         "mobile.cn.h1.decline": period_board("decline")},

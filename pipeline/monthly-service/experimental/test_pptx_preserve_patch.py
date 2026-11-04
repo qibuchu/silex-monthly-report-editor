@@ -40,6 +40,14 @@ class PreservePatchTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'missing or ambiguous'):
             patch_cell(XML, 8, 1, 0, 'CS2', 'new')
 
+    def test_blank_template_cell_becomes_editable_native_text(self):
+        source = XML.replace(b'<a:r><a:t>CS</a:t></a:r><a:r><a:t>2</a:t></a:r>',
+                             b'<a:p><a:endParaRPr lang="zh-CN" sz="1200"/></a:p>')
+        result = patch_cell(source, 9, 1, 0, '', '新游戏')
+        self.assertIn(b'<a:rPr lang="zh-CN" sz="1200">', result)
+        self.assertEqual(table_values(result.replace(b'<a:tbl>', b'<a:graphic><a:graphicData><a:tbl>')
+                                      .replace(b'</a:tbl>', b'</a:tbl></a:graphicData></a:graphic>'), 9)[1][0], '新游戏')
+
     def test_fills_native_table_and_clears_remaining_old_rows(self):
         result = patch_table(TABLE_XML, 9, 0, ['header'], [['新游戏']], new_header=['新表头'])
         self.assertEqual(table_values(result, 9), [['新表头'], ['新游戏'], ['']])

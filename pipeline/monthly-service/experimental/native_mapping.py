@@ -24,7 +24,7 @@ FORMAT = "native-pptx-mapping-v1"
 NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
-OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable", "featuredGames",
+OPS = {"fillTable", "fillSelectedTable", "selectedGameCards", "selectedObservations", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable", "featuredGames",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
        "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength", "trendChart", "dataChart", "growthArrow"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME, "mobile-monthly": MOBILE,
@@ -211,14 +211,25 @@ class Compiler:
         highlight = op.get("highlight")
         if highlight:
             source = highlight.get("source")
-            if source and source not in self.source["highlights"]:
+            if highlight.get("selectionGroup"):
+                group = highlight["selectionGroup"]
+                chosen = set(map(str, (self.extras.get("selection") or {}).get(group) or []))
+                items = self.data
+                for segment in highlight["sourcePath"].split("."):
+                    items = items.get(segment) if isinstance(items, dict) else None
+                keys = {str(item.get(highlight["nameField"])) for item in items or []
+                        if str(item.get(highlight["idField"])) in chosen}
+            elif source and source not in self.source["highlights"]:
                 self.problem(op, f"未知高亮数据 {source}")
+                keys = set()
             else:
                 keys = self.source["highlights"][source](self.data, self.extras) if source else set()
-                column = int(highlight.get("keyColumn", 0))
-                self.replacements.append({"kind": "tableFills", "slide": op["slide"], "tableId": op["tableId"],
-                                          "firstRow": header_row + 1, "color": highlight.get("color", "FAF3E3"),
-                                          "flags": [row[column] in keys for row in portion]})
+            column = int(highlight.get("keyColumn", 0))
+            self.replacements.append({"kind": "tableFills", "slide": op["slide"], "tableId": op["tableId"],
+                                      "firstRow": header_row + 1, "color": highlight.get("color", "FAF3E3"),
+                                      "resetColor": highlight.get("resetColor"),
+                                      "textColor": highlight.get("textColor"), "resetTextColor": highlight.get("resetTextColor"),
+                                      "flags": [row[column] in keys for row in portion]})
         if op.get("trim"):
             self.replacements.append({"kind": "trimTable", "slide": op["slide"], "tableId": op["tableId"],
                                       "keepRows": max(2, header_row + 1 + len(portion))})
@@ -253,15 +264,109 @@ class Compiler:
         current = self.shape(op)
         if current is None:
             return
+        sample = op.get("sample", "")
         if not current:
             # Already blank (e.g. a template saved from a draft): still a slot to fill.
             if op.get("slot", True):
                 self.slots.append({"slide": op["slide"], "objectId": op["shapeId"], "type": "text"})
+            if sample:
+                self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": op["shapeId"],
+                                          "expectedText": "", "value": sample})
             return
         self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": op["shapeId"],
-                                  "expectedText": current, "value": ""})
+                                  "expectedText": current, "value": sample})
         if op.get("slot", True):
             self.slots.append({"slide": op["slide"], "objectId": op["shapeId"], "type": "text"})
+
+    def selected_games(self, op):
+        items = self.data
+        for segment in op["sourcePath"].split("."):
+            items = items.get(segment) if isinstance(items, dict) else None
+        if not isinstance(items, list):
+            self.problem(op, f"入选游戏候选不存在：{op['sourcePath']}")
+            return []
+        by_id = {str(item.get(op["idField"])): item for item in items}
+        ids = (self.extras.get("selection") or {}).get(op["group"]) or []
+        return [by_id[str(game_id)] for game_id in ids if str(game_id) in by_id]
+
+    def selected_text(self, op, shape_id, value, slot_type="text"):
+        current = self.shape({**op, "shapeId": shape_id})
+        if current is not None:
+            self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": shape_id,
+                                      "expectedText": current, "value": str(value)})
+            self.slots.append({"slide": op["slide"], "objectId": shape_id, "type": slot_type})
+
+    def do_fillSelectedTable(self, op):
+        """Fill a compact editable table with selected rows from a larger frozen board."""
+        games = self.selected_games(op)
+        rows = self.rows(op)
+        table = self.table(op)
+        if rows is None or table is None:
+            return
+        capacity = len(table) - 1
+        if len(games) > capacity:
+            self.problem(op, f"表格只能容纳 {capacity} 款入选游戏")
+        selected = []
+        for game in games[:capacity]:
+            rank = int(game.get(op["rankField"], 0))
+            if rank < 1 or rank > len(rows):
+                self.problem(op, f"入选游戏排名 {rank} 超出榜单")
+                continue
+            selected.append(rows[rank - 1])
+        selected.extend([[""] * len(table[0]) for _ in range(capacity - len(selected))])
+        self.replacements.append({"kind": "table", "slide": op["slide"], "tableId": op["tableId"],
+                                  "headerRow": 0, "expectedHeader": table[0], "rows": selected})
+        self.replacements.append({"kind": "tableFills", "slide": op["slide"], "tableId": op["tableId"],
+                                  "firstRow": 1, "color": op.get("highlightColor", "FFF1D6"), "resetColor": "FFFFFF",
+                                  "textColor": "C9912F", "resetTextColor": "202020",
+                                  "flags": [index < len(games) for index in range(capacity)]})
+
+    def do_selectedGameCards(self, op):
+        """Keep original editable card objects while replacing old-month content."""
+        games = self.selected_games(op)
+        cards = op["cards"]
+        for index, card in enumerate(cards):
+            object_ids = card.get("objectIds") or []
+            if index >= len(games):
+                for object_id in object_ids:
+                    self.removed.append((op["slide"], object_id))
+                    self.replacements.append({"kind": "removeObject", "slide": op["slide"], "objectId": object_id})
+                continue
+            game = games[index]
+            self.selected_text(op, card["nameId"], game.get(op["nameField"]) or "游戏名称", "selected-game-name")
+            if card.get("rankId"):
+                self.selected_text(op, card["rankId"], game.get(op["rankField"]) or "—", "selected-game-rank")
+            for item in card.get("prompts") or []:
+                self.selected_text(op, item["shapeId"], item["sample"])
+            for picture_id in card.get("pictureIds") or []:
+                self.do_imageSlot({"op": "imageSlot", "slide": op["slide"], "pictureId": picture_id})
+            if len(games) == 1 and len(cards) > 1:
+                dy = int(float(op.get("singleShiftInches", 0)) * 914400)
+                for object_id in object_ids:
+                    self.replacements.append({"kind": "moveObject", "slide": op["slide"], "objectId": object_id,
+                                              "dx": 0, "dy": dy})
+
+    def do_selectedObservations(self, op):
+        games = self.selected_games(op)
+        slots = op["slots"]
+        for index, card in enumerate(slots):
+            ids = [card["badgeId"], card["titleId"], card["bodyId"]]
+            if index >= len(games):
+                for object_id in ids:
+                    self.removed.append((op["slide"], object_id))
+                    self.replacements.append({"kind": "removeObject", "slide": op["slide"], "objectId": object_id})
+                continue
+            game = games[index]
+            name = game.get(op["nameField"]) or "游戏"
+            self.selected_text(op, card["titleId"], f"《{name}》：请填写榜单观察", "selected-game-title")
+            self.selected_text(op, card["bodyId"], "示例：结合本月排名、变化及活动信息，填写观察与依据。")
+            self.selected_text(op, card["badgeId"], f"{index+1:02d}")
+            # Keep the original three-position rhythm while centering shorter lists.
+            dy = int((3 - len(games)) * (0.55 if index == 0 else 0.28) * 914400)
+            if dy:
+                for object_id in ids:
+                    self.replacements.append({"kind": "moveObject", "slide": op["slide"], "objectId": object_id,
+                                              "dx": 0, "dy": dy})
 
     def do_featuredGames(self, op):
         """Fill confirmed game names; unused cards are removed from the editable slide."""
@@ -285,8 +390,14 @@ class Compiler:
                 continue
             if index < len(chosen):
                 name = chosen[index].get("name") or chosen[index].get("game_name") or ""
-                self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": shape_id,
-                                          "expectedText": texts[shape_id], "value": name})
+                runs = shape_runs(xml, shape_id)
+                if runs and len(runs) > 1:
+                    values = [name] + [""] * (len(runs) - 2) + ["• 示例：填写本月活动与营收变化原因。"]
+                    self.replacements.append({"kind": "shapeRuns", "slide": op["slide"], "shapeId": shape_id,
+                                              "expectedRuns": runs, "values": values})
+                else:
+                    self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": shape_id,
+                                              "expectedText": texts[shape_id], "value": name})
                 self.replacements.append({"kind": "pictureSlot", "slide": op["slide"], "pictureId": picture_id})
                 rows = (len(chosen) + 1) // 2
                 dx = int(2.25 * 914400) if len(chosen) % 2 and index == len(chosen) - 1 else 0
@@ -726,6 +837,14 @@ def check_mapping(mapping, template):
                         problems.append({"op": op["op"], "slide": op["slide"], "object": card.get("shapeId"), "reason": "介绍文字对象不存在"})
                     if card.get("pictureId") not in pictures:
                         problems.append({"op": op["op"], "slide": op["slide"], "object": card.get("pictureId"), "reason": "介绍图片对象不存在"})
+            if op["op"] in ("selectedGameCards", "selectedObservations"):
+                present = (object_ids(xml, "sp", "nvSpPr") | object_ids(xml, "pic", "nvPicPr") |
+                           object_ids(xml, "cxnSp", "nvCxnSpPr"))
+                for card in op.get("cards", op.get("slots", [])):
+                    required = card.get("objectIds", []) if op["op"] == "selectedGameCards" else [card["badgeId"], card["titleId"], card["bodyId"]]
+                    for object_id in required:
+                        if object_id not in present:
+                            problems.append({"op": op["op"], "slide": op["slide"], "object": object_id, "reason": "入选游戏对象不存在"})
             if "chartId" in op and op["chartId"] not in object_ids(xml, "graphicFrame", "nvGraphicFramePr"):
                 problems.append({"op": op["op"], "slide": op["slide"], "object": op["chartId"], "reason": "图表对象不存在"})
             if "tableId" in op:

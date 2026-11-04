@@ -42,7 +42,8 @@
   {
    "op": "clearText",
    "slide": 2,
-   "shapeId": 113
+   "shapeId": 113,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "replaceFragment",
@@ -68,12 +69,14 @@
   {
    "op": "clearText",
    "slide": 2,
-   "shapeId": 31
+   "shapeId": 31,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 2,
-   "shapeId": 125
+   "shapeId": 125,
+   "sample": "待填"
   },
   {
    "op": "setRuns",
@@ -112,12 +115,14 @@
   {
    "op": "clearText",
    "slide": 2,
-   "shapeId": 44
+   "shapeId": 44,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 2,
-   "shapeId": 127
+   "shapeId": 127,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "replaceFragment",
@@ -183,7 +188,8 @@
   {
    "op": "clearText",
    "slide": 3,
-   "shapeId": 273
+   "shapeId": 273,
+   "sample": "示例：概述本月榜单变化及重点观察。"
   },
   {
    "op": "fillGrid",
@@ -218,37 +224,8 @@
   {
    "op": "clearText",
    "slide": 3,
-   "shapeId": 13
-  },
-  {
-   "op": "clearText",
-   "slide": 3,
-   "shapeId": 15
-  },
-  {
-   "op": "clearText",
-   "slide": 3,
-   "shapeId": 17
-  },
-  {
-   "op": "clearText",
-   "slide": 3,
-   "shapeId": 4
-  },
-  {
-   "op": "clearText",
-   "slide": 3,
-   "shapeId": 115
-  },
-  {
-   "op": "clearText",
-   "slide": 3,
-   "shapeId": 117
-  },
-  {
-   "op": "clearText",
-   "slide": 3,
-   "shapeId": 156
+   "shapeId": 156,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "replaceFragment",
@@ -260,7 +237,8 @@
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 10
+   "shapeId": 10,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "fillShapes",
@@ -293,62 +271,74 @@
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 27
+   "shapeId": 27,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 83
+   "shapeId": 83,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 87
+   "shapeId": 87,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 91
+   "shapeId": 91,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 118
+   "shapeId": 118,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 159
+   "shapeId": 159,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 167
+   "shapeId": 167,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 176
+   "shapeId": 176,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 214
+   "shapeId": 214,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 283
+   "shapeId": 283,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 291
+   "shapeId": 291,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 4,
-   "shapeId": 303
+   "shapeId": 303,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearRegion",
@@ -371,7 +361,8 @@
   {
    "op": "clearText",
    "slide": 5,
-   "shapeId": 381
+   "shapeId": 381,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "nativeChart",
@@ -383,32 +374,38 @@
   {
    "op": "clearText",
    "slide": 5,
-   "shapeId": 5
+   "shapeId": 5,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 5,
-   "shapeId": 7
+   "shapeId": 7,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 5,
-   "shapeId": 9
+   "shapeId": 9,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 5,
-   "shapeId": 11
+   "shapeId": 11,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 5,
-   "shapeId": 17
+   "shapeId": 17,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 5,
-   "shapeId": 21
+   "shapeId": 21,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "replaceFragment",
@@ -420,7 +417,8 @@
   {
    "op": "clearText",
    "slide": 6,
-   "shapeId": 600
+   "shapeId": 600,
+   "sample": "示例：概述本月榜单变化及重点观察。"
   },
   {
    "op": "fillGrid",
@@ -453,36 +451,6 @@
    "uniformStyle": true
   },
   {
-   "op": "clearText",
-   "slide": 6,
-   "shapeId": 33
-  },
-  {
-   "op": "clearText",
-   "slide": 6,
-   "shapeId": 37
-  },
-  {
-   "op": "clearText",
-   "slide": 6,
-   "shapeId": 47
-  },
-  {
-   "op": "clearText",
-   "slide": 6,
-   "shapeId": 55
-  },
-  {
-   "op": "clearText",
-   "slide": 6,
-   "shapeId": 456
-  },
-  {
-   "op": "clearText",
-   "slide": 6,
-   "shapeId": 458
-  },
-  {
    "op": "replaceFragment",
    "slide": 7,
    "shapeId": 281,
@@ -492,7 +460,8 @@
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 282
+   "shapeId": 282,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "fillShapes",
@@ -525,62 +494,74 @@
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 369
+   "shapeId": 369,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 383
+   "shapeId": 383,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 2
+   "shapeId": 2,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 5
+   "shapeId": 5,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 14
+   "shapeId": 14,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 25
+   "shapeId": 25,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 26
+   "shapeId": 26,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 28
+   "shapeId": 28,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 44
+   "shapeId": 44,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 264
+   "shapeId": 264,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 266
+   "shapeId": 266,
+   "sample": "待填"
   },
   {
    "op": "clearText",
    "slide": 7,
-   "shapeId": 268
+   "shapeId": 268,
+   "sample": "示例：填写本月事实与依据"
   },
   {
    "op": "clearRegion",
@@ -592,6 +573,82 @@
     690
    ],
    "texts": false
+  },
+  {
+   "op": "selectedObservations",
+   "slide": 3,
+   "group": "miniIapObserve",
+   "sourcePath": "bestseller",
+   "idField": "game_id",
+   "nameField": "game_name",
+   "slots": [
+    {
+     "badgeId": 7,
+     "titleId": 15,
+     "bodyId": 4
+    },
+    {
+     "badgeId": 11,
+     "titleId": 17,
+     "bodyId": 13
+    },
+    {
+     "badgeId": 113,
+     "titleId": 117,
+     "bodyId": 115
+    }
+   ]
+  },
+  {
+   "op": "selectedObservations",
+   "slide": 6,
+   "group": "miniIaaObserve",
+   "sourcePath": "most_played",
+   "idField": "game_id",
+   "nameField": "game_name",
+   "slots": [
+    {
+     "badgeId": 21,
+     "titleId": 33,
+     "bodyId": 37
+    },
+    {
+     "badgeId": 42,
+     "titleId": 47,
+     "bodyId": 55
+    },
+    {
+     "badgeId": 454,
+     "titleId": 458,
+     "bodyId": 456
+    }
+   ]
   }
- ]
+ ],
+ "gameSelection": {
+  "groups": [
+   {
+    "id": "miniIapObserve",
+    "title": "第3页 畅销榜观察",
+    "source": "bestseller",
+    "idField": "game_id",
+    "nameField": "game_name",
+    "rankField": "rank",
+    "min": 1,
+    "max": 3,
+    "layout": "three-observations"
+   },
+   {
+    "id": "miniIaaObserve",
+    "title": "第6页 畅玩榜观察",
+    "source": "most_played",
+    "idField": "game_id",
+    "nameField": "game_name",
+    "rankField": "rank",
+    "min": 1,
+    "max": 3,
+    "layout": "three-observations"
+   }
+  ]
+ }
 }
