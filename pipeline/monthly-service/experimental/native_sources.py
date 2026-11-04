@@ -32,7 +32,9 @@ def check_contract(data, audit):
 def month_context(month):
     year, number = map(int, month.split("-"))
     previous = previous_month(month)
+    publication_year, publication_month = (year + 1, 1) if number == 12 else (year, number + 1)
     return {"year": str(year), "monthNumber": str(number), "yearMonthDot": month.replace("-", "."),
+            "publicationMonthDot": f"{publication_year}.{publication_month:02d}",
             "monthEnd": f"{year}.{number:02d}.{calendar.monthrange(year, number)[1]}",
             "previousMonthNumber": str(int(previous[-2:])),
             "twoMonthsAgoNumber": str(int(previous_month(previous)[-2:]))}
