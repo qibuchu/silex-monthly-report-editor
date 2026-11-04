@@ -296,6 +296,58 @@ def ads_trend_chart(months):
     return chart_space(chart), workbook(sheet)
 
 
+def new_game_daily_chart(days, ranks, materials):
+    """Editable dual-axis lines: lower rank is better; material is a daily snapshot count."""
+    count = len(days)
+    sheet = [["日期", "排名", "素材数"]] + [[day, rank, material] for day, rank, material in zip(days, ranks, materials)]
+    categories = f'<c:cat>{string_ref(0, 2, days)}</c:cat>'
+    rank_values = [value for value in ranks if value is not None]
+    material_values = [value for value in materials if value is not None]
+    rank_min = max(1, min(rank_values, default=1) - 10)
+    rank_max = max(rank_min + 20, max(rank_values, default=100) + 10)
+    material_max, material_step = nice_axis(max(material_values, default=0), 4, 1.15)
+
+    def line(index, label, color, axis_cat, axis_val, values):
+        style = (f'<c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="{color}"/>'
+                 '</a:solidFill></a:ln></c:spPr>')
+        return (f'<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>'
+                f'<c:ser><c:idx val="{index}"/><c:order val="{index}"/>{series_name(index + 1, label)}'
+                f'{style}<c:marker><c:symbol val="circle"/><c:size val="3"/>{fill(color)}</c:marker>'
+                f'{categories}<c:val>{number_ref(index + 1, 2, values, "#,##0")}</c:val>'
+                '<c:smooth val="0"/></c:ser><c:marker val="1"/>'
+                f'<c:axId val="{axis_cat}"/><c:axId val="{axis_val}"/></c:lineChart>')
+
+    def category_axis(axis_id, cross_id, hidden=False):
+        return (f'<c:catAx><c:axId val="{axis_id}"/><c:scaling><c:orientation val="minMax"/></c:scaling>'
+                f'<c:delete val="{1 if hidden else 0}"/><c:axPos val="b"/><c:numFmt formatCode="dd" sourceLinked="0"/>'
+                '<c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>'
+                f'{text_props(550)}<c:crossAx val="{cross_id}"/><c:crosses val="max"/><c:auto val="1"/>'
+                '<c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:tickLblSkip val="5"/></c:catAx>')
+
+    def value_axis(axis_id, cross_id, top, step, reverse, right, minimum=0):
+        return (f'<c:valAx><c:axId val="{axis_id}"/><c:scaling><c:orientation val="{"maxMin" if reverse else "minMax"}"/>'
+                f'<c:max val="{top:g}"/><c:min val="{minimum:g}"/></c:scaling><c:delete val="0"/>'
+                f'<c:axPos val="{"r" if right else "l"}"/><c:numFmt formatCode="#,##0" sourceLinked="0"/>'
+                '<c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>'
+                f'{text_props(550)}<c:crossAx val="{cross_id}"/><c:crosses val="{"max" if right else "min"}"/>'
+                f'<c:crossBetween val="between"/><c:majorUnit val="{step:g}"/></c:valAx>')
+
+    layout = ('<c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="edge"/>'
+              '<c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/>'
+              '<c:x val="0.09"/><c:y val="0.18"/><c:w val="0.81"/><c:h val="0.62"/></c:manualLayout></c:layout>')
+    plot = ('<c:plotArea>' + layout
+            + line(0, "排名", "D6A03D", 3001, 3002, ranks)
+            + line(1, "素材数", "002B58", 3003, 3004, materials)
+            + category_axis(3001, 3002)
+            + value_axis(3002, 3001, rank_max, 10, True, False, rank_min)
+            + category_axis(3003, 3004, True)
+            + value_axis(3004, 3003, material_max, material_step, False, True)
+            + '</c:plotArea>')
+    legend = f'<c:legend><c:legendPos val="t"/><c:overlay val="0"/>{text_props(600)}</c:legend>'
+    chart = f'<c:chart><c:autoTitleDeleted val="1"/>{plot}{legend}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>'
+    return chart_space(chart), workbook(sheet)
+
+
 # --- page 5: top genres -------------------------------------------------------
 
 def category_chart(rows, title, note):

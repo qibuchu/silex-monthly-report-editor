@@ -9,7 +9,7 @@ import re
 from decimal import Decimal, ROUND_HALF_UP
 
 from chart_images import ads_trend
-from native_charts import ads_trend_chart, category_chart
+from native_charts import ads_trend_chart, category_chart, new_game_daily_chart
 from native_sources import previous_month
 
 
@@ -234,6 +234,34 @@ def category_top_native(data, extras, limit=10):
     return chart, book, issues
 
 
+def featured_daily_native(position):
+    def build(data, extras):
+        month = data["month"]
+        games = [game for game in (data.get("new_games") or {}).get("bestseller") or []
+                 if game.get("featured_rank") is not None]
+        games.sort(key=lambda game: game["featured_rank"])
+        game = games[position] if position < len(games) else None
+        dates = [f"{month}-{day:02d}" for day in range(1, calendar.monthrange(*map(int, month.split("-")))[1] + 1)]
+        ranks = (game or {}).get("daily_board_ranks") or {}
+        materials = (game or {}).get("daily_wechat_materials") or {}
+        issues = []
+        if game is None:
+            issues.append({"field": f"new_games.bestseller[{position}]", "reason": "featured_game_missing"})
+        elif not materials:
+            issues.append({"field": f"new_games.bestseller[{position}].daily_wechat_materials",
+                           "reason": "daily_materials_missing"})
+        for name, source in (("daily_board_ranks", ranks), ("daily_wechat_materials", materials)):
+            missing = [date for date in dates if source.get(date) is None]
+            if missing:
+                issues.append({"field": f"new_games.bestseller[{position}].{name}",
+                               "reason": "daily_values_missing", "missingDays": missing})
+        chart, book = new_game_daily_chart([date[-2:] for date in dates],
+                                           [ranks.get(date) for date in dates],
+                                           [materials.get(date) for date in dates])
+        return chart, book, issues
+    return build
+
+
 MINIGAME = {"contract": contract,
             "tables": {"minigame.bestseller": board_rows("bestseller"),
                        "minigame.most_played": board_rows("most_played"),
@@ -241,5 +269,6 @@ MINIGAME = {"contract": contract,
                        "minigame.featured.most_played": featured_rows("most_played")},
             "highlights": {}, "values": values, "numbers": numbers, "market": None, "marketIssues": [],
             "images": {"minigame.adsTrend": ads_trend_image},
-            "charts": {"minigame.adsTrend": ads_trend_native, "minigame.categoryTop": category_top_native},
-            "warning": "MAU、榜单观察、品类分析、新游介绍和图片需人工或AI补齐；买量趋势图和品类分布图已按数据生成为 PowerPoint 原生图表。"}
+            "charts": {"minigame.adsTrend": ads_trend_native, "minigame.categoryTop": category_top_native,
+                       **{f"minigame.featuredDaily.{index + 1}": featured_daily_native(index) for index in range(3)}},
+            "warning": "MAU、榜单观察、品类分析、新游介绍和游戏图片需人工或AI补齐；买量趋势、品类分布和第4页新游逐日排名/素材数生成 PowerPoint 原生图表。"}

@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
-from native_charts import ads_trend_chart, category_chart, preview_svg, workbook
+from native_charts import ads_trend_chart, category_chart, new_game_daily_chart, preview_svg, workbook
 from native_mapping import compile_mapping
 from native_sources_minigame import category_top_native
 from native_writeback import extract
@@ -36,6 +36,20 @@ class WorkbookTests(unittest.TestCase):
         for name in book.namelist():
             ElementTree.fromstring(book.read(name))
         self.assertEqual(workbook([["a", 1]]), workbook([["a", 1]]))
+
+
+class NewGameDailyChartTests(unittest.TestCase):
+    def test_rank_and_material_are_separate_editable_series_with_missing_days(self):
+        chart, book = new_game_daily_chart(["01", "02", "03"], [49, None, 42], [0, None, 1200])
+        root = ElementTree.fromstring(chart)
+        self.assertEqual(len(list(root.iter(C + "lineChart"))), 2)
+        self.assertEqual(root.find(f".//{C}dispBlanksAs").get("val"), "gap")
+        rank, material = list(root.iter(C + "ser"))
+        self.assertEqual([p.get("idx") for p in rank.find(f"{C}val/{C}numRef/{C}numCache").iter(C + "pt")], ["0", "2"])
+        self.assertEqual([p.get("idx") for p in material.find(f"{C}val/{C}numRef/{C}numCache").iter(C + "pt")], ["0", "2"])
+        sheet = zipfile.ZipFile(io.BytesIO(book)).read("xl/worksheets/sheet1.xml").decode()
+        self.assertIn('<c r="C2"><v>0</v></c>', sheet)
+        self.assertNotIn('r="C3"', sheet)
 
 
 class TrendChartTests(unittest.TestCase):
