@@ -86,6 +86,7 @@ def build(original: Path, data_file: Path, output: Path, mapping_file: Path, ext
                 "unfilledOriginalPages": [{"sourceSlide": int(slide), "reason": reason}
                                           for slide, reason in (mapping.get("pageNotes") or {}).items()],
                 "oldMonthText": scan_old_month(output, mapping, contract),
+                "gameSelection": extras.get("selection") or None,
                 "warning": compiled["warning"]}
     issues_path = output.with_suffix(".issues.json")
     issues_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -101,6 +102,7 @@ def main():
         generate.add_argument(name, type=Path)
     generate.add_argument("--audit", type=Path)
     generate.add_argument("--previous", type=Path)
+    generate.add_argument("--selection", type=Path)
     check = subcommands.add_parser("check")
     for name in ("original", "mapping"):
         check.add_argument(name, type=Path)
@@ -110,7 +112,7 @@ def main():
         print(json.dumps(check_mapping(mapping, args.original), ensure_ascii=False))
         return
     manifest, issues = build(args.original, args.data, args.output, args.mapping,
-                             {"audit": args.audit, "previous": args.previous})
+                             {"audit": args.audit, "previous": args.previous, "selection": args.selection})
     print(json.dumps({"output": str(args.output), "issuesFile": str(issues), "pages": manifest["pages"],
                       "sourceIssues": len(manifest["sourceIssues"]), "mappingIssues": len(manifest["mappingIssues"]),
                       "oldMonthShapes": len(manifest["oldMonthText"])}, ensure_ascii=False))

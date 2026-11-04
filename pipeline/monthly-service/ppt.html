@@ -23,6 +23,10 @@ input[type=file]{padding:5px;min-width:260px}
 button,.button{font:inherit;padding:7px 16px;border-radius:6px;border:1px solid #c6ced8;background:#fff;color:var(--ink);cursor:pointer;text-decoration:none;display:inline-block}
 button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 button:disabled{opacity:.55;cursor:not-allowed}
+.selection-panel{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.selection-panel h3{margin:0 0 6px}.selection-group{margin-top:14px}.selection-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 14px;margin-top:8px}
+.selection-option{display:flex;gap:7px;align-items:flex-start;padding:5px 7px;border:1px solid var(--line);border-radius:5px}.selection-option input{min-width:0;margin-top:4px}
+.selection-order{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}.selection-order button{padding:1px 6px}.selection-note{font-size:12px;color:var(--muted)}
 .small{padding:4px 11px;font-size:13px}
 .cards{display:grid;gap:12px}
 .card{border:1px solid var(--line);border-radius:8px;padding:14px 16px}
@@ -47,14 +51,16 @@ ul.notes{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
 <main>
   <section id="generate">
     <h2>生成 PPT</h2>
-    <p class="hint">选模板和月份。小游戏模板会自动从小游戏接口取当月和上月数据；Steam 模板需要上传当月数据包和时间窗口审计。</p>
+    <p class="hint">选模板和月份。配置了游戏介绍规则的模板须先读取榜单并确认入选游戏；小游戏模板自动从接口取数，Steam 模板需要上传当月数据包和时间窗口审计。</p>
     <div class="row">
       <label>模板<select id="genTemplate"></select></label>
       <label>月份<input id="genMonth" type="month"></label>
       <label id="dataLabel" hidden>当月数据包 JSON<input id="genData" type="file" accept=".json,application/json"></label>
       <label id="auditLabel" hidden>时间窗口审计 JSON<input id="genAudit" type="file" accept=".json,application/json"></label>
+      <button id="readCandidates" hidden>读取候选游戏</button>
       <button class="primary" id="generate">生成 PPT</button>
     </div>
+    <div class="selection-panel" id="selectionPanel" hidden><h3>确认入选游戏</h3><p class="selection-note">默认勾选来自模板规则，可增删并调整介绍顺序。确认后将按数量使用对应卡片行数。</p><div id="selectionGroups"></div><div class="actions"><button id="confirmSelection">确认这些游戏</button><span id="selectionState" class="selection-note"></span></div></div>
     <div class="status" id="genStatus"></div>
   </section>
 

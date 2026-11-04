@@ -401,6 +401,25 @@ def picture_to_chart(slide_xml: bytes, rels_xml: bytes, picture_id: int, chart_t
     return slide_xml, rels_xml
 
 
+def move_object(slide_xml: bytes, object_id: int, dx: int, dy: int):
+    """Shift one native shape or picture without changing its text or editable geometry."""
+    marker = rb'<p:cNvPr\b[^>]*\bid="' + str(object_id).encode() + rb'"'
+    found = [match for tag in (rb"sp", rb"pic")
+             for match in re.finditer(rb"<p:" + tag + rb"\b[^>]*>.*?</p:" + tag + rb">", slide_xml, re.DOTALL)
+             if re.search(marker, match.group()) and len(re.findall(rb"<p:cNvPr\b", match.group())) == 1]
+    if len(found) != 1:
+        raise ValueError(f"Object {object_id} missing or ambiguous for layout")
+    match = found[0]
+    pattern = rb'(<a:off\b[^>]*\bx=")(\d+)("[^>]*\by=")(\d+)(")'
+    def shift(offset):
+        return (offset.group(1) + str(int(offset.group(2)) + dx).encode() + offset.group(3)
+                + str(int(offset.group(4)) + dy).encode() + offset.group(5))
+    changed, count = re.subn(pattern, shift, match.group(), count=1)
+    if count != 1:
+        raise ValueError(f"Object {object_id} has no editable position")
+    return slide_xml[:match.start()] + changed + slide_xml[match.end():]
+
+
 def remove_object(slide_xml: bytes, rels_xml: bytes, object_id: int):
     """Delete a shape, picture or connector; drop a picture's relationship once nothing uses it."""
     marker = rb'<p:cNvPr\b[^>]*\bid="' + str(object_id).encode() + rb'"'
@@ -587,6 +606,8 @@ def main():
                 changed[name] = replace_shape_text(data, int(item["shapeId"]), item["expectedText"], item["value"])
             elif item.get("kind") == "shapeRuns":
                 changed[name] = replace_shape_runs(data, int(item["shapeId"]), item["expectedRuns"], item["values"])
+            elif item.get("kind") == "moveObject":
+                changed[name] = move_object(data, int(item["objectId"]), int(item["dx"]), int(item["dy"]))
             elif item.get("kind") == "pictureSlot":
                 rels = f"ppt/slides/_rels/slide{slide}.xml.rels"
                 changed[name], changed[rels] = picture_to_slot(data, changed.get(rels, source.read(rels)), int(item["pictureId"]))

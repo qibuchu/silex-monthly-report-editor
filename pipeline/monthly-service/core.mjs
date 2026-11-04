@@ -54,7 +54,8 @@ export const tools = [
   tool('save_ppt_mapping', '按版本保存 PPT 模板对象映射草稿，发布后生效', {templateId:idSchema,baseRevision:{type:'integer',minimum:0},mapping:{type:'object'}}, ['templateId','baseRevision','mapping']),
   tool('publish_ppt_template', '发布 PPT 模板当前的原始 PPTX 与填数规则；需在 PowerPoint 中核对原稿后再发布', {templateId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['templateId','baseRevision']),
   tool('delete_ppt_template', '从 PPT 模板列表移除模板（原始 PPTX 文件与已生成的 PPT 保留）', {templateId:idSchema,baseRevision:{type:'integer',minimum:0}}, ['templateId','baseRevision']),
-  tool('generate_ppt', '用已发布的 PPT 模板生成目标月可编辑 PPTX 和问题清单。小游戏模板自动从小游戏接口取当月和上月数据；Steam 模板需传 data 与 audit', {templateId:idSchema,month:idSchema,data:{type:'object'},audit:{type:'object'},previous:{type:'object'}}, ['templateId','month']),
+  tool('prepare_ppt_game_selection', '按模板规则读取目标月榜单，返回候选游戏和默认推荐；生成前供人工确认', {templateId:idSchema,month:idSchema,data:{type:'object'},audit:{type:'object'}}, ['templateId','month']),
+  tool('generate_ppt', '用已发布的 PPT 模板生成目标月可编辑 PPTX 和问题清单。配置游戏介绍的模板必须先确认候选游戏；Steam 模板需传 data 与 audit', {templateId:idSchema,month:idSchema,data:{type:'object'},audit:{type:'object'},previous:{type:'object'},selection:{type:'object',additionalProperties:{type:'array',maxItems:8,items:{type:['integer','string']}}},selectionSnapshot:{type:'string'},selectionTemplateRevision:{type:'integer',minimum:1}}, ['templateId','month']),
   tool('list_ppt_drafts', '列出由 PPT 模板生成的 PPTX 及下载、问题清单链接', {}, [], true),
   tool('list_native_drafts', '列出已生成的原生 PPTX 草稿及其问题清单下载链接', {}, [], true),
   tool('get_task', '读取生成任务状态和结果', { taskId: idSchema }, ['taskId'], true),
@@ -372,16 +373,16 @@ export function createCore(config) {
   const previousMonthOf=month=>{const [y,m]=month.split('-').map(Number);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;};
   // Each data source checks its own package; the Python generator re-checks the full contract.
   const nativeSources={
-    'steam-monthly':{extras:['audit'],snapshot:args=>args.data.snapshot_id,
+    'steam-monthly':{extras:['audit','selection'],snapshot:args=>args.data.snapshot_id,
       check:(args,month)=>!!(args.data&&args.audit&&args.data.report_month===month&&args.audit.month===month&&args.data.snapshot_id&&args.audit.snapshot_id===args.data.snapshot_id&&Array.isArray(args.audit.contract_errors)&&!args.audit.contract_errors.length),
       error:'目标月数据包与时间窗口审计不匹配，或审计未通过'},
-    'minigame-monthly':{extras:['previous'],snapshot:args=>`${args.data.snapshot.id}@${args.data.snapshot.revision??0}`,
+    'minigame-monthly':{extras:['previous','selection'],snapshot:args=>`${args.data.snapshot.id}@${args.data.snapshot.revision??0}`,
       check:(args,month)=>!!(args.data&&args.data.month===month&&args.data.snapshot?.id!=null&&args.data.coverage?.calendar_complete===true&&(!args.previous||args.previous.month===previousMonthOf(month))),
       error:'小游戏月报导出与目标月份不符、月份未结束，或上月导出月份不对'},
-    'mobile-monthly':{extras:[],snapshot:args=>['cn','global'].map(m=>{const s=args.data[m].meta.snapshot;return s?.id!=null?`${m}:${s.id}@${s.version}`:`${m}:missing`;}).join('|'),
+    'mobile-monthly':{extras:['selection'],snapshot:args=>['cn','global'].map(m=>{const s=args.data[m].meta.snapshot;return s?.id!=null?`${m}:${s.id}@${s.version}`:`${m}:missing`;}).join('|'),
       check:(args,month)=>!!(args.data&&args.data.month===month&&['cn','global'].every(m=>{const p=args.data[m],meta=p?.meta;return meta?.month===month&&meta?.market===m&&meta?.ranking_metric==='revenue'&&Array.isArray(p.data)&&(!p.data.length||meta?.snapshot?.id!=null&&meta?.snapshot?.frozen_at);})&&['cn','global'].some(m=>args.data[m].data.length>=20)),
       error:'手游月报时间窗口不符，或国区、海外均无可用的固化榜单'},
-    'mobile-cn-monthly':{extras:[],snapshot:args=>{const s=args.data.cn.meta.snapshot;return `cn:${s.id}@${s.version}`;},
+    'mobile-cn-monthly':{extras:['selection'],snapshot:args=>{const s=args.data.cn.meta.snapshot;return `cn:${s.id}@${s.version}`;},
       check:(args,month)=>{const p=args.data?.cn,meta=p?.meta;return !!(args.data?.month===month&&meta?.month===month&&meta?.market==='cn'&&meta?.ranking_metric==='revenue'&&meta?.snapshot?.id!=null&&meta.snapshot.frozen_at&&Array.isArray(p.data)&&p.data.length>=20);},
       error:'手游国区榜单缺少目标月份的完整固化快照'}
   };
@@ -438,6 +439,7 @@ export function createCore(config) {
       sourcePptx:t.sourcePptx,source:`${config.publicUrl}/api/ppt-templates/${t.id}/source.pptx`,
       mappingConfigured:Boolean(mapping),mappingDataSource:mapping?.dataSource||null,mappingSourceMonth:mapping?.sourceMonth||null,
       mappingOperations:mapping?.ops?.length||0,mappingCheck:t.mappingCheck||null,pageNotes:mapping?.pageNotes||{},
+      gameSelection:t.published?.mapping?.gameSelection||null,
       ready:Boolean(t.published?.mapping&&t.published?.sourcePptx),publishedSourceMonth:t.published?.mapping?.sourceMonth||null,
       draftChanged:Boolean(t.published&&(t.published.sourcePptx.sha256!==t.sourcePptx.sha256||t.published.mappingRevision!==t.mappingRevision))};
   }
@@ -490,6 +492,50 @@ export function createCore(config) {
     }
     return result;
   }
+  const selectionPath=(value,field)=>String(field||'').split('.').reduce((current,key)=>current?.[key],value);
+  function selectionCandidates(mapping,data){
+    return (mapping.gameSelection?.groups||[]).map(group=>{
+      const source=selectionPath(data,group.source),defaults=selectionPath(data,group.defaultSource);
+      if(!Array.isArray(source))throw new ServiceError(`介绍游戏候选榜单不存在：${group.source}`,400);
+      const recommended=new Set(Array.isArray(defaults)?defaults.map(item=>String(item?.[group.idField])):[]);
+      const seen=new Set(),candidates=[];
+      for(const item of source){
+        const id=item?.[group.idField],name=item?.[group.nameField];
+        if((typeof id!=='number'&&typeof id!=='string')||!String(name||'').trim()||seen.has(String(id)))continue;
+        seen.add(String(id));candidates.push({id,name:String(name),rank:item?.[group.rankField]??null,
+          recommended:recommended.has(String(id)),revenueGrowth:item?.revenue_growth??null,rankChange:item?.rank_delta??null});
+      }
+      return {id:group.id,title:group.title,min:Math.max(0,Number(group.min)||0),max:Math.min(8,Math.max(1,Number(group.max)||6)),layout:group.layout||'cards',candidates};
+    });
+  }
+  function validatedSelection(mapping,data,selection,snapshot,actualSnapshot){
+    const groups=selectionCandidates(mapping,data);
+    if(!groups.length)return null;
+    if(!selection||typeof selection!=='object'||Array.isArray(selection)||snapshot!==actualSnapshot)throw new ServiceError('请先读取目标月份榜单并确认要介绍的游戏；数据快照变化后需重新确认',409);
+    if(Object.keys(selection).some(id=>!groups.some(group=>group.id===id)))throw new ServiceError('入选游戏包含模板未配置的栏目',400);
+    const result={};
+    for(const group of groups){
+      const ids=selection[group.id],available=new Set(group.candidates.map(item=>String(item.id)));
+      if(!Array.isArray(ids)||ids.length<group.min||ids.length>group.max||new Set(ids.map(String)).size!==ids.length||ids.some(id=>!available.has(String(id))))throw new ServiceError(`${group.title}的入选游戏不在当前榜单中，或数量不在 ${group.min}–${group.max} 款之间`,400);
+      result[group.id]=ids;
+    }
+    return result;
+  }
+  async function preparePptGameSelection(args){
+    const t=db.pptTemplates[args.templateId];if(!t||t.deletedAt||!t.published)throw new ServiceError('请选择已发布的PPT模板',404);
+    if(!pptMonth.test(args.month||''))throw new ServiceError('目标月份无效',400);
+    const mapping=t.published.mapping,source=mapping.dataSource||'steam-monthly';
+    if(!mapping.gameSelection?.groups?.length)return {required:false,groups:[]};
+    let data=args.data;
+    if(!data&&source==='minigame-monthly')data=await fetchMinigameExport(args.month);
+    if(!data&&source==='mobile-monthly')data=await fetchMobileMonthly(args.month,t.dataSourceId);
+    if(!data&&source==='mobile-cn-monthly')data=await fetchMobileMonthly(args.month,t.dataSourceId,['cn'],false);
+    if(!data)throw new ServiceError('请先上传目标月数据包',400);
+    const input={month:args.month,data,audit:args.audit},rule=nativeSources[source];
+    if(!rule?.check(input,args.month))throw new ServiceError(rule?.error||'目标月数据包校验未通过',400);
+    return {required:true,templateId:t.id,templateRevision:t.revision,month:args.month,
+      snapshot:rule.snapshot(input),groups:selectionCandidates(mapping,data)};
+  }
   async function generatePpt(args){
     const t=db.pptTemplates[args.templateId];
     if(!t)throw new ServiceError('PPT模板不存在',404);
@@ -506,7 +552,14 @@ export function createCore(config) {
     if(!data)throw new ServiceError('这个模板的数据源不能自动取数，请上传当月数据包',400);
     if(source==='minigame-monthly'&&data.month===args.month&&data.coverage?.calendar_complete!==true)throw new ServiceError(`${args.month} 还没有完整的月度数据（月份未结束或数据未齐），暂不能生成`,400);
     if(source==='minigame-monthly'&&data.month===args.month&&data.snapshot?.id==null)throw new ServiceError(`${args.month} 的小游戏数据还没有固化快照（接口当前是预览数据，之后可能还会变），请先在小游戏数据库固化该月快照再生成`,400);
-    return startNative({month:args.month,data,previous,audit},native,{pptTemplate:{id:t.id,title:t.title,revision:t.revision}},null,{dataFetched:fetched});
+    let selection=null;
+    if(native.mapping.gameSelection?.groups?.length){
+      if(args.selectionTemplateRevision!==t.revision)throw new ServiceError('模板版本已变化，请重新确认介绍游戏',409);
+      const sourceRule=nativeSources[source],input={month:args.month,data,previous,audit};
+      if(!sourceRule?.check(input,args.month))throw new ServiceError(sourceRule?.error||'目标月数据包校验未通过',400);
+      selection=validatedSelection(native.mapping,data,args.selection,args.selectionSnapshot,sourceRule.snapshot(input));
+    }
+    return startNative({month:args.month,data,previous,audit,selection},native,{pptTemplate:{id:t.id,title:t.title,revision:t.revision}},null,{dataFetched:fetched,...(selection?{gameSelection:selection}:{})});
   }
 
   async function call(name, args = {}) {
@@ -918,6 +971,7 @@ export function createCore(config) {
         t.deletedAt=new Date().toISOString();persist();return {templateId:t.id,deleted:true};
       }
       case 'generate_ppt': return generatePpt(args);
+      case 'prepare_ppt_game_selection': return preparePptGameSelection(args);
       case 'list_ppt_drafts': return Object.values(db.tasks).filter(task=>task.kind==='native-pptx'&&task.pptTemplate).sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt))).slice(0,100)
         .map(({id,status,month,pptTemplate,startedAt,finishedAt,error,pages,sourceIssues,mappingIssues,manualSlots,oldMonthText,pptx,issues,dataFetched})=>({id,status,month,template:pptTemplate,startedAt,finishedAt,error,pages,sourceIssues,mappingIssues,manualSlots,oldMonthText,pptx,issues,dataFetched}));
       case 'get_native_mapping': {

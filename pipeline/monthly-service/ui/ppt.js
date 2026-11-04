@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sourceNames = { 'minigame-monthly': '小游戏月报接口', steamauto: 'SteamAuto 月报数据' };
-const state = { templates: [], busy: false, mobileSourceIds: new Set() };
+const state = { templates: [], busy: false, mobileSourceIds: new Set(), selectionPreview: null, selectionDraft: {}, selectionConfirmed: false };
 
 async function call(name, args = {}) {
   const response = await fetch('/api/call', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, arguments: args }) });
@@ -29,6 +29,7 @@ function templateCard(t) {
   return `<div class="card"><h3>${esc(t.title)}</h3>
     <div>${status}${rules}</div>
     <div class="meta">数据源：${esc(sourceNames[t.dataSourceId] || t.dataSourceId)}${t.mappingSourceMonth ? ` · 原稿月份 ${esc(t.mappingSourceMonth)}` : ''} · 上传于 ${esc(time(t.createdAt))}${t.publishedAt ? ` · 发布于 ${esc(time(t.publishedAt))}` : ''}</div>
+    ${t.gameSelection?.groups?.length?`<div class="meta">生成前需确认介绍游戏：${t.gameSelection.groups.map(group=>`${esc(group.title)}（${esc(group.min||0)}–${esc(group.max)} 款）`).join('、')}</div>`:''}
     ${problems ? `<ul class="notes error">${problems}</ul>` : ''}
     ${notes ? `<details><summary>各页说明</summary><ul class="notes">${notes}</ul></details>` : ''}
     <div class="actions">
@@ -61,7 +62,39 @@ function refreshInputs() {
   const t = state.templates.find(item => item.id === $('genTemplate').value);
   const manual = Boolean(t) && t.dataSourceId !== 'minigame-monthly' && !state.mobileSourceIds.has(t.dataSourceId);
   $('dataLabel').hidden = !manual; $('auditLabel').hidden = !manual;
-  $('generate').disabled = !t || state.busy;
+  const needsSelection=Boolean(t?.gameSelection?.groups?.length);
+  $('readCandidates').hidden=!needsSelection;
+  $('readCandidates').disabled=!t||state.busy;
+  $('generate').disabled = !t || state.busy || (needsSelection&&!state.selectionConfirmed);
+}
+
+function resetSelection(){state.selectionPreview=null;state.selectionDraft={};state.selectionConfirmed=false;$('selectionPanel').hidden=true;refreshInputs();}
+function renderSelection(){
+  const preview=state.selectionPreview;if(!preview)return;
+  $('selectionPanel').hidden=false;
+  $('selectionGroups').innerHTML=preview.groups.map(group=>{
+    const chosen=state.selectionDraft[group.id]||[],byId=new Map(group.candidates.map(game=>[String(game.id),game]));
+    const options=group.candidates.map(game=>`<label class="selection-option"><input type="checkbox" data-group="${esc(group.id)}" data-game="${esc(game.id)}" ${chosen.some(id=>String(id)===String(game.id))?'checked':''}><span>${game.rank!=null?`#${esc(game.rank)} `:''}${esc(game.name)}${game.recommended?' · 默认推荐':''}</span></label>`).join('');
+    const ordered=chosen.map((id,index)=>{const game=byId.get(String(id));return game?`<span class="tag gray">${index+1}. ${esc(game.name)} <button type="button" data-order="up" data-group="${esc(group.id)}" data-index="${index}" aria-label="上移">↑</button><button type="button" data-order="down" data-group="${esc(group.id)}" data-index="${index}" aria-label="下移">↓</button></span>`:''}).join('');
+    return `<div class="selection-group"><strong>${esc(group.title)}</strong><div class="selection-note">选 ${group.min}–${group.max} 款；榜单仍完整保留。当前 ${chosen.length} 款，双列 ${Math.ceil(chosen.length/2)} 行。</div><div class="selection-order">${ordered||'尚未选取'}</div><div class="selection-list">${options}</div></div>`;
+  }).join('');
+  $('selectionState').textContent=state.selectionConfirmed?'已确认；可生成草稿':'选择变化后请重新确认';
+}
+async function readCandidates(){
+  if(state.busy)return;state.busy=true;refreshInputs();show('genStatus','正在读取目标月榜单和默认推荐…');
+  try{
+    const templateId=$('genTemplate').value,month=$('genMonth').value,t=state.templates.find(item=>item.id===templateId);
+    if(!t||!month)throw Error('请先选择模板和月份');
+    const args={templateId,month};
+    if(t.dataSourceId!=='minigame-monthly'&&!state.mobileSourceIds.has(t.dataSourceId)){
+      args.data=await readJson($('genData'),'当月数据包');args.audit=await readJson($('genAudit'),'时间窗口审计');
+      if(!args.data||!args.audit)throw Error('请先上传当月数据包和时间窗口审计');
+    }
+    const preview=await call('prepare_ppt_game_selection',args);
+    if(!preview.required)throw Error('这个模板未配置入选游戏规则');
+    state.selectionPreview=preview;state.selectionDraft=Object.fromEntries(preview.groups.map(group=>[group.id,group.candidates.filter(game=>game.recommended).slice(0,group.max).map(game=>game.id)]));state.selectionConfirmed=false;
+    renderSelection();show('genStatus','候选游戏已读取，请确认入选游戏和介绍顺序。');
+  }catch(error){resetSelection();show('genStatus',error.message,true);}finally{state.busy=false;refreshInputs();}
 }
 
 function draftRow(d) {
@@ -95,6 +128,11 @@ async function generate() {
   state.busy = true; refreshInputs();
   try {
     const args = { templateId, month };
+    if(t.gameSelection?.groups?.length){
+      const preview=state.selectionPreview;
+      if(!state.selectionConfirmed||!preview||preview.templateId!==templateId||preview.templateRevision!==t.revision||preview.month!==month)throw Error('请先读取并确认目标月要介绍的游戏');
+      args.selection=state.selectionDraft;args.selectionSnapshot=preview.snapshot;args.selectionTemplateRevision=preview.templateRevision;
+    }
     if (t.dataSourceId !== 'minigame-monthly' && !state.mobileSourceIds.has(t.dataSourceId)) {
       args.data = await readJson($('genData'), '当月数据包');
       args.audit = await readJson($('genAudit'), '时间窗口审计');
@@ -144,7 +182,31 @@ document.addEventListener('click', async event => {
     }
   } catch (error) { alert(error.message); }
 });
-$('genTemplate').onchange = refreshInputs;
+$('genTemplate').onchange = resetSelection;
+$('genMonth').onchange = resetSelection;
+$('genData').onchange = resetSelection;
+$('genAudit').onchange = resetSelection;
+$('readCandidates').onclick = () => { void readCandidates(); };
+$('selectionGroups').onchange = event => {
+  const input=event.target.closest('input[data-game]');if(!input)return;
+  const group=state.selectionPreview?.groups.find(item=>item.id===input.dataset.group);if(!group)return;
+  const candidate=group.candidates.find(item=>String(item.id)===input.dataset.game);if(!candidate)return;
+  const chosen=state.selectionDraft[group.id]||[];
+  if(input.checked){if(chosen.length>=group.max){input.checked=false;show('genStatus',`该栏目最多介绍 ${group.max} 款游戏`,true);return;}chosen.push(candidate.id);}
+  else state.selectionDraft[group.id]=chosen.filter(id=>String(id)!==input.dataset.game);
+  state.selectionConfirmed=false;renderSelection();refreshInputs();
+};
+$('selectionGroups').onclick = event => {
+  const button=event.target.closest('button[data-order]');if(!button)return;
+  const chosen=state.selectionDraft[button.dataset.group]||[],index=Number(button.dataset.index),other=index+(button.dataset.order==='up'?-1:1);
+  if(other<0||other>=chosen.length)return;
+  [chosen[index],chosen[other]]=[chosen[other],chosen[index]];state.selectionConfirmed=false;renderSelection();refreshInputs();
+};
+$('confirmSelection').onclick = () => {
+  const groups=state.selectionPreview?.groups||[];
+  for(const group of groups){const count=(state.selectionDraft[group.id]||[]).length;if(count<group.min||count>group.max)return show('genStatus',`${group.title}需选择 ${group.min}–${group.max} 款游戏`,true);}
+  state.selectionConfirmed=true;renderSelection();refreshInputs();show('genStatus','入选游戏已确认，可以生成 PPT。');
+};
 $('generate').onclick = () => { void generate(); };
 $('upload').onclick = () => { void upload(); };
 $('genMonth').value = lastFinishedMonth();

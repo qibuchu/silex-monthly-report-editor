@@ -24,7 +24,7 @@ FORMAT = "native-pptx-mapping-v1"
 NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
-OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable",
+OPS = {"fillTable", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable", "featuredGames",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
        "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength", "trendChart", "dataChart", "growthArrow"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME, "mobile-monthly": MOBILE,
@@ -262,6 +262,47 @@ class Compiler:
                                   "expectedText": current, "value": ""})
         if op.get("slot", True):
             self.slots.append({"slide": op["slide"], "objectId": op["shapeId"], "type": "text"})
+
+    def do_featuredGames(self, op):
+        """Fill confirmed game names; unused cards are removed from the editable slide."""
+        games = (self.data.get("head") or {}).get("top20") or []
+        by_id = {str(game.get("appid")): game for game in games}
+        selection = (self.extras.get("selection") or {}).get(op["group"])
+        if selection is None:
+            selection = [game.get("appid") for game in (self.data.get("head") or {}).get("highlights") or []]
+        chosen = [by_id[str(appid)] for appid in selection if str(appid) in by_id]
+        cards = op["cards"]
+        if len(chosen) > len(cards):
+            self.problem(op, "入选游戏超过页面卡片容量")
+            chosen = chosen[:len(cards)]
+        xml = self.slide(op["slide"])
+        texts = shape_texts(xml) if xml is not None else {}
+        pictures = object_ids(xml, "pic", "nvPicPr") if xml is not None else set()
+        for index, card in enumerate(cards):
+            shape_id, picture_id = card["shapeId"], card["pictureId"]
+            if shape_id not in texts or picture_id not in pictures:
+                self.problem({**op, "shapeId": shape_id}, "介绍卡片对象不存在")
+                continue
+            if index < len(chosen):
+                name = chosen[index].get("name") or chosen[index].get("game_name") or ""
+                self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": shape_id,
+                                          "expectedText": texts[shape_id], "value": name})
+                self.replacements.append({"kind": "pictureSlot", "slide": op["slide"], "pictureId": picture_id})
+                rows = (len(chosen) + 1) // 2
+                dx = int(2.25 * 914400) if len(chosen) % 2 and index == len(chosen) - 1 else 0
+                dy = int((3 - rows) * 914400)
+                if dx or dy:
+                    for object_id in (shape_id, picture_id):
+                        self.replacements.append({"kind": "moveObject", "slide": op["slide"], "objectId": object_id,
+                                                  "dx": dx, "dy": dy})
+                self.slots.append({"slide": op["slide"], "objectId": shape_id, "type": "game-description",
+                                   "appid": chosen[index].get("appid"), "name": name})
+                self.slots.append({"slide": op["slide"], "objectId": picture_id, "type": "game-icon",
+                                   "appid": chosen[index].get("appid"), "name": name})
+            else:
+                for object_id in (shape_id, picture_id):
+                    self.removed.append((op["slide"], object_id))
+                    self.replacements.append({"kind": "removeObject", "slide": op["slide"], "objectId": object_id})
 
     def do_setRuns(self, op):
         xml = self.slide(op["slide"])
@@ -678,6 +719,13 @@ def check_mapping(mapping, template):
             frames = object_ids(xml, "graphicFrame", "nvGraphicFramePr") if op["op"] == "nativeChart" else set()
             if "pictureId" in op and op["pictureId"] not in object_ids(xml, "pic", "nvPicPr") | frames:
                 problems.append({"op": op["op"], "slide": op["slide"], "object": op["pictureId"], "reason": "图片对象不存在"})
+            if op["op"] == "featuredGames":
+                pictures = object_ids(xml, "pic", "nvPicPr")
+                for card in op.get("cards", []):
+                    if card.get("shapeId") not in texts:
+                        problems.append({"op": op["op"], "slide": op["slide"], "object": card.get("shapeId"), "reason": "介绍文字对象不存在"})
+                    if card.get("pictureId") not in pictures:
+                        problems.append({"op": op["op"], "slide": op["slide"], "object": card.get("pictureId"), "reason": "介绍图片对象不存在"})
             if "chartId" in op and op["chartId"] not in object_ids(xml, "graphicFrame", "nvGraphicFramePr"):
                 problems.append({"op": op["op"], "slide": op["slide"], "object": op["chartId"], "reason": "图表对象不存在"})
             if "tableId" in op:

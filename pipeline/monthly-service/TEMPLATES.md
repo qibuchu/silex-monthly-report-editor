@@ -96,3 +96,11 @@ PPT识别结果的 `recognition.dataSource` 说明数据源适配状态：`exist
 
 版本快照保存在服务data/history/template-ID/版本.json，随既有项目备份一起备份。发布模板属于当前服务范围的操作；多用户账号和发布权限仍需后续实现，当前不是独立权限系统。
 
+# 榜单游戏介绍的生成前确认
+
+原生 PPT 模板可在映射 JSON 中声明 `gameSelection.groups`。每组指定候选榜单 `source`、默认推荐 `defaultSource`、游戏 ID/名称/排名字段，以及最少和最多入选数量。当前 Steam 原生 PPT 模板使用 `head.top20` 作为候选，`head.highlights` 作为默认推荐，允许人工选 1–6 款。
+
+工作台的“生成 PPT”页会先调用 `prepare_ppt_game_selection`，展示目标月榜单和推荐结果。人工可增删、调整介绍顺序，点“确认这些游戏”后才可生成。`generate_ppt` 接收 `selection` 和 `selectionSnapshot`，重新核对目标月快照和候选 ID；若快照变化须重新确认。MCP 客户端使用相同两步调用。
+
+Steam 模板在第 2 页保留完整榜单，仅给入选行上色；右侧按选中顺序填入游戏名和可编辑图标槽，并移除未入选卡片。1–2 款使用一行、3–4 款使用两行、5–6 款使用三行，少于六款时介绍区会在可用空间内居中。具体做法仍为人工可编辑内容。
+

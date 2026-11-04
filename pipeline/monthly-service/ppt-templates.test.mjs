@@ -40,6 +40,23 @@ test('PPT-only templates: upload without rules cannot publish, can be removed, a
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
+test('game introduction candidates require an explicit selection from the same monthly snapshot',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'ppt-game-selection-'));
+  try{
+    const core=createCore({dataDir:path.join(root,'data'),publicUrl:'http://127.0.0.1:4320'});
+    const mapping={dataSource:'steam-monthly',gameSelection:{groups:[{id:'head',title:'头部介绍',source:'head.top20',defaultSource:'head.highlights',idField:'appid',nameField:'name',rankField:'rank',min:1,max:2}]}};
+    core.db.pptTemplates.example={id:'example',title:'Steam',revision:1,sourcePptx:{sha256:'abc'},published:{mapping,sourcePptx:{sha256:'abc'},revision:1}};
+    const data={report_month:'2026-09',snapshot_id:'monthly-2026-09-test',head:{top20:[{appid:10,name:'Alpha',rank:1},{appid:20,name:'Beta',rank:2}],highlights:[{appid:20,rank:2}]}};
+    const audit={month:'2026-09',snapshot_id:data.snapshot_id,contract_errors:[]};
+    const preview=await core.call('prepare_ppt_game_selection',{templateId:'example',month:'2026-09',data,audit});
+    assert.equal(preview.snapshot,data.snapshot_id);
+    assert.deepEqual(preview.groups[0].candidates.filter(game=>game.recommended).map(game=>game.id),[20]);
+    await assert.rejects(core.call('generate_ppt',{templateId:'example',month:'2026-09',data,audit,selectionTemplateRevision:1}),/确认要介绍的游戏/);
+    await assert.rejects(core.call('generate_ppt',{templateId:'example',month:'2026-09',data,audit,selection:{head:[10]},selectionSnapshot:'old',selectionTemplateRevision:1}),/重新确认/);
+    await assert.rejects(core.call('generate_ppt',{templateId:'example',month:'2026-09',data,audit,selection:{head:[99]},selectionSnapshot:preview.snapshot,selectionTemplateRevision:1}),/不在当前榜单/);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
 test('generate_ppt fetches the minigame export for the month and refuses an unfinished month',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'ppt-fetch-'));
   const asked=[];let complete=false;
