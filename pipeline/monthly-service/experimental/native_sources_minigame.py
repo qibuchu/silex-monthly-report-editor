@@ -179,7 +179,7 @@ def values(data, extras):
             raw = kpi.get(f"{platform}_{field}")
             name = f"{platform}{suffix}"
             if isinstance(raw, (int, float)) and not isinstance(raw, bool):
-                text[name] = grouped(raw) if suffix == "Games" else short_number(Decimal(str(raw)) / 10000)
+                text[name] = grouped(raw) if suffix == "Games" else f"{Decimal(str(raw)) / 10000:.1f}"
             else:
                 text[name] = ""
                 issues.append({"field": f"adx_kpi.{platform}_{field}", "reason": "missing"})
