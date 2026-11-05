@@ -342,7 +342,7 @@ export function createCore(config) {
     db.projects[id]={id,revision:1,month:task.month,title:`${template.title} · ${task.month} PPTX 草稿`,stage:'draft',dataOrigin:{kind:'native-pptx',taskId:task.id,snapshotId},template:task.template,project:built.project,updatedAt:new Date().toISOString(),author:'native-pptx',native:{taskId:task.id,syncedRevision:1,pending:[],rejected:[],unsupported:[],missing:built.missing}};
     return id;
   }
-  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json','minigame_monthly_template_v4.json','mobile_monthly_mapping.json','mobile_cn_monthly_mapping.json','mobile_cn_monthly_8page_mapping.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
+  const seedMappings=['steam_monthly_mapping.json','minigame_monthly_mapping.json','minigame_monthly_template_v4.json','minigame_monthly_template_v5.json','mobile_monthly_mapping.json','mobile_cn_monthly_mapping.json','mobile_cn_monthly_8page_mapping.json'].map(file=>JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'experimental',file),'utf8')));
   const seedTemplateMapping=t=>{const seed=!t.nativeMapping&&seedMappings.find(item=>item.seedSha256===t.sourcePptx?.sha256);if(seed){t.nativeMapping=seed;t.nativeMappingRevision=(t.nativeMappingRevision||0)+1;return true;}return false;};
   const snapshotNative=t=>{if(t.origin==='pptx')t.nativePublished={sourcePptx:t.sourcePptx,mapping:t.nativeMapping,mappingRevision:t.nativeMappingRevision||0,templateRevision:t.revision};};
   function checkNativeMapping(t,mapping=t.nativeMapping){
@@ -1127,6 +1127,22 @@ export function createCore(config) {
     template.sourcePptx={sha256,bytes:bytes.length,storedAt:new Date().toISOString()};seedTemplateMapping(template);persist();
     let mappingCheck;try{mappingCheck=checkNativeMapping(template);}catch(error){mappingCheck={ok:false,configured:true,problems:[{reason:error.message}]};}
     return {templateId:id,sourcePptx:template.sourcePptx,mappingCheck};
+  }, updatePptTemplateSource(id,bytes,baseRevision) {
+    const t=db.pptTemplates[id];
+    if(!t||t.deletedAt)throw new ServiceError('PPT模板不存在',404);
+    if(t.revision!==baseRevision)throw new ServiceError('模板版本已变化，请重新读取',409);
+    if(!Buffer.isBuffer(bytes)||bytes.length>100*1024*1024||!isPptxArchive(bytes))throw new ServiceError('请选择100MB以内的有效PPTX文件',400);
+    const sha256=createHash('sha256').update(bytes).digest('hex');
+    const seed=seedMappings.find(item=>item.seedSha256===sha256);
+    if(!seed)throw new ServiceError('新版PPT尚未配置匹配的对象规则，不能替换模板原稿',400);
+    const folder=path.join(dir,'template-pptx');fs.mkdirSync(folder,{recursive:true});
+    const file=path.join(folder,sha256+'.pptx');
+    if(!fs.existsSync(file)){const temp=file+'.'+randomUUID()+'.tmp';try{fs.writeFileSync(temp,bytes,{flag:'wx'});fs.renameSync(temp,file);}finally{if(fs.existsSync(temp))fs.unlinkSync(temp);}}
+    const sourcePptx={sha256,bytes:bytes.length,storedAt:new Date().toISOString()};
+    const check=checkNativeMapping({...t,sourcePptx},seed);
+    if(!check.ok)throw new ServiceError('新版PPT对象与规则不匹配',400);
+    t.sourcePptx=sourcePptx;t.mapping=seed;t.mappingRevision=(t.mappingRevision||0)+1;t.mappingCheck=check;
+    persist();return pptTemplateView(t);
   }, createPptTemplate(bytes,{title,dataSourceId}={}) {
     title=String(title||'').trim();
     if(!title||title.length>120)throw new ServiceError('请填写120字以内的模板名称',400);

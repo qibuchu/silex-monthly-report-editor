@@ -24,7 +24,7 @@ FORMAT = "native-pptx-mapping-v1"
 NS = {"p": "http://schemas.openxmlformats.org/presentationml/2006/main",
       "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
-OPS = {"fillTable", "fillSelectedTable", "selectedGameCards", "selectedObservations", "replaceFragment", "replaceText", "clearText", "setRuns", "setCell", "clearTable", "featuredGames",
+OPS = {"fillTable", "fillSelectedTable", "selectedGameCards", "selectedObservations", "replaceFragment", "replaceText", "clearText", "sourceMonthText", "setRuns", "setCell", "clearTable", "featuredGames",
        "imageSlot", "chartSlot", "hideFill", "pageNumbers", "chart",
        "fillGrid", "fillShapes", "replaceAll", "clearRegion", "imageChart", "nativeChart", "removeObjects", "barLength", "trendChart", "dataChart", "growthArrow"}
 SOURCES = {"steam-monthly": STEAM, "minigame-monthly": MINIGAME, "mobile-monthly": MOBILE,
@@ -123,12 +123,13 @@ def uses_market(mapping):
 
 
 class Compiler:
-    def __init__(self, archive, data, source, month, extras=None):
+    def __init__(self, archive, data, source, month, extras=None, source_month=None):
         self.archive, self.data, self.source, self.extras = archive, data, source, extras or {}
         self.replacements, self.slots, self.source_issues, self.mapping_issues, self.charts, self.blank_charts = [], [], [], [], [], []
         self.table_rows, self.context, self.series = {}, month_context(month), {}
         self.removed = []
         self.page_order = presentation_order(archive)
+        self.source_month = source_month
 
     def problem(self, op, reason):
         self.mapping_issues.append({"op": op.get("op"), "slide": op.get("slide"), "reason": reason,
@@ -277,6 +278,15 @@ class Compiler:
                                   "expectedText": current, "value": sample})
         if op.get("slot", True):
             self.slots.append({"slide": op["slide"], "objectId": op["shapeId"], "type": "text"})
+
+    def do_sourceMonthText(self, op):
+        """Keep reviewed source-month writing; future months get an editable prompt."""
+        current = self.shape(op)
+        if current is None or self.context["year"] + "-" + self.context["monthNumber"].zfill(2) == self.source_month:
+            return
+        self.replacements.append({"kind": "shapeReplace", "slide": op["slide"], "shapeId": op["shapeId"],
+                                  "expectedText": current, "value": op.get("sample", "")})
+        self.slots.append({"slide": op["slide"], "objectId": op["shapeId"], "type": "text"})
 
     def selected_games(self, op):
         items = self.data
@@ -769,7 +779,7 @@ def compile_mapping(mapping, template, data, extras=None):
     with zipfile.ZipFile(template) as archive:
         if archive.testzip() is not None:
             raise ValueError("Template PPTX ZIP damaged")
-        compiler = Compiler(archive, data, source, contract["month"], extras)
+        compiler = Compiler(archive, data, source, contract["month"], extras, mapping.get("sourceMonth"))
         market = source["market"] and uses_market(mapping)
         if market:
             text, compiler.series = source["market"](data)

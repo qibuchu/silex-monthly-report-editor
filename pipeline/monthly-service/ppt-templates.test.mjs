@@ -57,6 +57,20 @@ test('game introduction candidates require an explicit selection from the same m
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
+test('replacing a PPT template source requires the current revision and matching object rules',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'ppt-source-update-'));
+  try{
+    const core=createCore({dataDir:path.join(root,'data'),publicUrl:'http://127.0.0.1:4320'});
+    const created=core.createPptTemplate(smallPptx(),{title:'小游戏月报',dataSourceId:'minigame-monthly'});
+    const source=fs.readFileSync(new URL('./experimental/minigame_monthly_template_v5.pptx',import.meta.url));
+    assert.throws(()=>core.updatePptTemplateSource(created.id,source,1),e=>e.status===409);
+    const updated=core.updatePptTemplateSource(created.id,source,0);
+    assert.equal(updated.mappingCheck.ok,true);
+    assert.equal(updated.mappingOperations,75);
+    assert.equal(updated.ready,false);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
 test('mobile page groups constrain candidates to Top20 and ranks 21–100',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'ppt-mobile-game-selection-'));
   try{

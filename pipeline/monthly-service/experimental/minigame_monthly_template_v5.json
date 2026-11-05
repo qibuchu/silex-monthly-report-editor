@@ -1,0 +1,654 @@
+{
+  "format": "native-pptx-mapping-v1",
+  "dataSource": "minigame-monthly",
+  "sourceMonth": "2026-09",
+  "seedSha256": "18c7431743e84c9ff7c4929ae25d27afc923f0e323256356b97bade1bce6eadd",
+  "templateNote": "第2页按微信/抖音双卡片重排，近三个月双轴图表为可编辑 PowerPoint 原生图表。",
+  "pageNotes": {
+    "2": "微信与抖音分别展示买量摘要和原生图表；原因说明在来源月保留，跨月份生成改为人工可编辑提示。",
+    "3": "MAU（万）、MAU环比接口无数据，需人工填写；重点游戏金色标记需人工标注。榜单观察只保留编号、标题和正文文字框，原稿表格下方还压着一套旧榜单文本框（被卡片遮住），建议在模板中删除。",
+    "5": "TOP50 品类分布图按 iaa.top50 生成 PowerPoint 原生条形图（前 10 个品类，括号内为较上月变化）。",
+    "6": "同第 3 页：MAU 两列人工填写，重点游戏标记人工标注，榜单观察的游戏图片不进入草稿，下层旧榜单建议删除。",
+    "4": "三款重点新游下方的折线图使用同月逐日榜单排名和经微信产品身份核验的逐日素材快照，自动生成可编辑 PowerPoint 双轴图。缺失日留空，不以 0 代替。"
+  },
+  "ops": [
+    {
+      "op": "replaceFragment",
+      "slide": 1,
+      "shapeId": 7,
+      "find": "\\d{4}\\.\\d{1,2}$",
+      "value": "{year}.{monthNumber}"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 1,
+      "shapeId": 2,
+      "find": "\\d{1,2}月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "replaceAll",
+      "slide": 1,
+      "shapeId": 4,
+      "find": "\\d{1,2}月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 3,
+      "shapeId": 76,
+      "find": "\\d{1,2}月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "clearText",
+      "slide": 3,
+      "shapeId": 273,
+      "sample": "示例：概述本月榜单变化及重点观察。"
+    },
+    {
+      "op": "fillGrid",
+      "slide": 3,
+      "source": "minigame.bestseller",
+      "header": [
+        171,
+        173,
+        175,
+        177,
+        179,
+        181,
+        183,
+        744,
+        746
+      ],
+      "columns": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        null,
+        null
+      ],
+      "rows": 20,
+      "bottom": 660,
+      "uniformStyle": true
+    },
+    {
+      "op": "clearText",
+      "slide": 3,
+      "shapeId": 156,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 4,
+      "shapeId": 6,
+      "find": "\\d{1,2}月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 10,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "fillShapes",
+      "slide": 4,
+      "source": "minigame.featured.bestseller",
+      "cells": [
+        [
+          25,
+          37,
+          49,
+          61,
+          79
+        ],
+        [
+          114,
+          124,
+          132,
+          145,
+          153
+        ],
+        [
+          210,
+          226,
+          239,
+          252,
+          275
+        ]
+      ]
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 27,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 83,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 87,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 91,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 118,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 159,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 167,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 176,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 214,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 283,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 291,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 4,
+      "shapeId": 303,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearRegion",
+      "slide": 4,
+      "box": [
+        40,
+        150,
+        1260,
+        690
+      ],
+      "texts": false,
+      "keep": [
+        367,
+        375,
+        383
+      ]
+    },
+    {
+      "op": "nativeChart",
+      "slide": 4,
+      "pictureId": 367,
+      "source": "minigame.featuredDaily.1",
+      "name": "新游1排名与素材数"
+    },
+    {
+      "op": "nativeChart",
+      "slide": 4,
+      "pictureId": 375,
+      "source": "minigame.featuredDaily.2",
+      "name": "新游2排名与素材数"
+    },
+    {
+      "op": "nativeChart",
+      "slide": 4,
+      "pictureId": 383,
+      "source": "minigame.featuredDaily.3",
+      "name": "新游3排名与素材数"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 5,
+      "shapeId": 392,
+      "find": "\\d{1,2}月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 381,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "nativeChart",
+      "slide": 5,
+      "pictureId": 6,
+      "source": "minigame.categoryTop",
+      "name": "TOP50品类数量"
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 5,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 7,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 9,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 11,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 17,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 5,
+      "shapeId": 21,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 6,
+      "shapeId": 407,
+      "find": "\\d{1,2}月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "clearText",
+      "slide": 6,
+      "shapeId": 600,
+      "sample": "示例：概述本月榜单变化及重点观察。"
+    },
+    {
+      "op": "fillGrid",
+      "slide": 6,
+      "source": "minigame.most_played",
+      "header": [
+        466,
+        469,
+        471,
+        473,
+        475,
+        477,
+        479,
+        481,
+        483
+      ],
+      "columns": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        null,
+        null
+      ],
+      "rows": 20,
+      "bottom": 660,
+      "uniformStyle": true
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 7,
+      "shapeId": 281,
+      "find": "\\d{1,2}月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 282,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "fillShapes",
+      "slide": 7,
+      "source": "minigame.featured.most_played",
+      "cells": [
+        [
+          368,
+          372,
+          375,
+          378,
+          381
+        ],
+        [
+          416,
+          420,
+          18,
+          426,
+          24
+        ],
+        [
+          40,
+          53,
+          256,
+          259,
+          262
+        ]
+      ]
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 369,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 383,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 2,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 5,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 14,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 25,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 26,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 28,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 44,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 264,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 266,
+      "sample": "待填"
+    },
+    {
+      "op": "clearText",
+      "slide": 7,
+      "shapeId": 268,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "clearRegion",
+      "slide": 7,
+      "box": [
+        40,
+        150,
+        1260,
+        690
+      ],
+      "texts": false
+    },
+    {
+      "op": "selectedObservations",
+      "slide": 3,
+      "group": "miniIapObserve",
+      "sourcePath": "bestseller",
+      "idField": "game_id",
+      "nameField": "game_name",
+      "slots": [
+        {
+          "badgeId": 7,
+          "titleId": 15,
+          "bodyId": 4
+        },
+        {
+          "badgeId": 11,
+          "titleId": 17,
+          "bodyId": 13
+        },
+        {
+          "badgeId": 113,
+          "titleId": 117,
+          "bodyId": 115
+        }
+      ]
+    },
+    {
+      "op": "selectedObservations",
+      "slide": 6,
+      "group": "miniIaaObserve",
+      "sourcePath": "most_played",
+      "idField": "game_id",
+      "nameField": "game_name",
+      "slots": [
+        {
+          "badgeId": 21,
+          "titleId": 33,
+          "bodyId": 37
+        },
+        {
+          "badgeId": 42,
+          "titleId": 47,
+          "bodyId": 55
+        },
+        {
+          "badgeId": 454,
+          "titleId": 458,
+          "bodyId": 456
+        }
+      ]
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 2,
+      "shapeId": 14,
+      "find": "\\d{1,2}月",
+      "value": "{monthNumber}月"
+    },
+    {
+      "op": "replaceText",
+      "slide": 2,
+      "shapeId": 2,
+      "value": "{acquisitionHeadline}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 2,
+      "shapeId": 16,
+      "value": "微信：{monthNumber}月 {wechatMaterialWan} 万条，环比 {acqWechatGrowth}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 2,
+      "shapeId": 18,
+      "value": "抖音：{monthNumber}月 {douyinMaterialWan} 万条，环比 {acqDouyinGrowth}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 2,
+      "shapeId": 29,
+      "value": "信息流素材             {wechatInfoWan} 万条        {acqWechatInfoGrowth}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 2,
+      "shapeId": 30,
+      "value": "在投游戏数             {wechatGames} 款       {acqWechatGamesGrowth}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 2,
+      "shapeId": 38,
+      "value": "抖音信息流素材         {douyinInfoWan} 万条       {acqDouyinInfoGrowth}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 2,
+      "shapeId": 39,
+      "value": "抖音达人素材           {douyinTalentWan} 万条       {acqDouyinTalentGrowth}"
+    },
+    {
+      "op": "replaceText",
+      "slide": 2,
+      "shapeId": 40,
+      "value": "抖音在投游戏数         {douyinGames} 款       {acqDouyinGamesGrowth}"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 2,
+      "shapeId": 41,
+      "find": "\\d{1,2}—\\d{1,2}月",
+      "value": "{twoMonthsAgoNumber}—{monthNumber}月"
+    },
+    {
+      "op": "replaceFragment",
+      "slide": 2,
+      "shapeId": 43,
+      "find": "\\d{1,2}—\\d{1,2}月",
+      "value": "{twoMonthsAgoNumber}—{monthNumber}月"
+    },
+    {
+      "op": "nativeChart",
+      "slide": 2,
+      "pictureId": 46,
+      "source": "minigame.adsWechat",
+      "name": "微信素材与在投游戏数"
+    },
+    {
+      "op": "nativeChart",
+      "slide": 2,
+      "pictureId": 48,
+      "source": "minigame.adsDouyin",
+      "name": "抖音素材与在投游戏数"
+    },
+    {
+      "op": "sourceMonthText",
+      "slide": 2,
+      "shapeId": 23,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "sourceMonthText",
+      "slide": 2,
+      "shapeId": 24,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "sourceMonthText",
+      "slide": 2,
+      "shapeId": 26,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "sourceMonthText",
+      "slide": 2,
+      "shapeId": 27,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "sourceMonthText",
+      "slide": 2,
+      "shapeId": 34,
+      "sample": "示例：填写本月事实与依据"
+    },
+    {
+      "op": "sourceMonthText",
+      "slide": 2,
+      "shapeId": 36,
+      "sample": "示例：填写本月事实与依据"
+    }
+  ],
+  "gameSelection": {
+    "groups": [
+      {
+        "id": "miniIapObserve",
+        "title": "第3页 畅销榜观察",
+        "source": "bestseller",
+        "idField": "game_id",
+        "nameField": "game_name",
+        "rankField": "rank",
+        "min": 1,
+        "max": 3,
+        "layout": "three-observations"
+      },
+      {
+        "id": "miniIaaObserve",
+        "title": "第6页 畅玩榜观察",
+        "source": "most_played",
+        "idField": "game_id",
+        "nameField": "game_name",
+        "rankField": "rank",
+        "min": 1,
+        "max": 3,
+        "layout": "three-observations"
+      }
+    ]
+  }
+}

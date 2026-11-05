@@ -296,6 +296,69 @@ def ads_trend_chart(months):
     return chart_space(chart), workbook(sheet)
 
 
+def ads_platform_chart(months, platform):
+    """Compact editable chart for one acquisition platform on slide 2."""
+    if platform not in ("wechat", "douyin"):
+        raise ValueError("Unknown acquisition platform")
+    month_labels = [item["label"] for item in months]
+    splits = [item[platform] for item in months]
+    info = [parts[0] if parts else None for parts in splits]
+    talent = [parts[1] if parts else None for parts in splits]
+    total = [parts[2] if parts else None for parts in splits]
+    games = [item[platform + "Games"] for item in months]
+    is_douyin = platform == "douyin"
+    colors = ("002B58", "8FAECD", "2464E9") if is_douyin else ("218357", "218357", "218357")
+    columns = [info, talent, games] if is_douyin else [total, games]
+    names = ["信息流广告", "达人广告", "在投游戏数"] if is_douyin else ["信息流广告", "在投游戏数"]
+    sheet = [["月份", *names]] + [[month_labels[i], *(column[i] for column in columns)] for i in range(len(month_labels))]
+    left_top, left_step = nice_axis(max((value for value in total if value is not None), default=0), 5, 1.15)
+    right_top, right_step = nice_axis(max((value for value in games if value is not None), default=0), 4, 1.15)
+    cats = f'<c:cat>{string_ref(0, 2, month_labels)}</c:cat>'
+
+    def bar(index, color, values, label_color):
+        return (f'<c:ser><c:idx val="{index}"/><c:order val="{index}"/>{series_name(index + 1, names[index])}'
+                f'{fill(color)}<c:invertIfNegative val="0"/>{labels_xml(label_color)}{cats}'
+                f'<c:val>{number_ref(index + 1, 2, values, "0.0")}</c:val></c:ser>')
+
+    def labels_xml(color):
+        return labels(850, color, True, "ctr", "0.0")
+
+    bars = bar(0, colors[0], columns[0], "FFFFFF")
+    if is_douyin:
+        bars += bar(1, colors[1], columns[1], "002B58")
+    line_index = 2 if is_douyin else 1
+    line = (f'<c:ser><c:idx val="{line_index}"/><c:order val="{line_index}"/>'
+            f'{series_name(line_index + 1, names[line_index])}'
+            f'<c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="{colors[2]}"/></a:solidFill>'
+            f'{"<a:prstDash val=\"dash\"/>" if not is_douyin else ""}</a:ln></c:spPr>'
+            f'<c:marker><c:symbol val="square"/><c:size val="5"/>{fill(colors[2])}</c:marker>'
+            f'{labels(850, colors[2], True, "t", "#,##0")}{cats}'
+            f'<c:val>{number_ref(line_index + 1, 2, games, "#,##0")}</c:val><c:smooth val="0"/></c:ser>')
+    grid = ('<c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D9D9D9"/>'
+            '</a:solidFill></a:ln></c:spPr></c:majorGridlines>')
+    cat_axis = lambda ax, cross, hidden: (f'<c:catAx><c:axId val="{ax}"/><c:scaling><c:orientation val="minMax"/></c:scaling>'
+        f'<c:delete val="{int(hidden)}"/><c:axPos val="b"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/>'
+        f'<c:tickLblPos val="nextTo"/>{text_props(850)}<c:crossAx val="{cross}"/><c:crosses val="autoZero"/>'
+        '<c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/></c:catAx>')
+    val_axis = lambda ax, cross, top, step, right: (f'<c:valAx><c:axId val="{ax}"/><c:scaling><c:orientation val="minMax"/>'
+        f'<c:max val="{top:g}"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="{"r" if right else "l"}"/>'
+        f'{"" if right else grid}<c:numFmt formatCode="#,##0" sourceLinked="0"/><c:majorTickMark val="none"/>'
+        f'<c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>{text_props(800)}<c:crossAx val="{cross}"/>'
+        f'<c:crosses val="{"max" if right else "autoZero"}"/><c:crossBetween val="between"/>'
+        f'<c:majorUnit val="{step:g}"/></c:valAx>')
+    plot = ('<c:plotArea><c:layout/>'
+            f'<c:barChart><c:barDir val="col"/><c:grouping val="{"stacked" if is_douyin else "clustered"}"/>'
+            f'<c:varyColors val="0"/>{bars}<c:gapWidth val="165"/><c:overlap val="100"/>'
+            '<c:axId val="4101"/><c:axId val="4102"/></c:barChart>'
+            f'<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>{line}<c:marker val="1"/>'
+            '<c:axId val="4103"/><c:axId val="4104"/></c:lineChart>'
+            + cat_axis(4101, 4102, False) + val_axis(4102, 4101, left_top, left_step, False)
+            + cat_axis(4103, 4104, True) + val_axis(4104, 4103, right_top, right_step, True)
+            + '</c:plotArea>')
+    legend = f'<c:legend><c:legendPos val="b"/><c:overlay val="0"/>{text_props(800)}</c:legend>'
+    return chart_space(f'<c:chart><c:autoTitleDeleted val="1"/>{plot}{legend}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>'), workbook(sheet)
+
+
 def new_game_daily_chart(days, ranks, materials):
     """Editable dual-axis lines: lower rank is better; material is a daily snapshot count."""
     count = len(days)

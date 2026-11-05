@@ -117,6 +117,11 @@ export function createService(config) {
         return json(res, 200, core.createPptTemplate(await pptxBody(req),{title,dataSourceId}));
       }
       const pptSource=url.pathname.match(/^\/api\/ppt-templates\/([a-f0-9-]+)\/source\.pptx$/);
+      if(pptSource&&req.method==='PUT'){
+        const revision=Number(req.headers['x-base-revision']);
+        if(!Number.isSafeInteger(revision)||revision<0)throw Object.assign(Error('请提供当前模板版本'),{status:400});
+        return json(res,200,core.updatePptTemplateSource(pptSource[1],await pptxBody(req),revision));
+      }
       if(pptSource&&req.method==='GET'){
         const {file,filename}=core.pptTemplateSource(pptSource[1]);
         res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.presentationml.presentation','Content-Disposition':`attachment; filename="template.pptx"; filename*=UTF-8''${encodeURIComponent(filename)}`,'Content-Length':fs.statSync(file).size,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});

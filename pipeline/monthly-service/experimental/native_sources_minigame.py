@@ -9,7 +9,7 @@ import re
 from decimal import Decimal, ROUND_HALF_UP
 
 from chart_images import ads_trend
-from native_charts import ads_trend_chart, category_chart, new_game_daily_chart
+from native_charts import ads_trend_chart, ads_platform_chart, category_chart, new_game_daily_chart
 from native_sources import previous_month
 
 
@@ -167,6 +167,24 @@ def values(data, extras):
         text[name] = value or ""
         if value is None:
             issues.append({"field": f"adx_kpi.{field}", "reason": "missing"})
+    for platform in ("wechat", "douyin"):
+        for suffix, field in (("Growth", "material_growth_pct"), ("InfoGrowth", "info_flow_growth_pct"),
+                              ("TalentGrowth", "talent_growth_pct"), ("GamesGrowth", "games_growth_pct")):
+            raw = kpi.get(f"{platform}_{field}")
+            name = f"acq{platform.title()}{suffix}"
+            text[name] = f"{Decimal(str(raw)):+.1f}%" if isinstance(raw, (int, float)) and not isinstance(raw, bool) else ""
+    for platform in ("wechat", "douyin"):
+        for suffix, field in (("MaterialWan", "material_total"), ("InfoWan", "info_flow_total"),
+                              ("TalentWan", "talent_total"), ("Games", "games")):
+            raw = kpi.get(f"{platform}_{field}")
+            name = f"{platform}{suffix}"
+            if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+                text[name] = grouped(raw) if suffix == "Games" else short_number(Decimal(str(raw)) / 10000)
+            else:
+                text[name] = ""
+                issues.append({"field": f"adx_kpi.{platform}_{field}", "reason": "missing"})
+    text["acquisitionHeadline"] = (f"暑期激励部分结束，大盘整体回落，抖音 {text['acqDouyinGrowth']}、微信 {text['acqWechatGrowth']}"
+                                  if data["month"] == "2026-09" else "示例：填写本月买量变化与原因")
     return text, issues
 
 
@@ -208,6 +226,14 @@ def ads_trend_native(data, extras):
     months, issues = ads_trend_months(data)
     chart, book = ads_trend_chart(months)
     return chart, book, issues
+
+
+def ads_platform_native(platform):
+    def build(data, extras):
+        months, issues = ads_trend_months(data)
+        chart, book = ads_platform_chart(months, platform)
+        return chart, book, issues
+    return build
 
 
 def category_top_native(data, extras, limit=10):
@@ -269,6 +295,9 @@ MINIGAME = {"contract": contract,
                        "minigame.featured.most_played": featured_rows("most_played")},
             "highlights": {}, "values": values, "numbers": numbers, "market": None, "marketIssues": [],
             "images": {"minigame.adsTrend": ads_trend_image},
-            "charts": {"minigame.adsTrend": ads_trend_native, "minigame.categoryTop": category_top_native,
+            "charts": {"minigame.adsTrend": ads_trend_native,
+                       "minigame.adsWechat": ads_platform_native("wechat"),
+                       "minigame.adsDouyin": ads_platform_native("douyin"),
+                       "minigame.categoryTop": category_top_native,
                        **{f"minigame.featuredDaily.{index + 1}": featured_daily_native(index) for index in range(3)}},
             "warning": "MAU、榜单观察、品类分析、新游介绍和游戏图片需人工或AI补齐；买量趋势、品类分布和第4页新游逐日排名/素材数生成 PowerPoint 原生图表。"}

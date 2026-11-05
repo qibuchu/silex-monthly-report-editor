@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
-from native_charts import ads_trend_chart, category_chart, new_game_daily_chart, preview_svg, workbook
+from native_charts import ads_trend_chart, ads_platform_chart, category_chart, new_game_daily_chart, preview_svg, workbook
 from native_mapping import compile_mapping
 from native_sources_minigame import category_top_native
 from native_writeback import extract
@@ -50,6 +50,18 @@ class NewGameDailyChartTests(unittest.TestCase):
         sheet = zipfile.ZipFile(io.BytesIO(book)).read("xl/worksheets/sheet1.xml").decode()
         self.assertIn('<c r="C2"><v>0</v></c>', sheet)
         self.assertNotIn('r="C3"', sheet)
+
+
+class AcquisitionPlatformChartTests(unittest.TestCase):
+    def test_two_editable_platform_charts_use_separate_series_and_preserve_missing_month(self):
+        for platform, series_count in (("wechat", 2), ("douyin", 3)):
+            chart, book = ads_platform_chart(months(), platform)
+            root = ElementTree.fromstring(chart)
+            self.assertEqual(len(list(root.iter(C + "ser"))), series_count)
+            self.assertEqual(len(list(root.iter(C + "valAx"))), 2)
+            self.assertEqual(root.find(f".//{C}dispBlanksAs").get("val"), "gap")
+            sheet = zipfile.ZipFile(io.BytesIO(book)).read("xl/worksheets/sheet1.xml").decode()
+            self.assertNotIn('r="B3"', sheet)
 
 
 class TrendChartTests(unittest.TestCase):
